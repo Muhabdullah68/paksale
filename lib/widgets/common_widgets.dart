@@ -1,7 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
-import '../main.dart';
+import '../providers/favorites_provider.dart';
+import '../providers/compare_provider.dart';
+import '../services/language_provider.dart';
+import '../services/currency_provider.dart';
+
+// ─── Logo Icon ────────────────────────────────────────────────────────────────
+class AppLogoIcon extends StatelessWidget {
+  final double size;
+  final Color? color;
+  const AppLogoIcon({super.key, this.size = 40, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/icons/app_logo.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+    );
+  }
+}
 
 // ─── App Logo ──────────────────────────────────────────────────────────────────
 class AppLogo extends StatelessWidget {
@@ -10,16 +31,42 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    final appName = t['appName'] ?? 'PakistanSale';
+    
+    // Split name for two-tone color if it contains 'Sale'
+    String part1 = appName;
+    String part2 = '';
+    
+    if (appName.contains('Sale')) {
+      part1 = appName.substring(0, appName.indexOf('Sale'));
+      part2 = 'Sale';
+    } else if (appName.contains(' ')) {
+      final parts = appName.split(' ');
+      part1 = parts[0];
+      part2 = ' ${parts.sublist(1).join(' ')}';
+    }
+
     return RichText(
       text: TextSpan(
         children: [
           TextSpan(
-            text: 'Qatar',
-            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.white),
+            text: part1,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : AppColors.primary,
+            ),
           ),
           TextSpan(
-            text: 'Sale',
-            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: AppColors.gold),
+            text: part2,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+              color: AppColors.gold,
+            ),
           ),
         ],
       ),
@@ -34,6 +81,7 @@ class CustomSearchBar extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
   final String hint;
+  final bool onPrimaryBackground;
 
   const CustomSearchBar({
     super.key,
@@ -41,31 +89,44 @@ class CustomSearchBar extends StatelessWidget {
     this.onTap,
     this.onChanged,
     this.controller,
-    this.hint = 'Search in QatarSale...',
+    this.hint = 'Search in PakistanSale...',
+    this.onPrimaryBackground = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // If on primary background (like our dark red AppBar), always use white-ish colors
+    final textColor = (isDark || onPrimaryBackground) ? Colors.white : Colors.black87;
+    final hintColor = (isDark || onPrimaryBackground) ? Colors.white60 : Colors.black45;
+
     return GestureDetector(
       onTap: readOnly ? onTap : null,
       child: Container(
         constraints: const BoxConstraints(minHeight: 42, maxHeight: 52),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: (isDark || onPrimaryBackground)
+              ? Colors.white.withValues(alpha: 0.15) 
+              : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+          border: Border.all(
+              color: (isDark || onPrimaryBackground)
+                  ? AppColors.gold.withValues(alpha: 0.3) 
+                  : AppColors.primary.withValues(alpha: 0.2)),
         ),
         child: readOnly
             ? Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
             children: [
-              const Icon(Icons.search, color: Colors.white60, size: 18),
+              Icon(Icons.search, color: hintColor, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hint,
-                  style: const TextStyle(color: Colors.white54, fontSize: 14),
+                  style: TextStyle(color: hintColor, fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -76,11 +137,11 @@ class CustomSearchBar extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           autofocus: true,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: textColor, fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white54, fontSize: 14),
-            prefixIcon: const Icon(Icons.search, color: Colors.white60, size: 18),
+            hintStyle: TextStyle(color: hintColor, fontSize: 14),
+            prefixIcon: Icon(Icons.search, color: hintColor, size: 18),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -102,26 +163,29 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
+    
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.1), blurRadius: 16)],
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: onTap,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.primaryDark,
-        selectedItemColor: AppColors.gold,
-        unselectedItemColor: AppColors.textMuted,
+        backgroundColor: theme.bottomNavigationBarTheme.backgroundColor,
+        selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor,
         selectedFontSize: 10,
         unselectedFontSize: 10,
         iconSize: 22,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), activeIcon: Icon(Icons.grid_view), label: 'Categories'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline, size: 28), activeIcon: Icon(Icons.add_circle, size: 28), label: 'Post Ad'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), activeIcon: Icon(Icons.favorite), label: 'Favorites'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Account'),
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.home_outlined), activeIcon: const Icon(Icons.home), label: t['nav_home'] ?? 'Home'),
+          BottomNavigationBarItem(icon: const Icon(Icons.grid_view_outlined), activeIcon: const Icon(Icons.grid_view), label: t['nav_categories'] ?? 'Categories'),
+          BottomNavigationBarItem(icon: const Icon(Icons.add_circle_outline, size: 28), activeIcon: const Icon(Icons.add_circle, size: 28), label: t['nav_post_ad'] ?? 'Post Ad'),
+          BottomNavigationBarItem(icon: const Icon(Icons.favorite_outline), activeIcon: const Icon(Icons.favorite), label: t['nav_saved'] ?? 'Saved'),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_outline), activeIcon: const Icon(Icons.person), label: t['nav_account'] ?? 'Account'),
         ],
       ),
     );
@@ -129,7 +193,7 @@ class AppBottomNavBar extends StatelessWidget {
 }
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-class ProductCard extends StatefulWidget {
+class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback? onTap;
   final bool isGridView;
@@ -145,30 +209,6 @@ class ProductCard extends StatefulWidget {
     this.showCompareButton = true,
   });
 
-  @override
-  State<ProductCard> createState() => _ProductCardState();
-}
-
-class _ProductCardState extends State<ProductCard> {
-  @override
-  void initState() {
-    super.initState();
-    AppState().addListener(_onAppStateChanged);
-  }
-
-  @override
-  void dispose() {
-    AppState().removeListener(_onAppStateChanged);
-    super.dispose();
-  }
-
-  void _onAppStateChanged() {
-    setState(() {});
-  }
-
-  bool get _isFav => AppState().isFavorite(widget.product.id);
-  bool get _inCompare => AppState().isInCompare(widget.product.id);
-
   String _formatPrice(double price) {
     return price
         .toStringAsFixed(0)
@@ -177,264 +217,404 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.isGridView ? _buildGrid() : _buildList();
+    return isGridView ? _buildGrid(context) : _buildList(context);
   }
 
-  Widget _buildList() {
-    final p = widget.product;
+  Widget _buildList(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    final currencyProvider = context.watch<CurrencyProvider>();
+    final favoritesProvider = context.watch<FavoritesProvider?>();
+    final compareProvider = context.watch<CompareProvider>();
+    final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
+    final inCompare = compareProvider.isInCompare(product.id);
+    
+    final p = product;
     return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider.withOpacity(0.4)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                  child: _buildImagePlaceholder(100, 100),
-                ),
-                if (p.isSold)
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                      child: Container(
-                        color: Colors.black54,
-                        child: const Center(
-                          child: Text('SOLD',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+      onTap: onTap,
+      child: RepaintBoundary(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
+            boxShadow: isDark ? null : [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                    child: _buildImage(context, 100, 100),
+                  ),
+                  if (p.isSold)
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                        child: Container(
+                          color: Colors.black54,
+                          child: Center(
+                            child: Text(t['sold'] ?? 'SOLD',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                if (p.isFeatured)
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
-                      child: const Text('⭐', style: TextStyle(fontSize: 9)),
+                  if (p.isFeatured)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
+                        child: const Text('⭐', style: TextStyle(fontSize: 9)),
+                      ),
                     ),
+                ],
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: theme.textTheme.bodyLarge?.color, 
+                              fontSize: 13, 
+                              fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 5),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              p.price == 0 ? (t['contact'] ?? 'Contact') : currencyProvider.formatPrice(p.price),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: theme.textTheme.titleLarge?.color, 
+                                  fontSize: 17, 
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          _ConditionBadge(condition: p.condition),
+                          const Spacer(),
+                          Icon(Icons.location_on, size: 11, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                                '${p.location}${p.city.isNotEmpty ? ', ${p.city}' : ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: theme.textTheme.bodySmall?.color
+                                            ?.withValues(alpha: 0.5) ??
+                                        AppColors.textMuted,
+                                    fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.remove_red_eye_outlined, size: 11, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text('${p.views}', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 10)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 10)),
+                          ),
+                          const Spacer(),
+                          if (showCompareButton)
+                            GestureDetector(
+                              onTap: () {
+                                if (compareProvider.toggleCompare(p)) {
+                                  // Added
+                                } else if (!inCompare) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(t['compare_limit'] ?? 'Compare limit reached (max 3)'),
+                                    backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                                  ));
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: inCompare ? AppColors.gold.withValues(alpha: 0.2) : theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                                ),
+                                child: Text(inCompare ? (t['compare'] ?? '✓ Compare') : (t['compare'] ?? '+ Compare'),
+                                    style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10, top: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    if (favoritesProvider != null) {
+                      favoritesProvider.toggleFavorite(product);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(t['sign_in_favorites'] ?? 'Please sign in to save favorites'),
+                        backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                      ));
+                    }
+                  },
+                  child: Icon(isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? Colors.redAccent : AppColors.textMuted, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGrid(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    final currencyProvider = context.watch<CurrencyProvider>();
+    final favoritesProvider = context.watch<FavoritesProvider?>();
+    final compareProvider = context.watch<CompareProvider>();
+    final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
+    final inCompare = compareProvider.isInCompare(product.id);
+    
+    final p = product;
+    return GestureDetector(
+      onTap: onTap,
+      child: RepaintBoundary(
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
+            boxShadow: isDark ? null : [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 1.6,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: _buildImage(context, double.infinity, double.infinity, isGrid: true),
+                    ),
+                    if (p.isSold)
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Text(t['sold'] ?? 'SOLD',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                        ),
+                      ),
+                    if (p.isFeatured)
+                      Positioned(
+                        top: 6, left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
+                          child: Text(t['featured_label'] ?? 'Featured', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    if (p.isBoosted)
+                      Positioned(
+                        top: p.isFeatured ? 28 : 6, left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.orange, borderRadius: BorderRadius.circular(4)),
+                          child: const Text('🚀 Boosted', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    Positioned(
+                      top: 6, right: 6,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (favoritesProvider != null) {
+                            favoritesProvider.toggleFavorite(product);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(t['sign_in_favorites'] ?? 'Please sign in to save favorites'),
+                              backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                            ));
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                          child: Icon(isFav ? Icons.favorite : Icons.favorite_border,
+                              size: 16, color: isFav ? Colors.redAccent : Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 5),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            p.price == 0 ? 'Contact' : _formatPrice(p.price),
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(p.price == 0 ? '' : p.currency,
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
+                        style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Text(
+                      p.price == 0 ? (t['contact'] ?? 'Contact') : currencyProvider.formatPrice(p.price),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 13, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        _ConditionBadge(condition: p.condition),
-                        const Spacer(),
-                        const Icon(Icons.location_on, size: 11, color: AppColors.textMuted),
+                        Icon(Icons.location_on, size: 9, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
                         const SizedBox(width: 2),
                         Flexible(
-                          child: Text(p.location, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                          child: Text('${p.location}${p.city.isNotEmpty ? ', ${p.city}' : ''}', 
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 9)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.remove_red_eye_outlined, size: 11, color: AppColors.textMuted),
-                        const SizedBox(width: 3),
-                        Text('${p.views}', style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
-                        ),
+                        _ConditionBadge(condition: p.condition, small: true),
                         const Spacer(),
-                        if (widget.showCompareButton)
-                          GestureDetector(
-                            onTap: widget.onCompare,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: _inCompare ? AppColors.gold.withOpacity(0.2) : AppColors.surface,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: AppColors.gold.withOpacity(0.4)),
-                              ),
-                              child: Text(_inCompare ? '✓ Compare' : '+ Compare',
-                                  style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
-                            ),
-                          ),
+                        Flexible( 
+                          child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 9)),
+                        ),
                       ],
                     ),
+                    if (showCompareButton) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () {
+                          if (compareProvider.toggleCompare(p)) {
+                            // Added
+                          } else if (!compareProvider.isInCompare(p.id)) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(t['compare_limit'] ?? 'Compare limit reached (max 3)'),
+                              backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                            ));
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: inCompare ? AppColors.gold.withValues(alpha: 0.15) : theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(inCompare ? (t['compare_added'] ?? '✓ Added') : (t['compare'] ?? '+ Compare'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 10, top: 10),
-              child: GestureDetector(
-                onTap: () {
-                  AppState().toggleFavorite(widget.product);
-                },
-                child: Icon(_isFav ? Icons.favorite : Icons.favorite_border,
-                    color: _isFav ? Colors.redAccent : AppColors.textMuted, size: 20),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildGrid() {
-    final p = widget.product;
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider.withOpacity(0.4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1.6,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: _buildImagePlaceholder(double.infinity, double.infinity),
-                  ),
-                  if (p.isFeatured)
-                    Positioned(
-                      top: 6, left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
-                        child: const Text('Featured', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  Positioned(
-                    top: 6, right: 6,
-                    child: GestureDetector(
-                      onTap: () {
-                        AppState().toggleFavorite(widget.product);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
-                        child: Icon(_isFav ? Icons.favorite : Icons.favorite_border,
-                            size: 14, color: _isFav ? Colors.redAccent : Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
+  Widget _buildImage(BuildContext context, double width, double height, {bool isGrid = false}) {
+    if (product.imageUrls.isNotEmpty) {
+      return Hero(
+        tag: 'product_image_${product.id}',
+        child: Image.network(
+          product.imageUrls[0],
+          width: width,
+          height: height,
+          cacheWidth: 250, // Optimize memory by caching a smaller version
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(context, width, height),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            final isDarkLoading = Theme.of(context).brightness == Brightness.dark;
+            return Container(
+              width: width,
+              height: height,
+              color: isDarkLoading ? AppColors.surface : AppColors.cardLightMode,
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 11)),
-                  const SizedBox(height: 4),
-                  Text(
-                    p.price == 0 ? 'Contact' : '${_formatPrice(p.price)} ${p.currency}',
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _ConditionBadge(condition: p.condition, small: true),
-                      const Spacer(),
-                      Flexible(
-                        child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 9)),
-                      ),
-                    ],
-                  ),
-                  if (widget.showCompareButton) ...[
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: widget.onCompare,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _inCompare ? AppColors.gold.withOpacity(0.15) : AppColors.surface,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.gold.withOpacity(0.4)),
-                        ),
-                        child: Text(_inCompare ? '✓ Added' : '+ Compare',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+            );
+          },
         ),
-      ),
-    );
+      );
+    }
+    return _buildImagePlaceholder(context, width, height);
   }
 
-  Widget _buildImagePlaceholder(double width, double height) {
+  Widget _buildImagePlaceholder(BuildContext context, double width, double height) {
     IconData icon;
     Color color;
-    switch (widget.product.category) {
+    switch (product.category) {
       case 'Vehicles': icon = Icons.directions_car; color = const Color(0xFF1565C0); break;
       case 'Properties': icon = Icons.home; color = const Color(0xFF2E7D32); break;
-      case 'Mobile Phones': icon = Icons.phone_iphone; color = const Color(0xFF00838F); break;
       case 'Electronics': icon = Icons.devices; color = const Color(0xFF6A1B9A); break;
-      case 'Computers & Parts': icon = Icons.laptop; color = AppColors.primary; break;
-      case 'Furniture': icon = Icons.chair; color = AppColors.primary; break;
-      case 'Jobs Center': icon = Icons.work; color = AppColors.primary; break;
+      case 'Furniture & Décor': icon = Icons.chair; color = const Color(0xFF5D4037); break;
+      case 'WaterCrafts': icon = Icons.directions_boat; color = const Color(0xFF0288D1); break;
       case 'Jewellery': icon = Icons.diamond; color = const Color(0xFFC62828); break;
-      default: icon = Icons.image; color = AppColors.primary;
+      case 'Lifestyle': icon = Icons.shopping_bag; color = const Color(0xFFD81B60); break;
+      case 'Market': icon = Icons.shopping_cart; color = const Color(0xFF388E3C); break;
+      case 'Outdoor & Leisure': icon = Icons.landscape; color = const Color(0xFFF57C00); break;
+      case 'Special Numbers': icon = Icons.looks_one; color = AppColors.gold; break;
+      case 'Heavy Equipments': icon = Icons.construction; color = const Color(0xFF455A64); break;
+      case 'Jobs Center': icon = Icons.work; color = const Color(0xFF00897B); break;
+      case 'Super Ads': icon = Icons.star; color = AppColors.orange; break;
+      default: icon = Icons.image; color = AppColors.textMuted;
     }
     return Container(
       width: width,
       height: height,
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.08),
       child: Center(
         child: FractionallySizedBox(
           widthFactor: 0.38,
           heightFactor: 0.38,
-          child: FittedBox(child: Icon(icon, color: color.withOpacity(0.4))),
+          child: FittedBox(child: Icon(icon, color: color.withValues(alpha: 0.4))),
         ),
       ),
     );
@@ -451,6 +631,7 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
       child: Row(
@@ -463,7 +644,10 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(title,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    color: theme.textTheme.titleLarge?.color, 
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w700)),
           ),
           if (actionText != null)
             GestureDetector(
@@ -488,30 +672,41 @@ class CategoryCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size, height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.card,
-              border: Border.all(color: AppColors.divider.withOpacity(0.6)),
+      child: RepaintBoundary(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: size, height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.cardTheme.color,
+                border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
+                boxShadow: isDark ? null : [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
+                ],
+              ),
+              child: Center(child: Text(icon, style: TextStyle(fontSize: size * 0.42))),
             ),
-            child: Center(child: Text(icon, style: TextStyle(fontSize: size * 0.42))),
-          ),
-          const SizedBox(height: 5),
-          SizedBox(
-            width: size + 10,
-            child: Text(name,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 11, height: 1.2)),
-          ),
-        ],
+            const SizedBox(height: 5),
+            SizedBox(
+              width: size + 10,
+              child: Text(name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color, 
+                      fontSize: 11, 
+                      height: 1.2)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -525,46 +720,48 @@ class AdBannerPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      height: 80,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryLight],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold.withOpacity(0.3)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -20, top: -20,
-            child: Container(width: 100, height: 100,
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle)),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Row(
-              children: [
-                const Icon(Icons.campaign, color: AppColors.gold, size: 26),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(text,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(16)),
-                  child: const Text('AD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ],
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        height: 80,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -20, top: -20,
+              child: Container(width: 100, height: 100,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle)),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  const Icon(Icons.campaign, color: AppColors.gold, size: 26),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(text,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(16)),
+                    child: const Text('AD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -580,12 +777,15 @@ class ContactActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
       decoration: BoxDecoration(
-        color: AppColors.primaryDark,
-        border: Border(top: BorderSide(color: AppColors.divider.withOpacity(0.5))),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, -3))],
+        color: isDark ? AppColors.primaryDark : AppColors.cardLightMode,
+        border: Border(top: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05), blurRadius: 12, offset: const Offset(0, -3))],
       ),
       child: Row(
         children: [
@@ -593,7 +793,7 @@ class ContactActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onCall,
               icon: const Icon(Icons.phone, size: 18, color: Colors.white),
-              label: const Text('Call Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              label: Text(t['call_now'] ?? 'Call Now', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orange,
                 padding: const EdgeInsets.symmetric(vertical: 13),
@@ -606,7 +806,7 @@ class ContactActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onWhatsApp,
               icon: const Icon(Icons.chat, size: 18, color: Colors.white),
-              label: const Text('WhatsApp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              label: Text(t['whatsapp'] ?? 'WhatsApp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.green,
                 padding: const EdgeInsets.symmetric(vertical: 13),
@@ -618,9 +818,9 @@ class ContactActionButtons extends StatelessWidget {
             const SizedBox(width: 10),
             Container(
               decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: theme.cardTheme.color,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider)),
+                  border: Border.all(color: isDark ? AppColors.divider : AppColors.dividerLightMode)),
               child: IconButton(onPressed: onChat, icon: const Icon(Icons.message_outlined, color: AppColors.gold, size: 22)),
             ),
           ],
@@ -636,13 +836,16 @@ class LoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold), strokeWidth: 2.5),
-          SizedBox(height: 12),
-          Text('Loading...', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+          const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold), strokeWidth: 2.5),
+          const SizedBox(height: 12),
+          Text(t['loading'] ?? 'Loading...', style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
         ],
       ),
     );
@@ -660,17 +863,19 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 72, color: AppColors.textMuted.withOpacity(0.35)),
+            Icon(icon, size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
             const SizedBox(height: 20),
-            Text(title, style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(title, style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+            Text(subtitle, textAlign: TextAlign.center, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
             if (action != null) ...[const SizedBox(height: 24), action!],
           ],
         ),
@@ -701,9 +906,9 @@ class _ConditionBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: small ? 5 : 7, vertical: small ? 2 : 3),
       decoration: BoxDecoration(
-          color: _color.withOpacity(0.2),
+          color: _color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: _color.withOpacity(0.5))),
+          border: Border.all(color: _color.withValues(alpha: 0.5))),
       child: Text(condition, style: TextStyle(color: _color, fontSize: small ? 9 : 10, fontWeight: FontWeight.w600)),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -44,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
             pageBuilder: (_, __, ___) => const HomeScreen(),
             transitionsBuilder: (_, animation, __, child) =>
                 FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 600),
+            transitionDuration: const Duration(milliseconds: 300),
           ),
         );
       }
@@ -116,22 +117,22 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 130,
                       height: 130,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: AppColors.gold.withOpacity(0.4),
+                          color: AppColors.gold.withValues(alpha: 0.4),
                           width: 2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.gold.withOpacity(0.2),
+                            color: AppColors.gold.withValues(alpha: 0.2),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
                         ],
                       ),
                       child: Center(
-                        child: _buildLogoIcon(),
+                        child: AppLogoIcon(size: 80),
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -139,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
                       text: const TextSpan(
                         children: [
                           TextSpan(
-                            text: 'Qatar',
+                            text: 'Pakistan',
                             style: TextStyle(
                               fontSize: 38,
                               fontWeight: FontWeight.bold,
@@ -164,17 +165,17 @@ class _SplashScreenState extends State<SplashScreen>
                       'THE MARKET AT YOUR HOME',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         letterSpacing: 2.5,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'السوق في بيتك',
+                      'مارکیٹ آپ کے گھر پر',
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.gold.withOpacity(0.8),
+                        color: AppColors.gold.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(height: 60),
@@ -182,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 40,
                       height: 3,
                       child: LinearProgressIndicator(
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
                         valueColor: const AlwaysStoppedAnimation(AppColors.gold),
                       ),
                     ),
@@ -203,53 +204,10 @@ class _SplashScreenState extends State<SplashScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withOpacity(opacity),
+          color: Colors.white.withValues(alpha: opacity),
           width: 1.5,
         ),
       ),
     );
   }
-
-  Widget _buildLogoIcon() {
-    return CustomPaint(
-      size: const Size(70, 70),
-      painter: _LogoPainter(),
-    );
-  }
-}
-
-class _LogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.gold
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width * 0.35;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -2.5,
-      5.0,
-      false,
-      paint,
-    );
-
-    final arrowPaint = Paint()
-      ..color = AppColors.gold
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.moveTo(center.dx + radius - 2, center.dy - 12);
-    path.lineTo(center.dx + radius + 10, center.dy - 2);
-    path.lineTo(center.dx + radius - 8, center.dy + 6);
-    path.close();
-    canvas.drawPath(path, arrowPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

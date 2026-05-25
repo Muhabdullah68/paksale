@@ -21,8 +21,9 @@ class SubCategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         leading: IconButton(
@@ -51,8 +52,8 @@ class SubCategoryScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               categoryName,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -61,6 +62,7 @@ class SubCategoryScreen extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final isDark = theme.brightness == Brightness.dark;
                 // Dynamically size the circle so it always fits on any screen.
                 // 3 columns + spacing: available width per cell ≈ (width - 2*16 - 2*12) / 3
                 final cellWidth =
@@ -104,9 +106,9 @@ class SubCategoryScreen extends StatelessWidget {
                             height: circleSize,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.card,
+                              color: theme.cardTheme.color,
                               border: Border.all(
-                                color: AppColors.divider.withOpacity(0.5),
+                                color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5),
                               ),
                             ),
                             child: Center(
@@ -124,8 +126,8 @@ class SubCategoryScreen extends StatelessWidget {
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
+                              style: TextStyle(
+                                color: theme.textTheme.bodyLarge?.color,
                                 fontSize: 10,
                                 height: 1.3,
                               ),
@@ -144,3 +146,4 @@ class SubCategoryScreen extends StatelessWidget {
     );
   }
 }
+

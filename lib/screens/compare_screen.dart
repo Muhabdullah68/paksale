@@ -1,9 +1,9 @@
 // screens/compare_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
-import '../main.dart';
-import '../widgets/common_widgets.dart';
+import '../providers/compare_provider.dart';
 
 class CompareScreen extends StatefulWidget {
   final List<ProductModel> selectedProducts;
@@ -41,11 +41,10 @@ class _CompareScreenState extends State<CompareScreen> {
   void _removeProduct(int index) {
     if (index < 0 || index >= _products.length) return;
     final id = _products[index].id;
+    context.read<CompareProvider>().removeFromCompare(id);
     setState(() {
-      AppState().removeFromCompare(id);
       _products.removeAt(index);
     });
-    // If the last product was removed, go back.
     if (_products.isEmpty) _safePop();
   }
 
@@ -56,17 +55,19 @@ class _CompareScreenState extends State<CompareScreen> {
   // a double-pop when the listener also tried to pop. Both buttons now use
   // the same safe helper below.
   void _clearAll() {
+    context.read<CompareProvider>().clearCompare();
     setState(() {
-      AppState().clearCompare();
       _products.clear();
     });
-    _safePop(); // pop exactly once after clearing
+    _safePop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         leading: IconButton(
@@ -101,10 +102,10 @@ class _CompareScreenState extends State<CompareScreen> {
                   Container(
                     width: 140,
                     padding: const EdgeInsets.all(16),
-                    child: const Text(
+                    child: Text(
                       'Product',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: theme.textTheme.bodyLarge?.color,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -119,7 +120,7 @@ class _CompareScreenState extends State<CompareScreen> {
                     ),
                 ],
               ),
-              const Divider(color: AppColors.divider, height: 1),
+              Divider(height: 1, color: isDark ? AppColors.divider : AppColors.dividerLightMode),
 
               // Comparison rows
               _ComparisonRow(
@@ -147,16 +148,16 @@ class _CompareScreenState extends State<CompareScreen> {
                 values:
                 _products.map((p) => '${p.views}').toList(),
               ),
-              const Divider(color: AppColors.divider, height: 1),
+              Divider(height: 1, color: isDark ? AppColors.divider : AppColors.dividerLightMode),
 
               // Specifications section header
               Container(
                 width: 140,
                 padding: const EdgeInsets.all(16),
-                child: const Text(
+                child: Text(
                   'Specifications',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: theme.textTheme.bodyLarge?.color,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -177,9 +178,9 @@ class _CompareScreenState extends State<CompareScreen> {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.primaryDark,
+          color: isDark ? AppColors.primaryDark : AppColors.backgroundLightMode,
           border: Border(
-              top: BorderSide(color: AppColors.divider.withOpacity(0.5))),
+              top: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
         ),
         child: Row(
           children: [
@@ -189,15 +190,15 @@ class _CompareScreenState extends State<CompareScreen> {
                 // clears state, updates AppState, and pops exactly once.
                 onPressed: _clearAll,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.divider),
+                  side: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                icon: const Icon(Icons.clear_all,
-                    color: AppColors.textMuted),
-                label: const Text('Clear All',
-                    style: TextStyle(color: AppColors.textMuted)),
+                icon: Icon(Icons.clear_all,
+                    color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
+                label: Text('Clear All',
+                    style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
               ),
             ),
             const SizedBox(width: 12),
@@ -263,6 +264,8 @@ class _ProductHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: 140,
       padding: const EdgeInsets.all(8),
@@ -274,10 +277,10 @@ class _ProductHeader extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: theme.cardTheme.color,
                   borderRadius: BorderRadius.circular(12),
                   border:
-                  Border.all(color: AppColors.divider.withOpacity(0.5)),
+                  Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
                 ),
                 child: Center(
                   child: Icon(
@@ -315,8 +318,8 @@ class _ProductHeader extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontSize: 12),
+            style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color, fontSize: 12),
           ),
         ],
       ),
@@ -334,11 +337,13 @@ class _ComparisonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-              color: AppColors.divider.withOpacity(0.3), width: 0.5),
+              color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.3), width: 0.5),
         ),
       ),
       child: Row(
@@ -349,8 +354,8 @@ class _ComparisonRow extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Text(
               label,
-              style: const TextStyle(
-                  color: AppColors.textSecondary,
+              style: TextStyle(
+                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                   fontSize: 13,
                   fontWeight: FontWeight.w500),
             ),
@@ -363,8 +368,8 @@ class _ComparisonRow extends StatelessWidget {
               child: Text(
                 value,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 13),
+                style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color, fontSize: 13),
               ),
             ),
           ),
@@ -373,3 +378,4 @@ class _ComparisonRow extends StatelessWidget {
     );
   }
 }
+

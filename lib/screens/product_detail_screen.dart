@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/models.dart';
-import '../main.dart';
+import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
+import '../providers/compare_provider.dart';
+import '../providers/favorites_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/report_provider.dart';
+import '../services/language_provider.dart';
+import '../services/currency_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
-import 'compare_screen.dart';
 import 'chat_screen.dart';
+import 'compare_screen.dart';
+import 'listing_screen.dart';
 import 'seller_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -17,26 +27,67 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedImageIndex = 0;
-  bool _descExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    AppState().addListener(_onAppStateChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().incrementViews(widget.product.id);
+    });
   }
 
-  @override
-  void dispose() {
-    AppState().removeListener(_onAppStateChanged);
-    super.dispose();
+  void _launchCaller() async {
+    final url = Uri.parse('tel:${widget.product.sellerPhone}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch dialer')),
+        );
+      }
+    }
   }
 
-  void _onAppStateChanged() {
-    setState(() {});
+  void _launchWhatsApp() async {
+    // Prefer whatsAppNumber if available, else fallback to sellerPhone
+    final phone = widget.product.whatsAppNumber.isNotEmpty 
+        ? widget.product.whatsAppNumber 
+        : widget.product.sellerPhone;
+    
+    // Format phone for WhatsApp (remove spaces and +)
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=Hi, I am interested in your ad: ${widget.product.title}');
+    if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      // Success
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch WhatsApp')),
+        );
+      }
+    }
   }
 
-  bool get _isFav => AppState().isFavorite(widget.product.id);
-  bool get _inCompare => AppState().isInCompare(widget.product.id);
+  void _updateStatus(BuildContext context, String status) async {
+    try {
+      await context.read<ProductProvider>().updateProductStatus(widget.product.id, status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Product $status successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  bool _descExpanded = false;
 
   String _fmt(double p) => p.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
@@ -59,11 +110,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final p = widget.product;
-    final cmpCount = AppState().compareList.length;
+    final compareProvider = context.watch<CompareProvider>();
+    final favoritesProvider = context.watch<FavoritesProvider?>();
+    final currencyProvider = context.watch<CurrencyProvider>();
+    final cmpCount = compareProvider.compareList.length;
+    final isFav = favoritesProvider?.isFavorite(p.id) ?? false;
+    final inCompare = compareProvider.isInCompare(p.id);
+
+    final t = context.watch<LanguageProvider>().t;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       floatingActionButton: cmpCount > 0
           ? FloatingActionButton.extended(
         backgroundColor: AppColors.gold,
@@ -71,9 +131,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             context,
             MaterialPageRoute(
                 builder: (_) => CompareScreen(
-                    selectedProducts: AppState().compareList))),
+                    selectedProducts: compareProvider.compareList))),
         icon: const Icon(Icons.compare_arrows, color: Colors.white),
-        label: Text('Compare ($cmpCount)',
+        label: Text('${t['compare'] ?? 'Compare'} ($cmpCount)',
             style: const TextStyle(
                 color: Colors.white, fontWeight: FontWeight.w600)),
       )
@@ -86,25 +146,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         title: const AppLogo(),
         actions: [
           IconButton(
-            icon: Icon(_isFav ? Icons.favorite : Icons.favorite_border,
-                color: _isFav ? Colors.redAccent : Colors.white),
+            icon: const Icon(Icons.report_gmailerrorred_outlined, color: Colors.white),
+            onPressed: () => _showReportDialog(context),
+          ),
+          IconButton(
+            icon: Icon(isFav ? Icons.favorite : Icons.favorite_border,
+                color: isFav ? Colors.red : Colors.white),
             onPressed: () {
-              AppState().toggleFavorite(p);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(_isFav
-                    ? 'Added to favorites ❤️'
-                    : 'Removed from favorites'),
-                backgroundColor:
-                _isFav ? AppColors.gold : AppColors.primaryDark,
-                duration: const Duration(seconds: 1),
-              ));
+              if (favoritesProvider != null) {
+                favoritesProvider.toggleFavorite(p);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(!isFav
+                      ? (t['added_to_favorites'] ?? 'Added to favorites ❤️')
+                      : (t['removed_from_favorites'] ?? 'Removed from favorites')),
+                  backgroundColor:
+                  !isFav ? AppColors.gold : (isDark ? AppColors.primaryDark : AppColors.primary),
+                  duration: const Duration(seconds: 1),
+                ));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(t['sign_in_favorites_short'] ?? 'Please sign in to save favorites'),
+                  backgroundColor: AppColors.orange,
+                ));
+              }
             },
           ),
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.white),
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Link copied to clipboard!'),
+                SnackBar(
+                    content: Text(t['link_copied'] ?? 'Link copied to clipboard!'),
                     backgroundColor: AppColors.gold)),
           ),
         ],
@@ -116,7 +187,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildGallery(p),
+                _buildGallery(p, isDark),
                 const SizedBox(height: 12),
 
                 Padding(
@@ -125,14 +196,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(p.title,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
+                          style: TextStyle(
+                              color: theme.textTheme.titleLarge?.color,
                               fontSize: 17,
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
 
                       Row(children: [
-                        _SellerTypeBadge(type: p.sellerType),
+                        _SellerTypeBadge(
+                          type: p.sellerType,
+                          isVerified: p.isVerifiedSeller,
+                          sellerTier: p.sellerTier,
+                        ),
                         const Spacer(),
                         const Icon(Icons.remove_red_eye_outlined,
                             size: 13, color: AppColors.textMuted),
@@ -153,24 +228,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              p.price == 0 ? 'Contact' : _fmt(p.price),
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            if (p.price > 0) ...[
-                              const SizedBox(width: 4),
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(p.currency,
-                                    style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 14)),
+                            Flexible(
+                              child: Text(
+                                p.price == 0 ? 'Contact' : currencyProvider.formatPrice(p.price),
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: theme.textTheme.titleLarge?.color,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.bold),
                               ),
-                            ],
-                            const Spacer(),
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 5),
@@ -195,16 +263,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const Icon(Icons.location_on,
                             size: 14, color: AppColors.textMuted),
                         const SizedBox(width: 4),
-                        Text(p.location,
+                        Expanded(
+                          child: Text(
+                            '${p.city}, Pakistan',
                             style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 13)),
+                                color: AppColors.textMuted, fontSize: 13),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ]),
                       const SizedBox(height: 12),
 
                       GestureDetector(
                         onTap: () {
-                          final ok = AppState().toggleCompare(p);
-                          if (!ok && !_inCompare) {
+                          final ok = compareProvider.toggleCompare(p);
+                          if (!ok && !inCompare) {
                             ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content:
@@ -213,9 +287,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(_inCompare
-                                    ? 'Added to compare list'
-                                    : 'Removed from compare'),
+                                content: Text(inCompare
+                                    ? 'Removed from compare'
+                                    : 'Added to compare list'),
                                 backgroundColor: AppColors.gold,
                                 duration: const Duration(seconds: 1),
                               ),
@@ -226,36 +300,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: _inCompare
-                                ? AppColors.gold.withOpacity(0.15)
-                                : AppColors.surface,
+                            color: inCompare
+                                ? AppColors.gold.withValues(alpha: 0.15)
+                                : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color: _inCompare
+                                color: inCompare
                                     ? AppColors.gold
-                                    : AppColors.divider),
+                                    : (isDark ? AppColors.divider : AppColors.dividerLightMode)),
                           ),
                           child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                    _inCompare
+                                    inCompare
                                         ? Icons.check_circle
                                         : Icons.compare_arrows,
                                     size: 16,
-                                    color: _inCompare
+                                    color: inCompare
                                         ? AppColors.gold
                                         : AppColors.textMuted),
                                 const SizedBox(width: 6),
                                 Text(
-                                    _inCompare
-                                        ? 'In Compare List'
-                                        : '+ Add to Compare',
+                                    inCompare
+                                        ? 'In Comparison'
+                                        : 'Add to Compare',
                                     style: TextStyle(
-                                        color: _inCompare
+                                        color: inCompare
                                             ? AppColors.gold
-                                            : AppColors.textMuted,
-                                        fontSize: 13,
+                                            : theme.textTheme.bodyMedium?.color,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w500)),
                               ]),
                         ),
@@ -264,7 +338,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: AppColors.divider, height: 1),
+                Divider(color: isDark ? AppColors.divider : AppColors.dividerLightMode, height: 1),
 
                 if (p.description.isNotEmpty) ...[
                   const SectionHeader(title: 'Description'),
@@ -275,8 +349,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         children: [
                           Text(
                             p.description,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary,
+                            style: TextStyle(
+                                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                                 fontSize: 14,
                                 height: 1.6),
                             maxLines: _descExpanded ? null : 3,
@@ -299,23 +373,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ]),
                   ),
-                  const Divider(color: AppColors.divider, height: 24),
+                  Divider(color: isDark ? AppColors.divider : AppColors.dividerLightMode, height: 24),
                 ],
 
                 if (p.specifications.isNotEmpty) ...[
                   const SectionHeader(title: 'Specifications'),
-                  _buildSpecsTable(p.specifications),
+                  _buildSpecsTable(p.specifications, theme, isDark),
+                  const SizedBox(height: 8),
+                ],
+
+                if (p.isAuction) ...[
+                  const SectionHeader(title: 'Auction & Bidding'),
+                  _buildAuctionCard(p, theme, isDark),
+                  const SizedBox(height: 8),
+                ],
+
+                if (p.isJob) ...[
+                  const SectionHeader(title: 'Job Information'),
+                  _buildJobCard(p, theme, isDark),
                   const SizedBox(height: 8),
                 ],
 
                 const SectionHeader(title: 'Seller'),
-                _buildSellerCard(p),
+                _buildSellerCard(p, theme, isDark),
+
 
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Column(children: [
                     GestureDetector(
-                      onTap: _showReportDialog,
+                      onTap: () => _showReportDialog(context),
                       child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -352,19 +439,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 SectionHeader(
                     title: 'Similar Products',
                     actionText: 'See All',
-                    onAction: () => Navigator.pop(context)),
-                ...SampleData.products
-                    .where((x) =>
-                x.category == p.category && x.id != p.id)
-                    .take(3)
-                    .map((prod) => ProductCard(
-                  product: prod,
-                  onTap: () => Navigator.pushReplacement(context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              ProductDetailScreen(product: prod))),
-                  onCompare: () {},
-                )),
+                    onAction: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ListingScreen(categoryTitle: p.category)))),
+                Consumer<ProductProvider>(
+                  builder: (context, provider, _) {
+                    final similar = provider.products
+                        .where((x) => x.category == p.category && x.id != p.id)
+                        .take(3)
+                        .toList();
+                    
+                    if (similar.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Text('No similar products found', 
+                            style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
+                      );
+                    }
+
+                    return Column(
+                      children: similar.map((prod) => ProductCard(
+                        product: prod,
+                        onTap: () => Navigator.pushReplacement(context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    ProductDetailScreen(product: prod))),
+                        onCompare: () {},
+                      )).toList(),
+                    );
+                  },
+                ),
                 const SizedBox(height: 20),
               ],
             ),
@@ -372,35 +477,116 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
           Positioned(
             bottom: 0, left: 0, right: 0,
-            child: ContactActionButtons(
-              onCall: () => _showCallDialog(p),
-              onWhatsApp: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Opening WhatsApp with ${p.sellerPhone}'),
-                      backgroundColor: AppColors.green)),
-              onChat: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ConversationScreen(chat: {
-                    'name': p.sellerName,
-                    'avatar': '👤',
-                    'isOnline': true,
-                    'lastMessage':
-                    'Hi, is "${p.title.length > 30 ? p.title.substring(0, 30) : p.title}…" still available?',
-                    'time': 'now',
-                    'unread': 0,
-                  }),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (context.watch<AuthProvider>().userModel?.isAdmin == true && widget.product.status == 'pending')
+                  Container(
+                    color: theme.cardTheme.color,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _updateStatus(context, 'approved'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _updateStatus(context, 'rejected'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            child: const Text('Disapprove', style: TextStyle(color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ContactActionButtons(
+                  onCall: _launchCaller,
+                  onWhatsApp: _launchWhatsApp,
+                  onChat: () async {
+                final auth = context.read<AuthProvider>();
+                final chatProvider = context.read<ChatProvider>();
+                final t = context.read<LanguageProvider>().t;
 
-  Widget _buildGallery(ProductModel p) {
+                if (!auth.isAuthenticated) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(t['login_prompt'] ?? 'Please sign in to message the seller'),
+                    backgroundColor: AppColors.orange,
+                  ));
+                  return;
+                }
+
+                if (auth.firebaseUser!.uid == p.sellerId) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('This is your own listing. You cannot chat with yourself.'),
+                    backgroundColor: AppColors.orange,
+                  ));
+                  return;
+                }
+
+                ConversationModel? conv = chatProvider.findConversation(
+                  auth.firebaseUser!.uid,
+                  p.sellerId,
+                  p.id,
+                );
+
+                if (conv == null) {
+                  // Create new conversation model
+                  final newConv = ConversationModel(
+                    id: '', // Will be set by repository
+                    participants: [auth.firebaseUser!.uid, p.sellerId],
+                    participantNames: {
+                      auth.firebaseUser!.uid: auth.userModel?.name ?? 'Buyer',
+                      p.sellerId: p.sellerName,
+                    },
+                    participantAvatars: {
+                      auth.firebaseUser!.uid: auth.userModel?.avatarUrl ?? '',
+                      p.sellerId: '', // Ideally fetch seller avatar
+                    },
+                    lastMessage: 'Interested in ${p.title}',
+                    lastMessageAt: DateTime.now(),
+                    lastSenderId: auth.firebaseUser!.uid,
+                    unreadCount: {p.sellerId: 1},
+                    productId: p.id,
+                    productTitle: p.title,
+                    productImageUrl: p.imageUrls.isNotEmpty ? p.imageUrls[0] : '',
+                  );
+
+                  try {
+                    final id = await chatProvider.startConversation(newConv);
+                    conv = newConv.copyWith(id: id);
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Error starting conversation: $e'),
+                      backgroundColor: Colors.redAccent,
+                    ));
+                    return;
+                  }
+                }
+
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ConversationScreen(conversation: conv!),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+);
+}
+
+  Widget _buildGallery(ProductModel p, bool isDark) {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -425,59 +611,89 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.w700)),
             ),
+          if (p.isBoosted) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                  color: AppColors.orange,
+                  borderRadius: BorderRadius.circular(6)),
+              child: const Text('🚀 Boosted',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ],
         ]),
       ),
       Container(
         height: 280,
         width: double.infinity,
-        color: AppColors.surface,
-        child: Center(
+        color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
+        child: p.imageUrls.isNotEmpty
+            ? Hero(
+          tag: 'product_image_${p.id}',
+          child: Image.network(
+            p.imageUrls[_selectedImageIndex < p.imageUrls.length ? _selectedImageIndex : 0],
+            fit: BoxFit.cover,
+            cacheWidth: 800, // Optimize memory for detail view
+            errorBuilder: (ctx, _, __) => Icon(_catIcon(p.category),
+                size: 100, color: AppColors.textMuted.withValues(alpha: 0.6)),
+            loadingBuilder: (ctx, child, lp) {
+              if (lp == null) return child;
+              return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+            },
+          ),
+        )
+            : Center(
           child: Icon(_catIcon(p.category),
-              size: 100, color: AppColors.textMuted.withOpacity(0.6)),
+              size: 100, color: AppColors.textMuted.withValues(alpha: 0.6)),
         ),
       ),
-      Container(
-        height: 72,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: 5,
-          itemBuilder: (_, i) {
-            final sel = _selectedImageIndex == i;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedImageIndex = i),
-              child: Container(
-                width: 64,
-                margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: sel
-                        ? AppColors.gold
-                        : AppColors.divider.withOpacity(0.4),
-                    width: sel ? 2 : 1,
+      if (p.imageUrls.length > 1)
+        Container(
+          height: 72,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: p.imageUrls.length,
+            itemBuilder: (_, i) {
+              final sel = _selectedImageIndex == i;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedImageIndex = i),
+                child: Container(
+                  width: 64,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surface : AppColors.cardLightMode,
+                    borderRadius: BorderRadius.circular(8),
+                    image: DecorationImage(
+                      image: NetworkImage(p.imageUrls[i]),
+                      fit: BoxFit.cover,
+                    ),
+                    border: Border.all(
+                      color: sel
+                          ? AppColors.gold
+                          : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.4),
+                      width: 2,
+                    ),
                   ),
                 ),
-                child: Center(
-                  child: Icon(_catIcon(p.category),
-                      size: 28, color: AppColors.textMuted),
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
     ]);
   }
 
-  Widget _buildSpecsTable(Map<String, String> specs) {
+  Widget _buildSpecsTable(Map<String, String> specs, ThemeData theme, bool isDark) {
     final entries = specs.entries.toList();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.divider.withOpacity(0.5))),
+          border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
       child: Column(
         children: entries.asMap().entries.map((e) {
           final i = e.key;
@@ -486,7 +702,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: i % 2 == 0 ? AppColors.surface : AppColors.card,
+              color: i % 2 == 0 ? theme.colorScheme.surface : theme.cardTheme.color,
               borderRadius: i == 0
                   ? const BorderRadius.vertical(top: Radius.circular(10))
                   : i == entries.length - 1
@@ -497,11 +713,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Row(children: [
               Expanded(
                   child: Text(spec.key,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14))),
+                      style: TextStyle(
+                          color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 14))),
               Text(spec.value,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
+                  style: TextStyle(
+                      color: theme.textTheme.bodyMedium?.color,
                       fontSize: 14,
                       fontWeight: FontWeight.w500)),
             ]),
@@ -511,12 +727,240 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildSellerCard(ProductModel p) {
+  Widget _buildAuctionCard(ProductModel p, ThemeData theme, bool isDark) {
+    final timeLeft = p.auctionEndTime?.difference(DateTime.now());
+    final isEnded = timeLeft == null || timeLeft.isNegative;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Current Bid', style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 12)),
+                  Text(context.read<CurrencyProvider>().formatPrice(p.currentBid ?? p.price), style: const TextStyle(color: AppColors.gold, fontSize: 22, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Time Left', style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 12)),
+                  Text(
+                    isEnded ? 'Auction Ended' : '${timeLeft.inDays}d ${timeLeft.inHours % 24}h ${timeLeft.inMinutes % 60}m',
+                    style: TextStyle(color: isEnded ? Colors.red : AppColors.green, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (!isEnded)
+            ElevatedButton(
+              onPressed: () => _showBidDialog(p),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                minimumSize: const Size(double.infinity, 44),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Place a Bid', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showBidDialog(ProductModel p) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final ctrl = TextEditingController();
+    final currentBid = p.currentBid ?? p.price;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
+        title: const Text('Place Your Bid', style: TextStyle(color: AppColors.gold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Current Bid: ${context.read<CurrencyProvider>().formatPrice(currentBid)}', style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode),
+              decoration: InputDecoration(
+                hintText: 'Enter amount > ${currentBid.toStringAsFixed(0)}',
+                hintStyle: const TextStyle(color: AppColors.textMuted),
+                filled: true,
+                fillColor: isDark ? AppColors.surface : Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final bid = double.tryParse(ctrl.text);
+              if (bid == null || bid <= currentBid) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bid must be higher than current bid'), backgroundColor: AppColors.orange));
+                return;
+              }
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bid placed successfully!'), backgroundColor: AppColors.green));
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: const Text('Confirm Bid', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJobCard(ProductModel p, ThemeData theme, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _JobRow(label: 'Company', value: p.companyName ?? 'N/A', icon: Icons.business),
+          _JobRow(label: 'Job Type', value: p.jobType ?? 'N/A', icon: Icons.work_outline),
+          _JobRow(label: 'Salary', value: p.salaryRange ?? 'Not disclosed', icon: Icons.payments_outlined),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _applyForJob(p),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              minimumSize: const Size(double.infinity, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Apply Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyForJob(ProductModel p) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to apply'), backgroundColor: AppColors.orange));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Apply for Position'),
+        content: const Text('Your profile and CV will be sent to the employer. Continue?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Application sent successfully!'), backgroundColor: AppColors.green));
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please login to report'),
+        backgroundColor: AppColors.orange,
+      ));
+      return;
+    }
+
+    ReportReason selectedReason = ReportReason.scam;
+    final descCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Report Product'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...ReportReason.values.map((reason) => RadioListTile<ReportReason>(
+                  title: Text(reason.name.toUpperCase()),
+                  value: reason,
+                  // ignore: deprecated_member_use
+                  groupValue: selectedReason,
+                  // ignore: deprecated_member_use
+                  onChanged: (v) => setDialogState(() => selectedReason = v!),
+                )),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(hintText: 'Describe the issue...'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final report = ReportModel(
+                  id: '',
+                  reporterId: auth.firebaseUser!.uid,
+                  targetId: widget.product.id,
+                  targetType: ReportType.product,
+                  reason: selectedReason,
+                  description: descCtrl.text.trim(),
+                  timestamp: DateTime.now(),
+                );
+                await context.read<ReportProvider>().submitReport(report);
+                if (!context.mounted) return;
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Report submitted successfully'),
+                  backgroundColor: AppColors.green,
+                ));
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildSellerCard(ProductModel p, ThemeData theme, bool isDark) {
     return GestureDetector(
       onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
               builder: (_) => SellerProfileScreen(
+                sellerId: p.sellerId,
                 sellerName: p.sellerName,
                 sellerPhone: p.sellerPhone,
                 sellerType: p.sellerType,
@@ -526,9 +970,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider.withOpacity(0.4)),
+          border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.4)),
         ),
         child: Row(children: [
           Container(
@@ -537,7 +981,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             decoration: BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.gold.withOpacity(0.5)),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
             ),
             child: Center(
               child: Text(
@@ -557,8 +1001,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     Row(children: [
                       Flexible(
                         child: Text(p.sellerName,
-                            style: const TextStyle(
-                                color: AppColors.textPrimary,
+                            style: TextStyle(
+                                color: theme.textTheme.bodyLarge?.color,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis),
@@ -576,89 +1020,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         style: const TextStyle(
                             color: AppColors.textMuted, fontSize: 11)),
                   ])),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            const Text('View Profile',
+          const Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('View Profile',
                 style: TextStyle(
                     color: AppColors.gold,
                     fontSize: 12,
                     fontWeight: FontWeight.w500)),
-            const SizedBox(height: 2),
-            const Icon(Icons.chevron_right,
+            SizedBox(height: 2),
+            Icon(Icons.chevron_right,
                 color: AppColors.textMuted, size: 16),
           ]),
         ]),
-      ),
-    );
-  }
-
-  void _showCallDialog(ProductModel p) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title: const Text('Call Seller',
-            style: TextStyle(color: Colors.white)),
-        content: Text('Call ${p.sellerName} at\n${p.sellerPhone}',
-            style: const TextStyle(
-                color: AppColors.textSecondary, height: 1.5)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppColors.textMuted))),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Calling ${p.sellerPhone}…'),
-                  backgroundColor: AppColors.orange));
-            },
-            style:
-            ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
-            child: const Text('Call',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReportDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title: const Text('Report Listing',
-            style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Why are you reporting?',
-              style: TextStyle(color: AppColors.textSecondary)),
-          const SizedBox(height: 12),
-          ...['Scam / Fraud', 'Wrong Category', 'Inappropriate Content',
-            'Duplicate Ad', 'Other']
-              .map((r) => ListTile(
-            leading: const Icon(Icons.radio_button_unchecked,
-                color: AppColors.textMuted, size: 18),
-            title: Text(r,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14)),
-            dense: true,
-            onTap: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content:
-                      Text('Report submitted. Thank you!'),
-                      backgroundColor: AppColors.green));
-            },
-          )),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppColors.textMuted))),
-        ],
       ),
     );
   }
@@ -666,30 +1038,98 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
 class _SellerTypeBadge extends StatelessWidget {
   final String type;
-  const _SellerTypeBadge({required this.type});
+  final bool isVerified;
+  final String sellerTier;
+
+  const _SellerTypeBadge({
+    required this.type,
+    this.isVerified = false,
+    this.sellerTier = 'free',
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isBusiness = type.toLowerCase() == 'business';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: (isBusiness ? AppColors.gold : Colors.blue).withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: (isBusiness ? AppColors.gold : Colors.blue)
-                .withOpacity(0.4)),
+        color: isDark ? AppColors.primaryDark : AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(isBusiness ? Icons.business : Icons.person,
-            size: 12,
-            color: isBusiness ? AppColors.gold : Colors.blue),
-        const SizedBox(width: 4),
-        Text(type,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (type == 'business') ...[
+            const Icon(Icons.store, size: 14, color: AppColors.gold),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            type == 'business' ? 'Business' : 'Personal',
             style: TextStyle(
-                color: isBusiness ? AppColors.gold : Colors.blue,
-                fontSize: 12)),
-      ]),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : AppColors.primary,
+            ),
+          ),
+          if (isVerified) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.verified, size: 14, color: AppColors.gold),
+          ],
+        ],
+      ),
     );
   }
 }
+
+class _JobRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _JobRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.gold),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

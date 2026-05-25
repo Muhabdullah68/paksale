@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
-import '../main.dart';
 import '../models/models.dart';
+import '../providers/auth_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/favorites_provider.dart';
+import '../providers/chat_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../services/language_provider.dart';
-import 'product_detail_screen.dart';
-import 'post_ad_screen.dart';
+import '../services/theme_provider.dart';
+import '../services/currency_provider.dart';
 import 'listing_screen.dart';
 import 'categories_screen.dart';
+import 'post_ad_screen.dart';
+import 'product_detail_screen.dart';
+import 'admin/reports_screen.dart';
+import 'admin/admin_dashboard.dart';
 
 // ─── Main Account Screen ──────────────────────────────────────────────────────
 class AccountScreen extends StatefulWidget {
@@ -18,30 +27,30 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
-  bool _isLoggedIn = false;
-  UserModel? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    // Rebuild when language changes
-    AppLanguage().addListener(_onLangChanged);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.isAuthenticated) {
+        context.read<ProductProvider>().fetchUserProducts(auth.firebaseUser!.uid);
+      }
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    AppLanguage().removeListener(_onLangChanged);
     super.dispose();
   }
 
-  void _onLangChanged() => setState(() {});
-
-  Map<String, String> get t => AppLanguage().t;
-  bool get _isAr => AppLanguage().isArabic;
+  Map<String, String> get _t => context.read<LanguageProvider>().t;
+  bool get _isArLang => context.read<LanguageProvider>().isArabic;
 
   // ── Auth ─────────────────────────────────────────────────────────────────
   void _showLoginSheet() {
@@ -49,13 +58,7 @@ class _AccountScreenState extends State<AccountScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AuthSheet(
-        isRegister: false,
-        onLoginSuccess: (user) => setState(() {
-          _isLoggedIn = true;
-          _currentUser = user;
-        }),
-      ),
+      builder: (_) => const _AuthSheet(isRegister: false),
     );
   }
 
@@ -64,42 +67,40 @@ class _AccountScreenState extends State<AccountScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AuthSheet(
-        isRegister: true,
-        onLoginSuccess: (user) => setState(() {
-          _isLoggedIn = true;
-          _currentUser = user;
-        }),
-      ),
+      builder: (_) => const _AuthSheet(isRegister: true),
     );
   }
 
   void _logout() {
+    final auth = context.read<AuthProvider>();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = _t;
+    final isAr = _isArLang;
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         title: Text(t['logout'] ?? 'Logout',
-            style: const TextStyle(color: Colors.white)),
-        content: Text(_isAr
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+        content: Text(isAr
             ? 'هل أنت متأكد من تسجيل الخروج؟'
             : 'Are you sure you want to logout?',
-            style: const TextStyle(color: AppColors.textSecondary)),
+            style: TextStyle(color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(t['cancel'] ?? 'Cancel',
-                style: const TextStyle(color: AppColors.textMuted)),
+                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() {
-                _isLoggedIn = false;
-                _currentUser = null;
-              });
+              context.read<ProductProvider>().clearUserProducts();
+              auth.signOut();
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(_isAr
+                content: Text(isAr
                     ? 'تم تسجيل الخروج بنجاح'
                     : 'Logged out successfully'),
                 backgroundColor: AppColors.gold,
@@ -117,35 +118,40 @@ class _AccountScreenState extends State<AccountScreen>
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      // RTL for Arabic
-      textDirection: _isAr ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.primary,
-          title: const AppLogo(),
-          actions: [
-            if (_isLoggedIn)
-              IconButton(
-                icon: const Icon(Icons.settings_outlined, color: Colors.white),
-                onPressed: _showQuickSettings,
-              ),
+    final auth = context.watch<AuthProvider>();
+    final isLoggedIn = auth.isAuthenticated;
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
+    final isAr = context.watch<LanguageProvider>().isArabic;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        title: const AppLogo(),
+        actions: [
+          if (isLoggedIn)
             IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-              onPressed: () {},
+              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              onPressed: () => _showQuickSettings(t),
             ),
-          ],
-        ),
-        body: _isLoggedIn ? _buildLoggedIn() : _buildGuest(),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
       ),
+      body: isLoggedIn ? _buildLoggedIn(auth.userModel, t, isAr) : _buildGuest(t),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  GUEST VIEW
   // ══════════════════════════════════════════════════════════════════════════
-  Widget _buildGuest() {
+  Widget _buildGuest(Map<String, String> t) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final lang = context.watch<LanguageProvider>();
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -153,11 +159,13 @@ class _AccountScreenState extends State<AccountScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.primaryDark],
+                colors: isDark 
+                    ? [AppColors.primary, AppColors.primaryDark] 
+                    : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
               ),
             ),
             child: Column(
@@ -167,16 +175,16 @@ class _AccountScreenState extends State<AccountScreen>
                   height: 88,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.card,
+                    color: theme.cardTheme.color,
                     border: Border.all(color: AppColors.gold, width: 2.5),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(Icons.person_outline,
-                        size: 48, color: AppColors.textMuted),
+                        size: 48, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(t['welcome'] ?? 'Welcome to QatarSale',
+                Text(t['welcome'] ?? 'Welcome to PakistanSale',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -186,7 +194,7 @@ class _AccountScreenState extends State<AccountScreen>
                 Text(t['login_prompt'] ?? 'Login to manage your account',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                        color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 24),
                 Row(
                   children: [
@@ -252,7 +260,7 @@ class _AccountScreenState extends State<AccountScreen>
                       builder: (_) => const ListingScreen(
                           categoryTitle: 'Featured'))),
             ),
-          ]),
+          ], t),
 
           // JOB CENTER section
           _buildSection(t['job_center'] ?? 'JOB CENTER', [
@@ -272,7 +280,7 @@ class _AccountScreenState extends State<AccountScreen>
               badge: 'New',
               onTap: () => _showCvUploadSheet(),
             ),
-          ]),
+          ], t),
 
           // INFORMATION section
           _buildSection(t['information'] ?? 'INFORMATION', [
@@ -280,7 +288,7 @@ class _AccountScreenState extends State<AccountScreen>
               icon: Icons.language,
               label: t['language'] ?? 'Language',
               trailing: Text(
-                AppLanguage().isArabic ? 'العربية' : 'English',
+                lang.isUrdu ? 'اردو' : (lang.isArabic ? 'العربية' : 'English'),
                 style: const TextStyle(
                     color: AppColors.gold, fontSize: 13),
               ),
@@ -293,9 +301,9 @@ class _AccountScreenState extends State<AccountScreen>
             ),
             _MenuRow(
               icon: Icons.info_outline,
-              label: t['about'] ?? 'About QatarSale',
+              label: t['about'] ?? 'About PakistanSale',
               onTap: () => _showInfoDialog(
-                t['about'] ?? 'About QatarSale',
+                t['about'] ?? 'About PakistanSale',
                 t['about_content'] ?? '',
               ),
             ),
@@ -307,7 +315,7 @@ class _AccountScreenState extends State<AccountScreen>
                 t['privacy_content'] ?? '',
               ),
             ),
-          ]),
+          ], t),
 
           const SizedBox(height: 80),
         ],
@@ -318,10 +326,29 @@ class _AccountScreenState extends State<AccountScreen>
   // ══════════════════════════════════════════════════════════════════════════
   //  LOGGED-IN VIEW
   // ══════════════════════════════════════════════════════════════════════════
-  Widget _buildLoggedIn() {
+  Widget _buildLoggedIn(UserModel? user, Map<String, String> t, bool isAr) {
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: AppColors.gold),
+            const SizedBox(height: 16),
+            Text(
+              t['loading_profile'] ?? 'Loading Profile...',
+              style: const TextStyle(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+    
     return NestedScrollView(
-      headerSliverBuilder: (ctx, _) => [
-        SliverToBoxAdapter(child: _buildProfileHeader()),
+      headerSliverBuilder: (ctx, innerBoxIsScrolled) => [
+        SliverOverlapAbsorber(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(ctx),
+          sliver: SliverToBoxAdapter(child: _buildProfileHeader(user, t)),
+        ),
         SliverPersistentHeader(
           pinned: true,
           delegate: _TabBarDelegate(
@@ -330,7 +357,7 @@ class _AccountScreenState extends State<AccountScreen>
               indicatorColor: AppColors.gold,
               indicatorWeight: 3,
               labelColor: AppColors.gold,
-              unselectedLabelColor: AppColors.textMuted,
+              unselectedLabelColor: Colors.white70,
               labelStyle: const TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w600),
               tabs: [
@@ -348,7 +375,7 @@ class _AccountScreenState extends State<AccountScreen>
           _MyAdsTab(t: t),
           _FavoritesTab(t: t),
           _SettingsTab(
-            user: _currentUser!,
+            user: user,
             onLogout: _logout,
             t: t,
             onLanguageChanged: () => setState(() {}),
@@ -358,16 +385,27 @@ class _AccountScreenState extends State<AccountScreen>
     );
   }
 
-  Widget _buildProfileHeader() {
-    final user = _currentUser!;
+  Widget _buildProfileHeader(UserModel user, Map<String, String> t) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final productProvider = context.watch<ProductProvider>();
+    final userAds = productProvider.getMyAds(user.id);
+    
+    final activeAdsCount = userAds.where((p) => p.status == 'approved' && !p.isSold).length;
+    final soldAdsCount = userAds.where((p) => p.isSold).length;
+    final boostedAdsCount = userAds.where((p) => p.isBoosted).length;
+    final totalViews = userAds.fold(0, (sum, p) => sum + p.views);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryDark],
+          colors: isDark 
+              ? [AppColors.primary, AppColors.primaryDark] 
+              : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
         ),
       ),
       child: Column(
@@ -382,7 +420,7 @@ class _AccountScreenState extends State<AccountScreen>
                     height: 76,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.card,
+                      color: isDark ? AppColors.surface : AppColors.cardLightMode,
                       border: Border.all(color: AppColors.gold, width: 2.5),
                     ),
                     child: Center(
@@ -401,7 +439,7 @@ class _AccountScreenState extends State<AccountScreen>
                     bottom: 2,
                     right: 2,
                     child: GestureDetector(
-                      onTap: () => _showEditProfileSheet(),
+                      onTap: () => _showEditProfileSheet(user),
                       child: Container(
                         width: 24,
                         height: 24,
@@ -409,7 +447,7 @@ class _AccountScreenState extends State<AccountScreen>
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: AppColors.primaryDark, width: 2),
+                              color: isDark ? AppColors.primaryDark : Colors.white, width: 2),
                         ),
                         child: const Icon(Icons.edit,
                             size: 13, color: Colors.white),
@@ -445,13 +483,13 @@ class _AccountScreenState extends State<AccountScreen>
                     const SizedBox(height: 4),
                     Text(user.email,
                         style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13),
+                            color: Colors.white70, fontSize: 13),
                         overflow: TextOverflow.ellipsis),
                     if (user.phone.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(user.phone,
                           style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 12)),
+                              color: Colors.white70, fontSize: 12)),
                     ],
                   ],
                 ),
@@ -462,25 +500,42 @@ class _AccountScreenState extends State<AccountScreen>
           Container(
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
               border:
-              Border.all(color: Colors.white.withOpacity(0.1)),
+              Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
-            child: Row(
-              children: [
-                _StatItem(
-                    label: t['active_ads'] ?? 'Active Ads',
-                    value: '${AppState().myAds.length}'),
-                _VertDivider(),
-                _StatItem(
-                    label: t['favorites'] ?? 'Favorites',
-                    value: '${AppState().favorites.length}'),
-                _VertDivider(),
-                _StatItem(label: t['views'] ?? 'Views', value: '1.2K'),
-                _VertDivider(),
-                _StatItem(label: t['rating'] ?? 'Rating', value: '4.8 ⭐'),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _StatItem(
+                      label: t['active_ads'] ?? 'Active Ads',
+                      value: '$activeAdsCount'),
+                  _VertDivider(),
+                  Consumer<FavoritesProvider?>(
+                    builder: (context, FavoritesProvider? favProvider, _) {
+                      return _StatItem(
+                        label: t['favorites'] ?? 'Favorites',
+                        value: '${favProvider?.favoriteIds.length ?? 0}');
+                    },
+                  ),
+                  _VertDivider(),
+                  _StatItem(label: t['views'] ?? 'Views', value: '$totalViews'),
+                  _VertDivider(),
+                  Consumer<ChatProvider>(
+                    builder: (context, ChatProvider chatProvider, _) {
+                      return _StatItem(
+                        label: t['chats'] ?? 'Chats', 
+                        value: '${chatProvider.conversations.length}');
+                    },
+                  ),
+                  _VertDivider(),
+                  _StatItem(label: t['sold_items'] ?? 'Sold', value: '$soldAdsCount'),
+                  _VertDivider(),
+                  _StatItem(label: t['boost_perf'] ?? 'Boosts', value: '$boostedAdsCount'),
+                ],
+              ),
             ),
           ),
         ],
@@ -488,8 +543,11 @@ class _AccountScreenState extends State<AccountScreen>
     );
   }
 
+
   // ── Shared Section Builder ────────────────────────────────────────────────
-  Widget _buildSection(String title, List<_MenuRow> rows) {
+  Widget _buildSection(String title, List<_MenuRow> rows, Map<String, String> t) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -497,14 +555,21 @@ class _AccountScreenState extends State<AccountScreen>
           width: double.infinity,
           padding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: AppColors.surface,
-          child: Text(title,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w600,
-              )),
+          color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                    color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+                    fontSize: 11,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w600,
+                  )),
+              if (title == (t['information'] ?? 'INFORMATION'))
+                _ThemeToggle(),
+            ],
+          ),
         ),
         ...rows,
       ],
@@ -513,7 +578,7 @@ class _AccountScreenState extends State<AccountScreen>
 
   // ── Sheets / Dialogs ──────────────────────────────────────────────────────
 
-  void _showQuickSettings() {
+  void _showQuickSettings(Map<String, String> t) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -522,23 +587,24 @@ class _AccountScreenState extends State<AccountScreen>
     );
   }
 
-  void _showEditProfileSheet() {
+  void _showEditProfileSheet(UserModel user) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _EditProfileSheet(
-        user: _currentUser!,
-        t: t,
-        onSave: (updated) => setState(() => _currentUser = updated),
+        user: user,
+        t: _t,
+        onSave: (updated) {},
       ),
     );
   }
 
   void _showLanguagePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
@@ -549,21 +615,23 @@ class _AccountScreenState extends State<AccountScreen>
   }
 
   void _showInfoDialog(String title, String content) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text(title,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
                 fontSize: 17,
                 fontWeight: FontWeight.w600)),
         content: SingleChildScrollView(
           child: Text(content,
-              style: const TextStyle(
-                  color: AppColors.textSecondary,
+              style: TextStyle(
+                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                   fontSize: 13,
                   height: 1.6)),
         ),
@@ -572,7 +640,7 @@ class _AccountScreenState extends State<AccountScreen>
             onPressed: () => Navigator.pop(ctx),
             style:
             ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: Text(t['close'] ?? 'Close',
+            child: Text(_t['close'] ?? 'Close',
                 style: const TextStyle(color: Colors.white)),
           ),
         ],
@@ -581,25 +649,27 @@ class _AccountScreenState extends State<AccountScreen>
   }
 
   void _showHelpSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _HelpSheet(t: t),
+      builder: (_) => _HelpSheet(t: _t),
     );
   }
 
   void _showCvUploadSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _CvUploadSheet(t: t),
+      builder: (_) => _CvUploadSheet(t: _t),
     );
   }
 }
@@ -619,26 +689,21 @@ class _MyAdsTabState extends State<_MyAdsTab> {
   String _filter = 'All';
 
   @override
-  void initState() {
-    super.initState();
-    AppState().addListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    AppState().removeListener(_rebuild);
-    super.dispose();
-  }
-
-  void _rebuild() => setState(() {});
-
-  @override
   Widget build(BuildContext context) {
     final t = widget.t;
-    final ads = AppState().myAds.isNotEmpty
-        ? AppState().myAds
-        : SampleData.products.take(3).toList();
+    final auth = context.watch<AuthProvider>();
+    final productProvider = context.watch<ProductProvider>();
 
+    if (!auth.isAuthenticated) {
+      return Center(
+        child: Text(t['please_login'] ?? 'Please login to view your ads',
+            style: const TextStyle(color: AppColors.textMuted)),
+      );
+    }
+
+    final myAds = productProvider.getMyAds(auth.firebaseUser!.uid);
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
       children: [
@@ -654,12 +719,12 @@ class _MyAdsTabState extends State<_MyAdsTab> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
-                AppColors.gold.withOpacity(0.2),
-                AppColors.primary
+                AppColors.gold.withValues(alpha: 0.2),
+                isDark ? AppColors.primary : AppColors.primary.withValues(alpha: 0.1)
               ]),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: AppColors.gold.withOpacity(0.5)),
+                  color: AppColors.gold.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -671,15 +736,15 @@ class _MyAdsTabState extends State<_MyAdsTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(t['post_new_ad'] ?? 'Post a New Ad',
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                               fontSize: 15,
                               fontWeight: FontWeight.w600)),
                       Text(
                           t['reach_buyers'] ??
                               'Reach thousands of buyers',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary,
+                          style: TextStyle(
+                              color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                               fontSize: 12)),
                     ],
                   ),
@@ -696,7 +761,7 @@ class _MyAdsTabState extends State<_MyAdsTab> {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ['All', 'Active', 'Pending', 'Sold', 'Expired']
+              children: ['All', 'Active', 'Pending', 'Rejected', 'Sold']
                   .map((s) => GestureDetector(
                 onTap: () => setState(() => _filter = s),
                 child: _FilterChip(
@@ -706,7 +771,30 @@ class _MyAdsTabState extends State<_MyAdsTab> {
             ),
           ),
         ),
-        ...ads.map((ad) => _MyAdCard(product: ad, t: t)),
+        if (myAds.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 40),
+              child: Column(
+                children: [
+                  Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
+                  const SizedBox(height: 16),
+                  Text(t['no_ads_found'] ?? 'No ads found',
+                      style: const TextStyle(color: AppColors.textMuted)),
+                ],
+              ),
+            ),
+          )
+        else
+          ...myAds.where((ad) {
+            if (_filter == 'All') return true;
+            if (_filter == 'Active') return ad.status == 'approved' && !ad.isSold;
+            if (_filter == 'Pending') return ad.status == 'pending';
+            if (_filter == 'Rejected') return ad.status == 'rejected';
+            if (_filter == 'Sold') return ad.isSold;
+            return true;
+          }).map((ad) => _MyAdCard(product: ad, t: t)),
+
       ],
     );
   }
@@ -718,20 +806,43 @@ class _MyAdCard extends StatelessWidget {
 
   const _MyAdCard({required this.product, required this.t});
 
-  String _fmt(double price) => price
-      .toStringAsFixed(0)
-      .replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currencyProvider = context.watch<CurrencyProvider>();
+    
+    Color statusColor;
+    String statusText;
+    
+    if (product.isSold) {
+      statusColor = Colors.grey;
+      statusText = 'Sold';
+    } else {
+      switch (product.status) {
+        case 'pending':
+          statusColor = AppColors.orange;
+          statusText = 'Pending';
+          break;
+        case 'rejected':
+          statusColor = Colors.red;
+          statusText = 'Rejected';
+          break;
+        case 'approved':
+        default:
+          statusColor = AppColors.green;
+          statusText = 'Active';
+          break;
+      }
+    }
+
     return Container(
       margin:
       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider.withOpacity(0.4)),
+        border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -743,11 +854,20 @@ class _MyAdCard extends StatelessWidget {
                 child: Container(
                   width: 100,
                   height: 90,
-                  color: AppColors.primary.withOpacity(0.3),
-                  child: const Center(
-                    child: Icon(Icons.image,
-                        color: AppColors.textMuted, size: 32),
-                  ),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  child: product.imageUrls.isNotEmpty
+                      ? Image.network(
+                          product.imageUrls[0],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                              Icons.image,
+                              color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+                              size: 32),
+                        )
+                      : Center(
+                          child: Icon(Icons.image,
+                              color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 32),
+                        ),
                 ),
               ),
               Expanded(
@@ -760,8 +880,8 @@ class _MyAdCard extends StatelessWidget {
                         product.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
+                        style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
                             fontSize: 13,
                             fontWeight: FontWeight.w500),
                       ),
@@ -769,7 +889,7 @@ class _MyAdCard extends StatelessWidget {
                       Text(
                         product.price == 0
                             ? 'Contact'
-                            : '${_fmt(product.price)} ${product.currency}',
+                            : currencyProvider.formatPrice(product.price),
                         style: const TextStyle(
                             color: AppColors.gold,
                             fontSize: 15,
@@ -801,26 +921,27 @@ class _MyAdCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.green.withOpacity(0.15),
+                    color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppColors.green.withOpacity(0.4)),
+                        color: statusColor.withValues(alpha: 0.4)),
                   ),
-                  child: const Text('Active',
+                  child: Text(statusText,
                       style: TextStyle(
-                          color: AppColors.green,
+                          color: statusColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
           ),
+
           // Action buttons
           Container(
             padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.surface.withOpacity(0.5),
+              color: isDark ? AppColors.surface.withValues(alpha: 0.5) : AppColors.backgroundLightMode,
               borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(12)),
             ),
@@ -840,12 +961,12 @@ class _MyAdCard extends StatelessWidget {
                 _AdActionBtn(
                   icon: Icons.edit_outlined,
                   label: t['edit'] ?? 'Edit',
-                  onTap: () => ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(
-                    content: Text('Edit feature coming soon'),
-                    backgroundColor: AppColors.gold,
-                    duration: Duration(seconds: 1),
-                  )),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            PostAdScreen(productToEdit: product)),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _AdActionBtn(
@@ -870,10 +991,12 @@ class _MyAdCard extends StatelessWidget {
   }
 
   void _showBoostDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: const Text('Boost Your Ad',
@@ -882,18 +1005,22 @@ class _MyAdCard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
                 'Boost your listing to appear at the top of search results.',
                 style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13)),
+                    color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
             const SizedBox(height: 16),
-            ...['3 Days — 25 Q.R', '7 Days — 50 Q.R', '30 Days — 150 Q.R']
+            ...[
+              '3 Days — ${context.read<CurrencyProvider>().formatPrice(500)}',
+              '7 Days — ${context.read<CurrencyProvider>().formatPrice(1000)}',
+              '30 Days — ${context.read<CurrencyProvider>().formatPrice(3000)}'
+            ]
                 .map((opt) => ListTile(
               leading: const Icon(Icons.star,
                   color: AppColors.gold, size: 18),
               title: Text(opt,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14)),
               onTap: () {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -906,8 +1033,8 @@ class _MyAdCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel',
+                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
           ),
         ],
       ),
@@ -915,33 +1042,45 @@ class _MyAdCard extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title: const Text('Delete Ad',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-            'Are you sure you want to delete this ad?',
-            style: TextStyle(color: AppColors.textSecondary)),
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
+        title: Text(t['delete_ad'] ?? 'Delete Ad',
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+        content: Text(
+            t['delete_confirm'] ?? 'Are you sure you want to delete this ad?',
+            style: TextStyle(color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textMuted)),
+            child: Text(t['cancel'] ?? 'Cancel',
+                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
           ),
           ElevatedButton(
-            onPressed: () {
-              AppState().removeMyAd(product.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Ad deleted'),
-                  backgroundColor: AppColors.orange));
+              try {
+                await context.read<ProductProvider>().deleteProduct(product.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(t['ad_deleted'] ?? 'Ad deleted successfully'),
+                      backgroundColor: AppColors.orange));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red));
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orange),
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.white)),
+            child: Text(t['delete'] ?? 'Delete',
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -962,95 +1101,72 @@ class _FavoritesTab extends StatefulWidget {
 
 class _FavoritesTabState extends State<_FavoritesTab> {
   @override
-  void initState() {
-    super.initState();
-    AppState().addListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    AppState().removeListener(_rebuild);
-    super.dispose();
-  }
-
-  void _rebuild() => setState(() {});
-
-  @override
   Widget build(BuildContext context) {
     final t = widget.t;
-    final favs = AppState().favorites;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final favoritesProvider = context.watch<FavoritesProvider?>();
+    final favs = favoritesProvider?.favoriteProducts ?? [];
 
     if (favs.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite_border,
-                size: 72,
-                color: AppColors.textMuted.withOpacity(0.4)),
-            const SizedBox(height: 16),
-            Text(t['favorites'] ?? 'No Saved Items',
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            const Text('Items you favorite will appear here',
-                style: TextStyle(
-                    color: AppColors.textMuted, fontSize: 13)),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(
-                      builder: (_) => const ListingScreen())),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25)),
-              ),
-              icon: const Icon(Icons.search,
-                  color: Colors.white, size: 18),
-              label: const Text('Browse Listings',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.favorite_border,
+                  size: 72,
+                  color: AppColors.textMuted.withValues(alpha: 0.4)),
+              const SizedBox(height: 16),
+              Text(t['favorites'] ?? 'No Saved Items',
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ],
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text('Items you favorite will appear here',
+                  style: TextStyle(
+                      color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const ListingScreen())),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25)),
+                ),
+                icon: const Icon(Icons.search,
+                    color: Colors.white, size: 18),
+                label: const Text('Browse Listings',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       itemCount: favs.length,
-      itemBuilder: (ctx, i) => Dismissible(
-        key: Key(favs[i].id),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          color: AppColors.orange.withOpacity(0.8),
-          child: const Icon(Icons.delete, color: Colors.white),
-        ),
-        onDismissed: (_) {
-          AppState().removeFavorite(favs[i].id);
-          setState(() {});
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Removed from favorites'),
-              backgroundColor: AppColors.orange));
-        },
-        child: ProductCard(
-          product: favs[i],
-          showCompareButton: false,
+      itemBuilder: (ctx, i) {
+        final product = favs[i];
+        return ProductCard(
+          product: product,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (_) =>
-                    ProductDetailScreen(product: favs[i])),
+              builder: (_) => ProductDetailScreen(product: product),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1080,6 +1196,27 @@ class _SettingsTabState extends State<_SettingsTab> {
   bool _priceAlerts = true;
   bool _messageAlerts = true;
   bool _emailNotifications = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _pushNotifications = prefs.getBool('push_notifications') ?? true;
+      _priceAlerts = prefs.getBool('price_alerts') ?? true;
+      _messageAlerts = prefs.getBool('message_alerts') ?? true;
+      _emailNotifications = prefs.getBool('email_notifications') ?? false;
+    });
+  }
+
+  Future<void> _saveSetting(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
 
   Map<String, String> get t => widget.t;
 
@@ -1113,10 +1250,10 @@ class _SettingsTabState extends State<_SettingsTab> {
               padding: const EdgeInsets.symmetric(
                   horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: AppColors.orange.withOpacity(0.15),
+                color: AppColors.orange.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: AppColors.orange.withOpacity(0.4)),
+                    color: AppColors.orange.withValues(alpha: 0.4)),
               ),
               child: Text(t['unverified'] ?? 'Unverified',
                   style: const TextStyle(
@@ -1140,27 +1277,37 @@ class _SettingsTabState extends State<_SettingsTab> {
                 icon: Icons.notifications_outlined,
                 label: t['push_notifications'] ?? 'Push Notifications',
                 value: _pushNotifications,
-                onChanged: (v) =>
-                    setState(() => _pushNotifications = v),
+                onChanged: (v) {
+                  setState(() => _pushNotifications = v);
+                  _saveSetting('push_notifications', v);
+                },
               ),
               _SettingsToggle(
                 icon: Icons.trending_down,
                 label: t['price_alerts'] ?? 'Price Drop Alerts',
                 value: _priceAlerts,
-                onChanged: (v) => setState(() => _priceAlerts = v),
+                onChanged: (v) {
+                  setState(() => _priceAlerts = v);
+                  _saveSetting('price_alerts', v);
+                },
               ),
               _SettingsToggle(
                 icon: Icons.message_outlined,
                 label: t['message_alerts'] ?? 'Message Alerts',
                 value: _messageAlerts,
-                onChanged: (v) => setState(() => _messageAlerts = v),
+                onChanged: (v) {
+                  setState(() => _messageAlerts = v);
+                  _saveSetting('message_alerts', v);
+                },
               ),
               _SettingsToggle(
                 icon: Icons.email_outlined,
                 label: t['email_notifications'] ?? 'Email Notifications',
                 value: _emailNotifications,
-                onChanged: (v) =>
-                    setState(() => _emailNotifications = v),
+                onChanged: (v) {
+                  setState(() => _emailNotifications = v);
+                  _saveSetting('email_notifications', v);
+                },
               ),
             ]),
 
@@ -1171,27 +1318,32 @@ class _SettingsTabState extends State<_SettingsTab> {
               _SettingsTile(
                 icon: Icons.language,
                 label: t['language'] ?? 'Language',
-                subtitle: AppLanguage().isArabic ? 'العربية' : 'English',
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  backgroundColor: AppColors.primaryDark,
-                  shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20))),
-                  builder: (_) => _LanguagePickerSheet(
-                      onChanged: widget.onLanguageChanged),
-                ),
+                subtitle: context.watch<LanguageProvider>().isArabic ? 'العربية' : 'English',
+                onTap: () {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20))),
+                    builder: (_) => _LanguagePickerSheet(
+                        onChanged: widget.onLanguageChanged),
+                  );
+                },
               ),
               _SettingsTile(
                 icon: Icons.location_on_outlined,
                 label: t['default_location'] ?? 'Default Location',
-                subtitle: 'Doha, Qatar',
+                subtitle: 'Lahore, Pakistan',
                 onTap: () => _showLocationPicker(),
               ),
               _SettingsTile(
                 icon: Icons.currency_exchange,
                 label: t['currency'] ?? 'Currency',
-                subtitle: 'Qatari Riyal (QAR)',
+                subtitle: context.watch<CurrencyProvider>().selectedCurrency == 'Rs.' 
+                    ? 'Pakistani Rupee (Rs.)' 
+                    : 'Qatari Riyal (Q.R)',
                 onTap: () => _showCurrencyPicker(),
               ),
             ]),
@@ -1222,15 +1374,18 @@ class _SettingsTabState extends State<_SettingsTab> {
               _SettingsTile(
                 icon: Icons.help_outline,
                 label: t['help_support'] ?? 'Help & Support',
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: AppColors.primaryDark,
-                  shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20))),
-                  builder: (_) => _HelpSheet(t: t),
-                ),
+                onTap: () {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20))),
+                    builder: (_) => _HelpSheet(t: t),
+                  );
+                },
               ),
               _SettingsTile(
                 icon: Icons.info_outline,
@@ -1240,6 +1395,22 @@ class _SettingsTabState extends State<_SettingsTab> {
                 onTap: () {},
               ),
             ]),
+
+        // ADMIN
+        if (widget.user.isAdmin)
+          _SettingsSection(
+              title: 'ADMIN',
+              items: [
+                _SettingsTile(
+                  icon: Icons.admin_panel_settings_outlined,
+                  label: 'Admin Control Panel',
+                  subtitle: 'Manage Products, Members, Finance & Reports',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                  ),
+                ),
+              ]),
 
         // ACCOUNT ACTIONS
         _SettingsSection(
@@ -1270,32 +1441,34 @@ class _SettingsTabState extends State<_SettingsTab> {
     final oldCtrl = TextEditingController();
     final newCtrl = TextEditingController();
     final confCtrl = TextEditingController();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text(t['change_password'] ?? 'Change Password',
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _SimpleField(
               ctrl: oldCtrl,
-              hint: AppLanguage().isArabic
+              hint: context.read<LanguageProvider>().isArabic
                   ? 'كلمة المرور الحالية'
                   : 'Current password',
               obscure: true),
           const SizedBox(height: 10),
           _SimpleField(
               ctrl: newCtrl,
-              hint: AppLanguage().isArabic
+              hint: context.read<LanguageProvider>().isArabic
                   ? 'كلمة المرور الجديدة'
                   : 'New password',
               obscure: true),
           const SizedBox(height: 10),
           _SimpleField(
               ctrl: confCtrl,
-              hint: AppLanguage().isArabic
+              hint: context.read<LanguageProvider>().isArabic
                   ? 'تأكيد كلمة المرور'
                   : 'Confirm new password',
               obscure: true),
@@ -1305,12 +1478,12 @@ class _SettingsTabState extends State<_SettingsTab> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(t['cancel'] ?? 'Cancel',
                   style:
-                  const TextStyle(color: AppColors.textMuted))),
+                  TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode))),
           ElevatedButton(
             onPressed: () {
               if (newCtrl.text != confCtrl.text) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(AppLanguage().isArabic
+                    content: Text(context.read<LanguageProvider>().isArabic
                         ? 'كلمات المرور غير متطابقة'
                         : 'Passwords do not match'),
                     backgroundColor: AppColors.orange));
@@ -1318,7 +1491,7 @@ class _SettingsTabState extends State<_SettingsTab> {
               }
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(AppLanguage().isArabic
+                  content: Text(context.read<LanguageProvider>().isArabic
                       ? 'تم تغيير كلمة المرور ✅'
                       : 'Password changed successfully! ✅'),
                   backgroundColor: AppColors.green));
@@ -1335,37 +1508,39 @@ class _SettingsTabState extends State<_SettingsTab> {
 
   void _showVerifyPhoneDialog() {
     final otpCtrl = TextEditingController();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text(t['verify_phone'] ?? 'Verify Phone Number',
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(
-              AppLanguage().isArabic
-                  ? 'سنرسل رمزًا إلى ${widget.user.phone.isNotEmpty ? widget.user.phone : "+974 XXXX XXXX"}'
-                  : 'We\'ll send a code to ${widget.user.phone.isNotEmpty ? widget.user.phone : "+974 XXXX XXXX"}',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13)),
+              context.read<LanguageProvider>().isArabic
+                  ? 'سنرسل رمزًا إلى ${widget.user.phone.isNotEmpty ? widget.user.phone : "+92 XXX XXXXXXX"}'
+                  : 'We\'ll send a code to ${widget.user.phone.isNotEmpty ? widget.user.phone : "+92 XXX XXXXXXX"}',
+              style: TextStyle(
+                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
           const SizedBox(height: 16),
           TextField(
             controller: otpCtrl,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 6,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 20, letterSpacing: 8),
-            decoration: const InputDecoration(
+            style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color, fontSize: 20, letterSpacing: 8),
+            decoration: InputDecoration(
               hintText: '------',
               hintStyle: TextStyle(
-                  color: AppColors.textMuted, letterSpacing: 8),
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, letterSpacing: 8),
               filled: true,
-              fillColor: AppColors.card,
+              fillColor: theme.cardTheme.color,
               counterText: '',
-              border: OutlineInputBorder(
+              border: const OutlineInputBorder(
                   borderSide: BorderSide.none),
             ),
           ),
@@ -1375,12 +1550,12 @@ class _SettingsTabState extends State<_SettingsTab> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(t['cancel'] ?? 'Cancel',
                   style:
-                  const TextStyle(color: AppColors.textMuted))),
+                  TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(AppLanguage().isArabic
+                  content: Text(context.read<LanguageProvider>().isArabic
                       ? 'تم التحقق من الهاتف ✅'
                       : 'Phone verified successfully! ✅'),
                   backgroundColor: AppColors.green));
@@ -1396,13 +1571,14 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showLocationPicker() {
-    final locations = AppLanguage().isArabic
-        ? ['الدوحة', 'الريان', 'لوسيل', 'الوكرة', 'الخور', 'الخليج الغربي']
-        : ['Doha', 'Al Rayyan', 'Lusail', 'Al Wakrah', 'Al Khor', 'West Bay'];
+    final locations = context.read<LanguageProvider>().isArabic
+        ? ['لاهور', 'كاراتشي', 'إسلام أباد', 'فيصل أباد', 'روالبندي', 'مولتان']
+        : ['Lahore', 'Karachi', 'Islamabad', 'Faisalabad', 'Rawalpindi', 'Multan'];
     String selected = locations.first;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
@@ -1411,16 +1587,16 @@ class _SettingsTabState extends State<_SettingsTab> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(t['default_location'] ?? 'Default Location',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             ...locations.map((loc) => ListTile(
-              leading: const Icon(Icons.location_on_outlined,
-                  color: AppColors.textMuted),
+              leading: Icon(Icons.location_on_outlined,
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
               title: Text(loc,
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
               trailing: selected == loc
                   ? const Icon(Icons.check_circle,
                   color: AppColors.gold)
@@ -1440,15 +1616,15 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showCurrencyPicker() {
+    final currencyProvider = context.read<CurrencyProvider>();
     final currencies = [
-      {'name': 'Qatari Riyal (QAR)', 'symbol': 'Q.R'},
-      {'name': 'US Dollar (USD)', 'symbol': '\$'},
-      {'name': 'Euro (EUR)', 'symbol': '€'},
-      {'name': 'British Pound (GBP)', 'symbol': '£'},
+      {'name': 'Pakistani Rupee (Rs.)', 'symbol': 'Rs.'},
+      {'name': 'Qatari Riyal (Q.R)', 'symbol': 'Q.R'},
     ];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
@@ -1456,23 +1632,24 @@ class _SettingsTabState extends State<_SettingsTab> {
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(t['currency'] ?? 'Currency',
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
           ...currencies.map((c) => ListTile(
             title: Text(c['name']!,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 14)),
-            trailing: c['symbol'] == 'Q.R'
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14)),
+            trailing: c['symbol'] == currencyProvider.selectedCurrency
                 ? const Icon(Icons.check_circle,
                 color: AppColors.gold)
                 : null,
             onTap: () {
+              currencyProvider.setCurrency(c['symbol']!);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Currency: ${c['name']}'),
+                  content: Text('Currency changed to: ${c['name']}'),
                   backgroundColor: AppColors.gold));
             },
           )),
@@ -1485,9 +1662,10 @@ class _SettingsTabState extends State<_SettingsTab> {
     bool showPhone = true;
     bool showEmail = false;
     bool allowMessages = true;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius:
@@ -1497,25 +1675,25 @@ class _SettingsTabState extends State<_SettingsTab> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(t['privacy_settings'] ?? 'Privacy Settings',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             _PrivacyToggle(
-                AppLanguage().isArabic
+                context.read<LanguageProvider>().isArabic
                     ? 'إظهار رقم الهاتف في الإعلانات'
                     : 'Show phone number on listings',
                 showPhone,
                     (v) => setModal(() => showPhone = v)),
             _PrivacyToggle(
-                AppLanguage().isArabic
+                context.read<LanguageProvider>().isArabic
                     ? 'إظهار البريد الإلكتروني في الملف'
                     : 'Show email on profile',
                 showEmail,
                     (v) => setModal(() => showEmail = v)),
             _PrivacyToggle(
-                AppLanguage().isArabic
+                context.read<LanguageProvider>().isArabic
                     ? 'السماح بالرسائل المباشرة'
                     : 'Allow direct messages',
                 allowMessages,
@@ -1527,7 +1705,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                 onPressed: () {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(AppLanguage().isArabic
+                      content: Text(context.read<LanguageProvider>().isArabic
                           ? 'تم حفظ إعدادات الخصوصية ✅'
                           : 'Privacy settings saved ✅'),
                       backgroundColor: AppColors.green));
@@ -1545,21 +1723,23 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showInfoDialog(String title, String content) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text(title,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
                 fontSize: 17,
                 fontWeight: FontWeight.w600)),
         content: SingleChildScrollView(
           child: Text(content,
-              style: const TextStyle(
-                  color: AppColors.textSecondary,
+              style: TextStyle(
+                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                   fontSize: 13,
                   height: 1.6)),
         ),
@@ -1577,27 +1757,28 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showDeleteAccountDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text(t['delete_account'] ?? 'Delete Account',
             style: const TextStyle(color: Colors.red)),
         content: Text(
-          AppLanguage().isArabic
+          context.read<LanguageProvider>().isArabic
               ? 'هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع بياناتك وإعلاناتك ورسائلك نهائيًا.'
               : 'This action is irreversible. All your data, ads and messages will be permanently deleted.',
-          style: const TextStyle(
-              color: AppColors.textSecondary),
+          style: TextStyle(
+              color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(t['cancel'] ?? 'Cancel',
                 style:
-                const TextStyle(color: AppColors.textMuted)),
+                TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
@@ -1624,10 +1805,17 @@ class _LanguagePickerSheet extends StatefulWidget {
 }
 
 class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
-  String _selected = AppLanguage().languageCode;
+  late String _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = context.read<LanguageProvider>().languageCode;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
       child: Column(
@@ -1639,14 +1827,14 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Select Language / اختر اللغة',
+          Text('Select Language / اختر اللغة',
               style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
@@ -1659,7 +1847,7 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
             isSelected: _selected == 'en',
             onTap: () {
               setState(() => _selected = 'en');
-              AppLanguage().setLanguage('en');
+              context.read<LanguageProvider>().setLanguage('en');
               Navigator.pop(context);
               widget.onChanged();
             },
@@ -1667,14 +1855,29 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
           const SizedBox(height: 10),
           // Arabic option
           _LangOption(
-            flagEmoji: '🇶🇦',
+            flagEmoji: '🇸🇦',
             name: 'Arabic',
             nativeName: 'العربية',
             code: 'ar',
             isSelected: _selected == 'ar',
             onTap: () {
               setState(() => _selected = 'ar');
-              AppLanguage().setLanguage('ar');
+              context.read<LanguageProvider>().setLanguage('ar');
+              Navigator.pop(context);
+              widget.onChanged();
+            },
+          ),
+          const SizedBox(height: 10),
+          // Urdu option
+          _LangOption(
+            flagEmoji: '🇵🇰',
+            name: 'Urdu',
+            nativeName: 'اردو',
+            code: 'ur',
+            isSelected: _selected == 'ur',
+            onTap: () {
+              setState(() => _selected = 'ur');
+              context.read<LanguageProvider>().setLanguage('ur');
               Navigator.pop(context);
               widget.onChanged();
             },
@@ -1683,9 +1886,11 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
           Text(
             _selected == 'ar'
                 ? 'سيتم تطبيق اللغة العربية على التطبيق بالكامل'
-                : 'Language will apply across the entire app',
-            style: const TextStyle(
-                color: AppColors.textMuted, fontSize: 12),
+                : _selected == 'ur'
+                    ? 'پوری ایپ پر اردو زبان لاگو ہوگی'
+                    : 'Language will apply across the entire app',
+            style: TextStyle(
+                color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1713,6 +1918,8 @@ class _LangOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1720,11 +1927,11 @@ class _LangOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.gold.withOpacity(0.15)
-              : AppColors.card,
+              ? AppColors.gold.withValues(alpha: 0.15)
+              : theme.cardTheme.color,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.divider,
+            color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1738,13 +1945,13 @@ class _LangOption extends StatelessWidget {
                 children: [
                   Text(nativeName,
                       style: TextStyle(
-                        color: isSelected ? AppColors.gold : Colors.white,
+                        color: isSelected ? AppColors.gold : (isDark ? Colors.white : AppColors.textPrimaryLightMode),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       )),
                   Text(name,
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 12)),
+                      style: TextStyle(
+                          color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 12)),
                 ],
               ),
             ),
@@ -1767,6 +1974,8 @@ class _HelpSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final faqs = [
       {'q': t['help_q1'] ?? '', 'a': t['help_a1'] ?? ''},
       {'q': t['help_q2'] ?? '', 'a': t['help_a2'] ?? ''},
@@ -1784,14 +1993,14 @@ class _HelpSheet extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                 borderRadius: BorderRadius.circular(2)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(t['help_support'] ?? 'Help & Support',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
           ),
@@ -1804,28 +2013,28 @@ class _HelpSheet extends StatelessWidget {
                 ...faqs.map((faq) => ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   title: Text(faq['q']!,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   iconColor: AppColors.gold,
-                  collapsedIconColor: AppColors.textMuted,
+                  collapsedIconColor: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(faq['a']!,
-                          style: const TextStyle(
-                              color: AppColors.textSecondary,
+                          style: TextStyle(
+                              color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                               fontSize: 13,
                               height: 1.5)),
                     ),
                   ],
                 )),
-                const Divider(color: AppColors.divider),
+                Divider(color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                 const SizedBox(height: 8),
-                const Text('Still need help?',
+                Text('Still need help?',
                     style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLightMode,
                         fontSize: 14,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(height: 12),
@@ -1839,8 +2048,8 @@ class _HelpSheet extends StatelessWidget {
                             backgroundColor: AppColors.green));
                       },
                       style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: AppColors.divider),
+                          side: BorderSide(
+                              color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                           shape: RoundedRectangleBorder(
                               borderRadius:
                               BorderRadius.circular(10))),
@@ -1857,23 +2066,23 @@ class _HelpSheet extends StatelessWidget {
                       onPressed: () {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Email: info@jhitzone.com'),
+                            SnackBar(
+                                content: const Text(
+                                    'Email: support@pakistansale.com'),
                                 backgroundColor:
-                                AppColors.primaryDark));
+                                isDark ? AppColors.primaryDark : AppColors.primary));
                       },
                       style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: AppColors.divider),
+                          side: BorderSide(
+                              color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                           shape: RoundedRectangleBorder(
                               borderRadius:
                               BorderRadius.circular(10))),
-                      icon: const Icon(Icons.email_outlined,
-                          color: AppColors.textMuted, size: 16),
-                      label: const Text('Email Us',
+                      icon: Icon(Icons.email_outlined,
+                          color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 16),
+                      label: Text('Email Us',
                           style: TextStyle(
-                              color: AppColors.textMuted)),
+                              color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
                     ),
                   ),
                 ]),
@@ -1903,6 +2112,8 @@ class _CvUploadSheetState extends State<_CvUploadSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       child: Column(
@@ -1913,20 +2124,20 @@ class _CvUploadSheetState extends State<_CvUploadSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 20),
           Text(widget.t['cv_title'] ?? 'Upload Your CV',
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Text(widget.t['cv_body'] ?? '',
-              style: const TextStyle(
-                  color: AppColors.textSecondary,
+              style: TextStyle(
+                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                   fontSize: 13,
                   height: 1.5)),
           const SizedBox(height: 24),
@@ -1934,10 +2145,10 @@ class _CvUploadSheetState extends State<_CvUploadSheet> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.green.withOpacity(0.1),
+                color: AppColors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: AppColors.green.withOpacity(0.4)),
+                    color: AppColors.green.withValues(alpha: 0.4)),
               ),
               child: const Row(children: [
                 Icon(Icons.check_circle, color: AppColors.green),
@@ -1962,28 +2173,28 @@ class _CvUploadSheetState extends State<_CvUploadSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: theme.cardTheme.color,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                      color: AppColors.gold.withOpacity(0.5),
+                      color: AppColors.gold.withValues(alpha: 0.5),
                       style: BorderStyle.solid),
                 ),
                 child: _uploading
                     ? const Center(
                     child: CircularProgressIndicator(
                         color: AppColors.gold))
-                    : const Column(children: [
-                  Icon(Icons.upload_file,
+                    : Column(children: [
+                  const Icon(Icons.upload_file,
                       color: AppColors.gold, size: 40),
-                  SizedBox(height: 10),
-                  Text('Tap to select your CV',
+                  const SizedBox(height: 10),
+                  const Text('Tap to select your CV',
                       style: TextStyle(
                           color: AppColors.gold,
                           fontWeight: FontWeight.w600)),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text('PDF or DOCX, max 5 MB',
                       style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                           fontSize: 12)),
                 ]),
               ),
@@ -2011,10 +2222,8 @@ class _CvUploadSheetState extends State<_CvUploadSheet> {
 // ══════════════════════════════════════════════════════════════════════════════
 class _AuthSheet extends StatefulWidget {
   final bool isRegister;
-  final Function(UserModel) onLoginSuccess;
 
-  const _AuthSheet(
-      {this.isRegister = false, required this.onLoginSuccess});
+  const _AuthSheet({this.isRegister = false});
 
   @override
   State<_AuthSheet> createState() => _AuthSheetState();
@@ -2027,7 +2236,6 @@ class _AuthSheetState extends State<_AuthSheet> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   bool _obscurePassword = true;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -2045,46 +2253,67 @@ class _AuthSheetState extends State<_AuthSheet> {
   }
 
   void _submit() async {
+    final auth = context.read<AuthProvider>();
+    final lang = context.read<LanguageProvider>();
+    
     if (_emailCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please fill in all fields'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(lang.isArabic ? 'يرجى ملء جميع الحقول' : 'Please fill in all fields'),
           backgroundColor: AppColors.orange));
       return;
     }
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    setState(() => _isLoading = false);
 
-    final user = UserModel(
-      id: '1',
-      name: _isRegister
-          ? _nameCtrl.text.trim()
-          : 'Ahmed Al-Mansoori',
-      email: _emailCtrl.text.trim(),
-      phone: _isRegister
-          ? _phoneCtrl.text.trim()
-          : '+974 5512 3456',
-      isVerified: false,
-    );
-    Navigator.pop(context);
-    widget.onLoginSuccess(user);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(_isRegister
-          ? 'Account created! Welcome!'
-          : 'Welcome back!'),
-      backgroundColor: AppColors.green,
-    ));
+    try {
+      if (_isRegister) {
+        if (_nameCtrl.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(lang.isArabic ? 'يرجى إدخال الاسم' : 'Please enter your name'),
+              backgroundColor: AppColors.orange));
+          return;
+        }
+        await auth.signUp(
+          _emailCtrl.text.trim(),
+          _passwordCtrl.text.trim(),
+          _nameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+        );
+      } else {
+        await auth.signIn(_emailCtrl.text.trim(), _passwordCtrl.text.trim());
+      }
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isRegister
+              ? (lang.isArabic ? 'تم إنشاء الحساب بنجاح!' : 'Account created! Welcome!')
+              : (lang.isArabic ? 'أهلاً بك مجددًا!' : 'Welcome back!')),
+          backgroundColor: AppColors.green,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isLoading = auth.isLoading;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryDark,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : Colors.white,
         borderRadius:
-        BorderRadius.vertical(top: Radius.circular(24)),
+        const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -2096,24 +2325,24 @@ class _AuthSheetState extends State<_AuthSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.divider,
+                    color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               _isRegister ? 'Create Account' : 'Welcome Back',
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                   fontSize: 24,
                   fontWeight: FontWeight.bold),
             ),
             Text(
               _isRegister
-                  ? 'Join thousands of buyers & sellers in Qatar'
-                  : 'Login to your QatarSale account',
-              style: const TextStyle(
-                  color: AppColors.textMuted, fontSize: 13),
+                  ? 'Join thousands of buyers & sellers in Pakistan'
+                  : 'Login to your PakistanSale account',
+              style: TextStyle(
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
             ),
             const SizedBox(height: 24),
             if (_isRegister) ...[
@@ -2134,7 +2363,7 @@ class _AuthSheetState extends State<_AuthSheet> {
             if (_isRegister) ...[
               _AuthField(
                   label: 'Phone Number',
-                  hint: '+974 XXXX XXXX',
+                  hint: '+92 XXX XXXXXXX',
                   controller: _phoneCtrl,
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone),
@@ -2153,7 +2382,7 @@ class _AuthSheetState extends State<_AuthSheet> {
                   _obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: AppColors.textMuted,
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                   size: 20,
                 ),
               ),
@@ -2177,14 +2406,14 @@ class _AuthSheetState extends State<_AuthSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
+                onPressed: isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: _isLoading
+                child: isLoading
                     ? const SizedBox(
                     width: 22,
                     height: 22,
@@ -2207,8 +2436,8 @@ class _AuthSheetState extends State<_AuthSheet> {
                   _isRegister
                       ? 'Already have an account? '
                       : "Don't have an account? ",
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 13),
+                  style: TextStyle(
+                      color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
                 ),
                 GestureDetector(
                   onTap: () =>
@@ -2269,14 +2498,16 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final t = widget.t;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryDark,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : Colors.white,
         borderRadius:
-        BorderRadius.vertical(top: Radius.circular(24)),
+        const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -2288,14 +2519,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.divider,
+                    color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
             Text(t['edit_profile'] ?? 'Edit Profile',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
@@ -2307,7 +2538,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.card,
+                      color: theme.cardTheme.color,
                       border: Border.all(
                           color: AppColors.gold, width: 2),
                     ),
@@ -2353,7 +2584,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             const SizedBox(height: 12),
             _AuthField(
                 label: 'Phone',
-                hint: '+974 XXXX XXXX',
+                hint: '+92 XXX XXXXXXX',
                 controller: _phoneCtrl,
                 icon: Icons.phone_outlined),
             const SizedBox(height: 20),
@@ -2361,8 +2592,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  final updated = UserModel(
-                    id: widget.user.id,
+                  final updated = widget.user.copyWith(
                     name: _nameCtrl.text.trim().isNotEmpty
                         ? _nameCtrl.text.trim()
                         : widget.user.name,
@@ -2370,12 +2600,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                         ? _emailCtrl.text.trim()
                         : widget.user.email,
                     phone: _phoneCtrl.text.trim(),
-                    isVerified: widget.user.isVerified,
                   );
-                  widget.onSave(updated);
+                  context.read<AuthProvider>().updateProfile(updated);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(AppLanguage().isArabic
+                      content: Text(context.read<LanguageProvider>().isArabic
                           ? 'تم تحديث الملف الشخصي!'
                           : 'Profile updated!'),
                       backgroundColor: AppColors.green));
@@ -2413,12 +2642,14 @@ class _QuickSettingsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryDark,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : Colors.white,
         borderRadius:
-        BorderRadius.vertical(top: Radius.circular(24)),
+        const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2428,30 +2659,30 @@ class _QuickSettingsSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: isDark ? AppColors.divider : AppColors.dividerLightMode,
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Quick Settings',
+          Text('Quick Settings',
               style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
           ListTile(
             leading:
-            const Icon(Icons.language, color: Colors.white70),
+            Icon(Icons.language, color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode),
             title: Text(t['language'] ?? 'Language',
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
             trailing: Text(
-                AppLanguage().isArabic ? 'العربية' : 'English',
-                style: const TextStyle(color: AppColors.textMuted)),
+                context.watch<LanguageProvider>().isArabic ? 'العربية' : 'English',
+                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
             onTap: () {
               Navigator.pop(context);
               showModalBottomSheet(
                 context: context,
-                backgroundColor: AppColors.primaryDark,
+                backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
                 shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(
                         top: Radius.circular(20))),
@@ -2461,27 +2692,27 @@ class _QuickSettingsSheet extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.notifications_outlined,
-                color: Colors.white70),
-            title: const Text('Notifications',
-                style: TextStyle(color: Colors.white)),
-            trailing: const Icon(Icons.chevron_right,
-                color: AppColors.textMuted),
+            leading: Icon(Icons.notifications_outlined,
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode),
+            title: Text('Notifications',
+                style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
+            trailing: Icon(Icons.chevron_right,
+                color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
             onTap: () {},
           ),
           ListTile(
-            leading: const Icon(Icons.help_outline,
-                color: Colors.white70),
+            leading: Icon(Icons.help_outline,
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode),
             title: Text(t['help_support'] ?? 'Help & Support',
-                style: const TextStyle(color: Colors.white)),
-            trailing: const Icon(Icons.chevron_right,
-                color: AppColors.textMuted),
+                style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
+            trailing: Icon(Icons.chevron_right,
+                color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
             onTap: () {
               Navigator.pop(context);
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
-                backgroundColor: AppColors.primaryDark,
+                backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
                 shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(
                         top: Radius.circular(20))),
@@ -2489,7 +2720,7 @@ class _QuickSettingsSheet extends StatelessWidget {
               );
             },
           ),
-          const Divider(color: AppColors.divider),
+          Divider(color: isDark ? AppColors.divider : AppColors.dividerLightMode),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.orange),
             title: Text(t['logout'] ?? 'Logout',
@@ -2517,26 +2748,31 @@ class _StatItem extends StatelessWidget {
   const _StatItem({required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(value,
-          style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold)),
-      const SizedBox(height: 2),
-      Text(label,
-          style: const TextStyle(
-              color: AppColors.textMuted, fontSize: 10),
-          textAlign: TextAlign.center),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(label,
+            style: TextStyle(
+                color: isDark ? AppColors.textMuted : Colors.white.withValues(alpha: 0.7), fontSize: 10),
+            textAlign: TextAlign.center),
+      ]),
+    );
+  }
 }
 
 class _VertDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-      width: 1, height: 30, color: AppColors.divider.withOpacity(0.5));
+      width: 1, height: 30, color: Colors.white.withValues(alpha: 0.15));
 }
 
 class _MenuRow extends StatelessWidget {
@@ -2556,22 +2792,24 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-              bottom: BorderSide(color: AppColors.divider, width: 0.3)),
+              bottom: BorderSide(color: isDark ? AppColors.divider : AppColors.dividerLightMode, width: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, size: 20),
             const SizedBox(width: 14),
             Expanded(
               child: Text(label,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14)),
             ),
             if (badge != null)
               Container(
@@ -2589,8 +2827,8 @@ class _MenuRow extends StatelessWidget {
               ),
             if (trailing != null) trailing!
             else
-              const Icon(Icons.chevron_right,
-                  color: AppColors.textMuted, size: 18),
+              Icon(Icons.chevron_right,
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
           ],
         ),
       ),
@@ -2605,18 +2843,20 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.gold : AppColors.card,
+        color: isSelected ? AppColors.gold : theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.divider),
+            color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
       ),
       child: Text(label,
           style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textSecondary,
+              color: isSelected ? Colors.white : (isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode),
               fontSize: 12,
               fontWeight: isSelected
                   ? FontWeight.w600
@@ -2628,26 +2868,28 @@ class _FilterChip extends StatelessWidget {
 class _AdActionBtn extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
+  final Color? color;
   final VoidCallback onTap;
 
   const _AdActionBtn({
     required this.icon,
     required this.label,
-    this.color = AppColors.textSecondary,
+    this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveColor = color ?? (isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode);
     return GestureDetector(
       onTap: onTap,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: color),
+        Icon(icon, size: 15, color: effectiveColor),
         const SizedBox(width: 3),
         Text(label,
             style: TextStyle(
-                color: color,
+                color: effectiveColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w500)),
       ]),
@@ -2662,15 +2904,16 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         width: double.infinity,
         padding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: AppColors.surface,
+        color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
         child: Text(title,
-            style: const TextStyle(
-                color: AppColors.textMuted,
+            style: TextStyle(
+                color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                 fontSize: 11,
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.w600)),
@@ -2685,7 +2928,7 @@ class _SettingsTile extends StatelessWidget {
   final String label;
   final String? subtitle;
   final Widget? trailing;
-  final Color color;
+  final Color? color;
   final bool showArrow;
   final VoidCallback onTap;
 
@@ -2694,26 +2937,28 @@ class _SettingsTile extends StatelessWidget {
     required this.label,
     this.subtitle,
     this.trailing,
-    this.color = Colors.white70,
+    this.color,
     this.showArrow = true,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveColor = color ?? (isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode);
     return InkWell(
       onTap: onTap,
       child: Container(
         padding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
               bottom:
-              BorderSide(color: AppColors.divider, width: 0.3)),
+              BorderSide(color: isDark ? AppColors.divider : AppColors.dividerLightMode, width: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 20),
+            Icon(icon, color: effectiveColor, size: 20),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -2721,22 +2966,20 @@ class _SettingsTile extends StatelessWidget {
                   children: [
                     Text(label,
                         style: TextStyle(
-                            color: color == Colors.white70
-                                ? Colors.white
-                                : color,
+                            color: color ?? (isDark ? Colors.white : AppColors.textPrimaryLightMode),
                             fontSize: 14)),
                     if (subtitle != null)
                       Text(subtitle!,
-                          style: const TextStyle(
-                              color: AppColors.textMuted,
+                          style: TextStyle(
+                              color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                               fontSize: 12)),
                   ]),
             ),
             if (trailing != null)
               trailing!
             else if (showArrow)
-              const Icon(Icons.chevron_right,
-                  color: AppColors.textMuted, size: 18),
+              Icon(Icons.chevron_right,
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
           ],
         ),
       ),
@@ -2759,29 +3002,30 @@ class _SettingsToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding:
       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
             bottom:
-            BorderSide(color: AppColors.divider, width: 0.3)),
+            BorderSide(color: isDark ? AppColors.divider : AppColors.dividerLightMode, width: 0.3)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, size: 20),
           const SizedBox(width: 14),
           Expanded(
               child: Text(label,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14))),
+                  style: TextStyle(
+                      color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 14))),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.gold,
-            activeTrackColor: AppColors.gold.withOpacity(0.3),
-            inactiveThumbColor: AppColors.textMuted,
-            inactiveTrackColor: AppColors.card,
+            activeThumbColor: AppColors.gold,
+            activeTrackColor: AppColors.gold.withValues(alpha: 0.3),
+            inactiveThumbColor: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+            inactiveTrackColor: isDark ? AppColors.card : Colors.black.withValues(alpha: 0.05),
           ),
         ],
       ),
@@ -2811,27 +3055,29 @@ class _AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 13)),
+            style: TextStyle(
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
-                color: AppColors.textMuted, fontSize: 13),
+            hintStyle: TextStyle(
+                color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
             prefixIcon:
-            Icon(icon, color: AppColors.textMuted, size: 20),
+            Icon(icon, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 20),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppColors.card,
+            fillColor: theme.cardTheme.color,
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none),
@@ -2857,21 +3103,25 @@ class _SimpleField extends StatelessWidget {
       {required this.ctrl, required this.hint, this.obscure = false});
 
   @override
-  Widget build(BuildContext context) => TextField(
-    controller: ctrl,
-    obscureText: obscure,
-    style: const TextStyle(color: Colors.white),
-    decoration: InputDecoration(
-      hintText: hint,
-      hintStyle:
-      const TextStyle(color: AppColors.textMuted),
-      filled: true,
-      fillColor: AppColors.card,
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return TextField(
+      controller: ctrl,
+      obscureText: obscure,
+      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle:
+        TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
+        filled: true,
+        fillColor: theme.cardTheme.color,
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none),
+      ),
+    );
+  }
 }
 
 // ── Privacy toggle ────────────────────────────────────────────────────────────
@@ -2882,23 +3132,26 @@ class _PrivacyToggle extends StatelessWidget {
   const _PrivacyToggle(this.label, this.value, this.onChanged);
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(children: [
-      Expanded(
-          child: Text(label,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 14))),
-      Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.gold,
-        activeTrackColor: AppColors.gold.withOpacity(0.3),
-        inactiveThumbColor: AppColors.textMuted,
-        inactiveTrackColor: AppColors.card,
-      ),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14))),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: AppColors.gold,
+          activeTrackColor: AppColors.gold.withValues(alpha: 0.3),
+          inactiveThumbColor: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+          inactiveTrackColor: isDark ? AppColors.card : AppColors.backgroundLightMode,
+        ),
+      ]),
+    );
+  }
 }
 
 // ── Tab bar delegate ──────────────────────────────────────────────────────────
@@ -2908,8 +3161,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext ctx, double shrinkOffset, bool overlapsContent) =>
-      Container(color: AppColors.primaryDark, child: tabBar);
+      BuildContext ctx, double shrinkOffset, bool overlapsContent) {
+    final theme = Theme.of(ctx);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(color: isDark ? AppColors.primaryDark : AppColors.primaryLightMode, child: tabBar);
+  }
 
   @override
   double get maxExtent => tabBar.preferredSize.height;
@@ -2918,5 +3174,44 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => tabBar.preferredSize.height;
 
   @override
-  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => true;
+}
+
+class _ThemeToggle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
+
+    return GestureDetector(
+      onTap: () => themeProvider.toggleTheme(!isDark),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.gold.withValues(alpha: 0.15) : AppColors.gold.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isDark ? Icons.dark_mode : Icons.light_mode,
+              size: 14,
+              color: AppColors.gold,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isDark ? 'Dark Mode' : 'Light Mode',
+              style: const TextStyle(
+                color: AppColors.gold,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

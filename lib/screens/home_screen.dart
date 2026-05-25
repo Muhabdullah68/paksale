@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
-import '../main.dart';
+import '../providers/compare_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/notification_provider.dart';
+import '../providers/chat_provider.dart';
+import '../providers/cms_provider.dart';
+import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/app_drawer.dart';
 import 'categories_screen.dart';
@@ -26,8 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  late final List<Widget> _screens;
-
   // Bottom nav tab indices
   static const int _tabHome = 0;
   static const int _tabCategories = 1;
@@ -39,32 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    AppState().addListener(_onAppStateChanged);
-    _screens = [
-      _HomeBody(
-        onProductTap: (p) => _navToProduct(p),
-        onCompare: () => setState(() {}),
-      ),
-      const CategoriesScreen(),
-      const PostAdScreen(),
-      const FavoritesScreen(),
-      const ChatScreen(),
-      const AccountScreen(),
-    ];
   }
-
-  @override
-  void dispose() {
-    AppState().removeListener(_onAppStateChanged);
-    super.dispose();
-  }
-
-  void _onAppStateChanged() => setState(() {});
 
   void _navToProduct(ProductModel p) {
     Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)))
-        .then((_) => setState(() {}));
+        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)));
   }
 
   // ── Handle every possible drawer key ──────────────────────────────────────
@@ -73,42 +56,52 @@ class _HomeScreenState extends State<HomeScreen> {
     // ── Tab switches ───────────────────────────────────────────────────────
       case 'home':
         setState(() => _currentNavIndex = _tabHome);
+        break;
       case 'categories':
         setState(() => _currentNavIndex = _tabCategories);
+        break;
       case 'post_ad':
         setState(() => _currentNavIndex = _tabPostAd);
+        break;
       case 'favorites':
         setState(() => _currentNavIndex = _tabFavorites);
+        break;
       case 'chat':
         setState(() => _currentNavIndex = _tabChat);
+        break;
       case 'account':
         setState(() => _currentNavIndex = _tabAccount);
+        break;
 
     // ── Screen pushes ──────────────────────────────────────────────────────
       case 'notifications':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+        break;
       case 'search':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const SearchFilterScreen()));
+        break;
       case 'compare':
-        if (AppState().compareList.isNotEmpty) {
+        final compareProvider = context.read<CompareProvider>();
+        final t = context.read<LanguageProvider>().t;
+        if (compareProvider.compareList.isNotEmpty) {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) =>
-                  CompareScreen(selectedProducts: AppState().compareList),
+                  CompareScreen(selectedProducts: compareProvider.compareList),
             ),
-          ).then((_) => setState(() {}));
+          );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('No items in compare list yet'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(t['compare_empty'] ?? 'No items in compare list yet'),
             backgroundColor: AppColors.primaryDark,
           ));
         }
+        break;
 
     // ── These are handled fully inside the drawer via bottom sheets ────────
-    // but fall through here gracefully just in case.
       case 'saved_filters':
       case 'language':
       case 'my_products':
@@ -118,7 +111,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'favorite_jobs':
       case 'my_job_posts':
       case 'applied_jobs':
-      // The drawer handles these with sheets — nothing to do in home_screen
         break;
 
       default:
@@ -132,82 +124,143 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cmpCount = AppState().compareList.length;
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
+    final compareProvider = context.watch<CompareProvider>();
+    final cmsProvider = context.watch<CMSProvider>();
+    final cmpCount = compareProvider.compareList.length;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.background,
-      drawer: AppDrawer(onItemTap: _handleDrawerNavigation),
-      appBar: _currentNavIndex == _tabHome ? _buildAppBar() : null,
-      floatingActionButton: cmpCount > 0
-          ? FloatingActionButton.extended(
-        backgroundColor: AppColors.gold,
-        elevation: 4,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                CompareScreen(selectedProducts: AppState().compareList),
+    // Check for policy updates
+    if (cmsProvider.needsPolicyReacceptance) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPolicyUpdateDialog(context, t);
+      });
+    }
+
+    return PopScope(
+      canPop: _currentNavIndex == _tabHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentNavIndex != _tabHome) {
+          setState(() => _currentNavIndex = _tabHome);
+        }
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        drawer: AppDrawer(onItemTap: _handleDrawerNavigation),
+        appBar: _currentNavIndex == _tabHome ? _buildAppBar() : null,
+        floatingActionButton: _currentNavIndex != _tabHome && cmpCount > 0
+            ? FloatingActionButton.extended(
+          backgroundColor: AppColors.gold,
+          elevation: 4,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  CompareScreen(selectedProducts: compareProvider.compareList),
+            ),
           ),
-        ).then((_) => setState(() {})),
-        icon: const Icon(Icons.compare_arrows, color: Colors.white),
-        label: Text(
-          'Compare ($cmpCount)',
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w600),
+          icon: const Icon(Icons.compare_arrows, color: Colors.white),
+          label: Text(
+            '${t['compare'] ?? 'Compare'} ($cmpCount)',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        )
+            : null,
+        body: IndexedStack(
+          index: _currentNavIndex,
+          children: [
+            _HomeBody(
+              onProductTap: (p) => _navToProduct(p),
+            ),
+            const CategoriesScreen(),
+            const PostAdScreen(),
+            const FavoritesScreen(),
+            const ChatScreen(),
+            const AccountScreen(),
+          ],
         ),
-      )
-          : null,
-      body: IndexedStack(
-        index: _currentNavIndex,
-        children: _screens,
+        bottomNavigationBar: _buildBottomNav(),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  void _showPolicyUpdateDialog(BuildContext context, Map<String, String> t) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(t['policy_update_title'] ?? 'Policy Update'),
+        content: Text(t['policy_update_msg'] ?? 'Our Terms of Service or Privacy Policy have been updated. Please review and accept to continue using the app.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
+              Navigator.pop(ctx);
+            },
+            child: Text(t['view_policies'] ?? 'View Policies'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<CMSProvider>().acceptPolicies();
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: Text(t['accept'] ?? 'Accept', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
   // ── 6-tab bottom nav ───────────────────────────────────────────────────────
   Widget _buildBottomNav() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16)
+          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05), blurRadius: 16)
         ],
       ),
       child: BottomNavigationBar(
         currentIndex: _currentNavIndex,
         onTap: (i) => setState(() => _currentNavIndex = i),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.primaryDark,
-        selectedItemColor: AppColors.gold,
-        unselectedItemColor: AppColors.textMuted,
+        backgroundColor: theme.bottomNavigationBarTheme.backgroundColor,
+        selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor,
         selectedFontSize: 10,
         unselectedFontSize: 10,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home'),
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home),
+              label: t['nav_home'] ?? 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_outlined),
-              activeIcon: Icon(Icons.grid_view),
-              label: 'Categories'),
+              icon: const Icon(Icons.grid_view_outlined),
+              activeIcon: const Icon(Icons.grid_view),
+              label: t['nav_categories'] ?? 'Categories'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.add_circle_outline, size: 28),
-              activeIcon: Icon(Icons.add_circle, size: 28),
-              label: 'Post Ad'),
+              icon: const Icon(Icons.add_circle_outline, size: 28),
+              activeIcon: const Icon(Icons.add_circle, size: 28),
+              label: t['nav_post_ad'] ?? 'Post Ad'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_outline),
-              activeIcon: Icon(Icons.favorite),
-              label: 'Saved'),
+              icon: const Icon(Icons.favorite_outline),
+              activeIcon: const Icon(Icons.favorite),
+              label: t['nav_saved'] ?? 'Saved'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline),
-              activeIcon: Icon(Icons.chat_bubble),
-              label: 'Chat'),
+              icon: const Icon(Icons.chat_bubble_outline),
+              activeIcon: const Icon(Icons.chat_bubble),
+              label: t['nav_chat'] ?? 'Chat'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Account'),
+              icon: const Icon(Icons.person_outline),
+              activeIcon: const Icon(Icons.person),
+              label: t['nav_account'] ?? 'Account'),
         ],
       ),
     );
@@ -215,6 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── App bar (Home tab only) ────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    final unread = context.select<NotificationProvider, int>(
+        (p) => p.unreadCount);
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: AppBar(
@@ -226,136 +283,200 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             padding: const EdgeInsets.symmetric(horizontal: 12),
+            tooltip: t['menu'] ?? 'Menu',
           ),
           Container(
-            width: 34, height: 34,
+            width: 38, height: 38,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.gold.withOpacity(0.5)),
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: const Center(
-              child: Text('Q',
-                  style: TextStyle(
-                      color: AppColors.gold,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold)),
+              child: AppLogoIcon(size: 24),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
-            child: CustomSearchBar(
-              readOnly: true,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const SearchFilterScreen())),
-            ),
-          ),
-          Stack(children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            Positioned(
-              top: 8, right: 8,
-              child: Container(
-                width: 8, height: 8,
-                decoration: const BoxDecoration(
-                    color: AppColors.gold, shape: BoxShape.circle),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: t['search_hint'] ?? 'Search in PakistanSale...',
+                hintStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
               ),
             ),
-          ]),
+          ),
         ]),
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: Colors.white),
+                onPressed: () => _handleDrawerNavigation('notifications'),
+              ),
+              if (unread > 0)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                        color: AppColors.gold, shape: BoxShape.circle),
+                    constraints:
+                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    child: Text('$unread',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    );  }
 }
 
 // ── Home Body ─────────────────────────────────────────────────────────────────
-class _HomeBody extends StatelessWidget {
+class _HomeBody extends StatefulWidget {
   final Function(ProductModel) onProductTap;
-  final VoidCallback onCompare;
 
-  const _HomeBody({required this.onProductTap, required this.onCompare});
+  const _HomeBody({required this.onProductTap});
+
+  @override
+  State<_HomeBody> createState() => _HomeBodyState();
+}
+
+class _HomeBodyState extends State<_HomeBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().fetchProducts();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<LanguageProvider>().t;
+    final products = context.select((ProductProvider p) => p.products);
+    final isLoading = context.select((ProductProvider p) => p.isLoading);
+    final error = context.select((ProductProvider p) => p.error);
+
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildStoriesRow(context),
-          const SizedBox(height: 4),
-          _buildMainCategories(context),
-          const SizedBox(height: 8),
-          const AdBannerPlaceholder(text: 'J SEVEN REAL ESTATE - Freehold For Expats'),
-          _catSection(context, 'Furniture & Décor', [
-            {'n': 'Furniture & Décor', 'i': '🪑'},
-            {'n': 'Kitchen & Dining Room', 'i': '🍽️'},
-            {'n': "Children's Room", 'i': '🧸'},
-            {'n': 'Bedroom', 'i': '🛏️'},
-            {'n': 'Office Furniture', 'i': '🖥️'},
-            {'n': 'Living Room', 'i': '🛋️'},
-          ]),
-          const AdBannerPlaceholder(text: 'City Doha Furniture - ستي دوحة للأثاث'),
-          _catSection(context, 'Electronics', [
-            {'n': 'Mobile & Tablets', 'i': '📱'},
-            {'n': 'Cameras & Equipment', 'i': '📷'},
-            {'n': 'Video Games', 'i': '🎮'},
-            {'n': 'Home Appliances', 'i': '📺'},
-            {'n': 'Computers & Parts', 'i': '💻'},
-            {'n': 'Services', 'i': '🔧'},
-          ]),
-          const AdBannerPlaceholder(text: 'Barcode Electronics - باركود للالكترونيات'),
-          _catSection(context, 'More Categories', [
-            {'n': 'Jobs Center', 'i': '💼'},
-            {'n': 'Market', 'i': '🛒'},
-            {'n': 'Jewellery', 'i': '💎'},
-          ]),
-          const AdBannerPlaceholder(text: 'iSTYLE - Experience The Best'),
-          _catSection(context, 'Lifestyle', [
-            {'n': 'Clothes', 'i': '👕'},
-            {'n': 'Health & Beauty', 'i': '💄'},
-            {'n': 'Shoes & Bags', 'i': '👟'},
-            {'n': 'Kids', 'i': '🧸'},
-            {'n': 'Sportswear', 'i': '⚽'},
-            {'n': 'Pet Accessories', 'i': '🐾'},
-          ]),
-          const AdBannerPlaceholder(text: 'Liyan Jewellery - مجوهرات ليان'),
-          _catSection(context, 'Outdoor & Leisure', [
-            {'n': 'Camping', 'i': '⛺'},
-            {'n': 'Musical Instruments', 'i': '🎸'},
-            {'n': 'Wrist Watches', 'i': '⌚'},
-            {'n': 'WaterCrafts', 'i': '⛵'},
-          ]),
-          const SizedBox(height: 16),
-          SectionHeader(
-            title: 'Recent Listings',
-            actionText: 'See All',
-            onAction: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const ListingScreen())),
-          ),
-          ...SampleData.products.take(5).map((p) => ProductCard(
-            product: p,
-            onTap: () => onProductTap(p),
-            onCompare: onCompare,
-          )),
-          const SizedBox(height: 80),
-        ],
+      child: RepaintBoundary(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStoriesRow(context),
+            const SizedBox(height: 4),
+            _buildMainCategories(context),
+            const SizedBox(height: 8),
+            const AdBannerPlaceholder(text: 'J SEVEN REAL ESTATE - Freehold For Expats'),
+            _catSection(context, 'Real Estate & Living', [
+              {'n': 'Properties', 'i': '🏠'},
+              {'n': 'Furniture & Décor', 'i': '🪑'},
+              {'n': 'Market', 'i': '🛒'},
+            ]),
+            const AdBannerPlaceholder(text: 'City Doha Furniture - ستي دوحة للأثاث'),
+            _catSection(context, 'Electronics & Tech', [
+              {'n': 'Electronics', 'i': '⚡'},
+              {'n': 'Computers & Parts', 'i': '💻'},
+              {'n': 'Mobile & Tablets', 'i': '📱'},
+            ]),
+            const AdBannerPlaceholder(text: 'Barcode Electronics - باركود للالكترونيات'),
+            _catSection(context, 'Leisure & Luxury', [
+              {'n': 'WaterCrafts', 'i': '⛵'},
+              {'n': 'Jewellery', 'i': '💎'},
+              {'n': 'Outdoor & Leisure', 'i': '⛺'},
+            ]),
+            const AdBannerPlaceholder(text: 'iSTYLE - Experience The Best'),
+            _catSection(context, 'Services & Others', [
+              {'n': 'Jobs Center', 'i': '💼'},
+              {'n': 'Special Numbers', 'i': '🔢'},
+              {'n': 'Heavy Equipments', 'i': '🏗️'},
+              {'n': 'Super Ads', 'i': '⭐'},
+            ]),
+            const SizedBox(height: 16),
+            SectionHeader(
+              title: t['recent'] ?? 'Recent Listings',
+              actionText: t['see_all'] ?? 'See All',
+              onAction: () => Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => const ListingScreen())),
+            ),
+            if (isLoading)
+              const Center(child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(color: AppColors.gold),
+              ))
+            else if (error != null)
+              _buildErrorState(context, error)
+            else if (products.isEmpty)
+              // Fallback to sample data if Firebase is empty/not configured
+              ...SampleData.products.take(5).map((p) => ProductCard(
+                product: p,
+                onTap: () => widget.onProductTap(p),
+                onCompare: () {},
+              ))
+            else
+              ...products.take(5).map((p) => ProductCard(
+                product: p,
+                onTap: () => widget.onProductTap(p),
+                onCompare: () {},
+              )),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String error) {
+    final t = context.watch<LanguageProvider>().t;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
+            const SizedBox(height: 12),
+            Text(t['error_loading'] ?? 'Error loading products',
+                style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.read<ProductProvider>().fetchProducts(),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              child: Text(t['retry'] ?? 'Retry', style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStoriesRow(BuildContext context) {
     final stories = [
-      {'l': 'QS Updates', 'f': true, 'cat': ''},
+      {'l': 'PS Updates', 'f': true, 'cat': ''},
       {'l': 'Vehicles', 'f': false, 'cat': 'Vehicles'},
       {'l': 'Real Estate', 'f': false, 'cat': 'Properties'},
-      {'l': 'Mobiles', 'f': false, 'cat': 'Mobile & Tablets'},
+      {'l': 'Electronics', 'f': false, 'cat': 'Electronics'},
+      {'l': 'Furniture', 'f': false, 'cat': 'Furniture & Décor'},
+      {'l': 'Jewellery', 'f': false, 'cat': 'Jewellery'},
       {'l': 'Jobs', 'f': false, 'cat': 'Jobs Center'},
-      {'l': 'Watches', 'f': false, 'cat': 'Wrist Watches'},
     ];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 98,
       child: ListView.builder(
@@ -379,15 +500,15 @@ class _HomeBody extends StatelessWidget {
                 Container(
                   width: 56, height: 56,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.card,
+                    shape: BoxShape.circle, color: Theme.of(context).cardTheme.color,
                     border: Border.all(
                         color: isFirst ? AppColors.gold : AppColors.primary,
                         width: 2.5),
                   ),
                   child: Center(
                     child: isFirst
-                        ? const Text('QS', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 14))
-                        : const Icon(Icons.image, color: AppColors.textMuted, size: 22),
+                        ? const Text('PS', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 14))
+                        : Icon(Icons.image, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 22),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -395,7 +516,7 @@ class _HomeBody extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                    style: TextStyle(color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 10)),
               ]),
             ),
           );
@@ -407,10 +528,10 @@ class _HomeBody extends StatelessWidget {
   Widget _buildMainCategories(BuildContext context) {
     final cats = [
       {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
-      {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Special Numbers', 'i': '📟'},
-      {'n': 'Heavy Equipments', 'i': '🏗️'}, {'n': 'Super Ads', 'i': '⭐'},
-      {'n': 'Jobs Center', 'i': '💼'}, {'n': 'Market', 'i': '🛒'},
-      {'n': 'Jewellery', 'i': '💎'},
+      {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
+      {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
+      {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
+      {'n': 'Outdoor & Leisure', 'i': '⛺'},
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -418,7 +539,7 @@ class _HomeBody extends StatelessWidget {
         crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 0.88,
+        childAspectRatio: 0.85,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
         children: cats.map((c) => CategoryCircle(

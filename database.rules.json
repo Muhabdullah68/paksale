@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "conversations": {
+      ".read": "auth != null",
+      "$conversationId": {
+        ".write": "auth != null",
+        "participants": {
+           ".validate": "newData.hasChild(auth.uid)"
+        }
+      }
+    },
+    "messages": {
+      "$conversationId": {
+        ".read": "auth != null && root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists()"
+      }
+    }
+  }
+}

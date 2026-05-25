@@ -1,7 +1,14 @@
 // screens/chat_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../providers/chat_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/chat_model.dart';
+import '../services/language_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -12,9 +19,34 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.isAuthenticated) {
+        context.read<ChatProvider>().listenToConversations(auth.firebaseUser!.uid);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chatProvider = context.watch<ChatProvider>();
+    final auth = context.watch<AuthProvider>();
+    final t = context.watch<LanguageProvider>().t;
+
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (!auth.isAuthenticated) {
+      return Center(
+        child: Text(t['login_prompt'] ?? 'Please sign in to see your chats',
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: const AppLogo(),
@@ -29,24 +61,28 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            color: AppColors.primaryDark,
+            color: isDark ? AppColors.primaryDark : AppColors.primary,
             child: Row(
               children: [
                 Expanded(
                   child: Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.card,
+                      color: theme.cardTheme.color,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       children: [
                         const SizedBox(width: 12),
                         const Icon(Icons.search, color: AppColors.textMuted, size: 18),
                         const SizedBox(width: 8),
-                        Text(
-                          'Search conversations...',
-                          style: TextStyle(color: AppColors.textMuted.withOpacity(0.7), fontSize: 13),
+                        Expanded(
+                          child: Text(
+                            t['search_conversations'] ?? 'Search conversations...',
+                            style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -67,15 +103,79 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
+            child: chatProvider.isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+                : chatProvider.error != null
+                ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                    const SizedBox(height: 16),
+                    Text(
+                      t['chat_error'] ?? 'Unable to load chats',
+                      style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      chatProvider.error!.contains('suspended')
+                          ? 'Firebase service is currently suspended. Please check your project settings.'
+                          : chatProvider.error!,
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        final auth = context.read<AuthProvider>();
+                        if (auth.isAuthenticated) {
+                          context.read<ChatProvider>().listenToConversations(auth.firebaseUser!.uid);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+                      child: Text(t['retry'] ?? 'Retry', style: const TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+                : chatProvider.conversations.isEmpty
+                ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.chat_bubble_outline, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
+                    const SizedBox(height: 16),
+                    Text(
+                      t['no_conversations'] ?? 'No conversations yet',
+                      style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 16, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      t['start_chat_prompt'] ?? 'Find a product you like and start a conversation with the seller!',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+                : ListView.builder(
               padding: EdgeInsets.zero,
-              itemCount: _dummyChats.length,
+              itemCount: chatProvider.conversations.length,
               itemBuilder: (ctx, i) => _ChatListItem(
-                chat: _dummyChats[i],
+                conversation: chatProvider.conversations[i],
+                currentUserId: auth.firebaseUser!.uid,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ConversationScreen(chat: _dummyChats[i]),
+                    builder: (_) => ConversationScreen(
+                        conversation: chatProvider.conversations[i]),
                   ),
                 ),
               ),
@@ -87,9 +187,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showNewMessageDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: theme.brightness == Brightness.dark ? AppColors.primaryDark : theme.cardTheme.color,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -102,9 +204,9 @@ class _ChatScreenState extends State<ChatScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'New Message',
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                Text(
+                  t['new_message'] ?? 'New Message',
+                  style: TextStyle(color: theme.textTheme.bodyLarge?.color ?? Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: AppColors.textMuted),
@@ -114,13 +216,13 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               decoration: InputDecoration(
-                hintText: 'Search users...',
+                hintText: t['search_users'] ?? 'Search users...',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
                 prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
                 filled: true,
-                fillColor: AppColors.card,
+                fillColor: theme.brightness == Brightness.dark ? theme.cardTheme.color : Colors.black.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide.none,
@@ -143,99 +245,66 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-
-  static final List<Map<String, dynamic>> _dummyChats = [
-    {
-      'name': 'Ahmed Al-Mansoori',
-      'lastMessage': 'Is the iPhone still available?',
-      'time': '10:30 AM',
-      'unread': 2,
-      'avatar': '👤',
-      'isOnline': true,
-    },
-    {
-      'name': 'Fatima Hassan',
-      'lastMessage': 'Thank you for the purchase!',
-      'time': 'Yesterday',
-      'unread': 0,
-      'avatar': '👩',
-      'isOnline': false,
-    },
-    {
-      'name': 'Car Dealer - Doha',
-      'lastMessage': 'We have new arrivals in Toyota...',
-      'time': 'Yesterday',
-      'unread': 1,
-      'avatar': '🚗',
-      'isOnline': true,
-    },
-    {
-      'name': 'Mohammed Khalid',
-      'lastMessage': 'Can you deliver to Al Rayyan?',
-      'time': '2 days ago',
-      'unread': 0,
-      'avatar': '👨',
-      'isOnline': false,
-    },
-    {
-      'name': 'Real Estate Qatar',
-      'lastMessage': 'Villa available for viewing tomorrow',
-      'time': '3 days ago',
-      'unread': 0,
-      'avatar': '🏠',
-      'isOnline': true,
-    },
-  ];
 }
 
 class _ChatListItem extends StatelessWidget {
-  final Map<String, dynamic> chat;
+  final ConversationModel conversation;
+  final String currentUserId;
   final VoidCallback onTap;
 
-  const _ChatListItem({required this.chat, required this.onTap});
+  const _ChatListItem({
+    required this.conversation,
+    required this.currentUserId,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final otherUserId = conversation.participants.firstWhere((id) => id != currentUserId);
+    final otherUserName = conversation.participantNames[otherUserId] ?? 'User';
+    final unread = conversation.unreadCount[currentUserId] ?? 0;
+
+    final isDark = theme.brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.divider, width: 0.3)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2))),
         ),
         child: Row(
           children: [
             Stack(
               children: [
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: AppColors.gold.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   child: Center(
                     child: Text(
-                      chat['avatar'],
-                      style: const TextStyle(fontSize: 24),
+                      otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : '?',
+                      style: const TextStyle(color: AppColors.gold, fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                if (chat['isOnline'])
-                  Positioned(
-                    bottom: 2,
-                    right: 2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.primaryDark, width: 2),
-                      ),
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? AppColors.primaryDark : Colors.white, width: 2),
                     ),
                   ),
+                ),
               ],
             ),
             const SizedBox(width: 12),
@@ -247,17 +316,17 @@ class _ChatListItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          chat['name'],
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
+                          otherUserName,
+                          style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       Text(
-                        chat['time'],
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        _formatDate(conversation.lastMessageAt),
+                        style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 11),
                       ),
                     ],
                   ),
@@ -266,16 +335,16 @@ class _ChatListItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          chat['lastMessage'],
+                          conversation.lastMessage,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: chat['unread'] > 0 ? AppColors.textPrimary : AppColors.textMuted,
+                            color: unread > 0 ? theme.textTheme.bodyLarge?.color : (isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                             fontSize: 13,
                           ),
                         ),
                       ),
-                      if (chat['unread'] > 0)
+                      if (unread > 0)
                         Container(
                           margin: const EdgeInsets.only(left: 8),
                           padding: const EdgeInsets.all(6),
@@ -284,7 +353,7 @@ class _ChatListItem extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            '${chat['unread']}',
+                            '$unread',
                             style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -298,6 +367,14 @@ class _ChatListItem extends StatelessWidget {
       ),
     );
   }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    if (date.day == now.day && date.month == now.month && date.year == now.year) {
+      return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    }
+    return '${date.day}/${date.month}';
+  }
 }
 
 class _UserListItem extends StatelessWidget {
@@ -308,21 +385,14 @@ class _UserListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ConversationScreen(
-              chat: {
-                'name': name,
-                'avatar': avatar,
-                'isOnline': true,
-              },
-            ),
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Starting new chat from list coming soon!')),
         );
+        Navigator.pop(context);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -343,10 +413,10 @@ class _UserListItem extends StatelessWidget {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 15),
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+            Icon(Icons.chevron_right, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
           ],
         ),
       ),
@@ -355,9 +425,9 @@ class _UserListItem extends StatelessWidget {
 }
 
 class ConversationScreen extends StatefulWidget {
-  final Map<String, dynamic> chat;
+  final ConversationModel conversation;
 
-  const ConversationScreen({super.key, required this.chat});
+  const ConversationScreen({super.key, required this.conversation});
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -365,251 +435,273 @@ class ConversationScreen extends StatefulWidget {
 
 class _ConversationScreenState extends State<ConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDummyMessages();
+  void _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    final auth = context.read<AuthProvider>();
+    final chatProvider = context.read<ChatProvider>();
+
+    final myId = auth.firebaseUser!.uid;
+    final myName = auth.userModel?.name ?? 'User';
+    final recipientId = widget.conversation.participants
+        .firstWhere((id) => id != myId, orElse: () => '');
+
+    try {
+      await chatProvider.sendImageMessage(
+        widget.conversation.id,
+        File(image.path),
+        myId,
+        recipientId: recipientId.isNotEmpty ? recipientId : null,
+        senderName: myName,
+      );
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending image: $e')),
+        );
+      }
+    }
   }
 
-  void _loadDummyMessages() {
-    _messages.addAll([
-      {
-        'text': 'Hello! Is the iPhone 14 Pro still available?',
-        'isMe': true,
-        'time': '10:15 AM',
-        'status': 'read',
-      },
-      {
-        'text': 'Yes, it\'s available! Are you interested?',
-        'isMe': false,
-        'time': '10:18 AM',
-      },
-      {
-        'text': 'What\'s the condition and does it come with original accessories?',
-        'isMe': true,
-        'time': '10:20 AM',
-        'status': 'read',
-      },
-      {
-        'text': 'It\'s in excellent condition, like new. Comes with original box, charger, and cable.',
-        'isMe': false,
-        'time': '10:22 AM',
-      },
-      {
-        'text': 'Great! Can we meet today to check it out?',
-        'isMe': true,
-        'time': '10:25 AM',
-        'status': 'delivered',
-      },
-    ]);
-  }
-
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    setState(() {
-      _messages.add({
-        'text': _messageController.text,
-        'isMe': true,
-        'time': _formatTime(DateTime.now()),
-        'status': 'sent',
-      });
-    });
+    final auth = context.read<AuthProvider>();
+    final chatProvider = context.read<ChatProvider>();
+
+    final myId = auth.firebaseUser!.uid;
+    final myName = auth.userModel?.name ?? 'User';
+
+    // Determine the recipient (the other participant)
+    final recipientId = widget.conversation.participants
+        .firstWhere((id) => id != myId, orElse: () => '');
+
+    final message = ChatMessage(
+      id: '',
+      senderId: myId,
+      text: _messageController.text.trim(),
+      createdAt: DateTime.now(),
+    );
+
     _messageController.clear();
+    await chatProvider.sendMessage(
+      widget.conversation.id,
+      message,
+      recipientId: recipientId.isNotEmpty ? recipientId : null,
+      senderName: myName,
+    );
     _scrollToBottom();
-
-    // Simulate reply
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _messages.add({
-          'text': _getAutoReply(),
-          'isMe': false,
-          'time': _formatTime(DateTime.now()),
-        });
-      });
-      _scrollToBottom();
-    });
-  }
-
-  String _getAutoReply() {
-    final replies = [
-      'Sure, let me know when you want to meet.',
-      'I can deliver it to you if you\'d like.',
-      'Would you like to see more photos?',
-      'The price is negotiable.',
-    ];
-    return replies[DateTime.now().millisecond % replies.length];
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour}:${time.minute.toString().padLeft(2, '0')} ${time.hour >= 12 ? 'PM' : 'AM'}';
   }
 
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
+    if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        _scrollController.position.maxScrollExtent + 100,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final auth = context.watch<AuthProvider>();
+    final chatProvider = context.watch<ChatProvider>();
+    final t = context.watch<LanguageProvider>().t;
+    final myId = auth.firebaseUser?.uid ?? '';
+    final otherUserId = widget.conversation.participants.firstWhere((id) => id != myId, orElse: () => '');
+    final otherUserName = widget.conversation.participantNames[otherUserId] ?? 'User';
+
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
         title: Row(
           children: [
             Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.primaryLight,
+                color: theme.cardTheme.color,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Center(
-                child: Text(widget.chat['avatar'], style: const TextStyle(fontSize: 18)),
+                child: Text(
+                  otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppColors.gold, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.chat['name'],
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: widget.chat['isOnline'] ? AppColors.green : AppColors.textMuted,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.chat['isOnline'] ? 'Online' : 'Offline',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    otherUserName,
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    t['online'] ?? 'Online',
+                    style: const TextStyle(color: Colors.green, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.phone, color: Colors.white),
-            onPressed: () => _showCallDialog(),
+            icon: const Icon(Icons.call_outlined, color: Colors.white, size: 20),
+            onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
+            icon: const Icon(Icons.more_vert, color: Colors.white, size: 20),
             onPressed: () {},
           ),
         ],
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (ctx, i) => _MessageBubble(message: _messages[i]),
-            ),
-          ),
+          // Product Info
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryDark,
-              border: Border(top: BorderSide(color: AppColors.divider.withOpacity(0.5))),
+              color: isDark ? AppColors.primaryDark : AppColors.primary,
+              border: Border(bottom: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.attach_file, color: AppColors.textMuted),
-                  onPressed: () {},
-                ),
-                Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(maxHeight: 100),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      style: const TextStyle(color: Colors.white),
-                      maxLines: null,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: const TextStyle(color: AppColors.textMuted),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Container(
-                  decoration: const BoxDecoration(
-                    color: AppColors.gold,
-                    shape: BoxShape.circle,
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isDark ? theme.cardTheme.color : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                    onPressed: _sendMessage,
+                  child: Center(
+                    child: Text(
+                      widget.conversation.productImageUrl.isNotEmpty ? '' : '📱',
+                      style: const TextStyle(fontSize: 20),
+                    ),
                   ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.conversation.productTitle,
+                        style: TextStyle(
+                            color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLightMode,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        t['negotiable_price'] ?? 'Negotiable price',
+                        style: const TextStyle(color: AppColors.gold, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: Text(t['view_ad'] ?? 'View Ad', style: const TextStyle(color: AppColors.gold, fontSize: 12)),
                 ),
               ],
             ),
           ),
+          Expanded(
+            child: StreamBuilder<List<ChatMessage>>(
+              stream: chatProvider.getMessages(widget.conversation.id),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final messages = snapshot.data!;
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (ctx, i) => _MessageBubble(
+                    message: messages[i],
+                    isMe: messages[i].senderId == auth.firebaseUser!.uid,
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
+      bottomNavigationBar: _buildMessageInput(context),
     );
   }
 
-  void _showCallDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title: const Text('Call Seller', style: TextStyle(color: Colors.white)),
-        content: const Text('This would initiate a call to the seller.', style: TextStyle(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+  Widget _buildMessageInput(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : theme.cardTheme.color,
+        border: Border(top: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.attach_file, color: AppColors.textMuted),
+            onPressed: _pickImage,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Calling seller...'),
-                  backgroundColor: AppColors.gold,
-                  duration: Duration(seconds: 2),
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 100),
+              decoration: BoxDecoration(
+                color: theme.cardTheme.color,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TextField(
+                controller: _messageController,
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: t['type_message'] ?? 'Type a message...',
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text('Call', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.gold,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white, size: 20),
+              onPressed: _sendMessage,
+            ),
           ),
         ],
       ),
@@ -618,14 +710,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final Map<String, dynamic> message;
+  final ChatMessage message;
+  final bool isMe;
 
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
-    final isMe = message['isMe'];
-
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -650,7 +742,7 @@ class _MessageBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? AppColors.gold : AppColors.card,
+                color: isMe ? AppColors.gold : theme.cardTheme.color,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -661,30 +753,50 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message['text'],
-                    style: TextStyle(
-                      color: isMe ? Colors.white : AppColors.textPrimary,
-                      fontSize: 14,
+                  if (message.imageUrl != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        message.imageUrl!,
+                        width: 200,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (ctx, child, lp) {
+                          if (lp == null) return child;
+                          return const SizedBox(
+                            width: 200,
+                            height: 150,
+                            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (message.text.isNotEmpty)
+                    Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isMe ? Colors.white : theme.textTheme.bodyLarge?.color ?? Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        message['time'],
+                        '${message.createdAt.hour}:${message.createdAt.minute.toString().padLeft(2, '0')}',
                         style: TextStyle(
                           color: isMe ? Colors.white70 : AppColors.textMuted,
                           fontSize: 10,
                         ),
                       ),
-                      if (isMe && message['status'] != null) ...[
+                      if (isMe) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          message['status'] == 'read' ? Icons.done_all : Icons.done,
+                          message.status == 'read' ? Icons.done_all : Icons.done,
                           size: 14,
-                          color: message['status'] == 'read' ? Colors.white : Colors.white70,
+                          color: message.status == 'read' ? Colors.white : Colors.white70,
                         ),
                       ],
                     ],
@@ -698,3 +810,4 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 }
+

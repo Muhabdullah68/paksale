@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
+import '../providers/auth_provider.dart';
+import '../providers/report_provider.dart';
 import '../widgets/common_widgets.dart';
-import '../main.dart';
 import 'product_detail_screen.dart';
-import 'chat_screen.dart';
 
 class SellerProfileScreen extends StatelessWidget {
+  final String sellerId;
   final String sellerName;
   final String sellerPhone;
   final String sellerType;
@@ -14,6 +17,7 @@ class SellerProfileScreen extends StatelessWidget {
 
   const SellerProfileScreen({
     super.key,
+    required this.sellerId,
     required this.sellerName,
     required this.sellerPhone,
     required this.sellerType,
@@ -26,6 +30,8 @@ class SellerProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final listings = _sellerListings();
     // Use all products as demos if none matched (mock data)
     final displayListings =
@@ -33,7 +39,7 @@ class SellerProfileScreen extends StatelessWidget {
     final isBusiness = sellerType.toLowerCase() == 'business';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         leading: IconButton(
@@ -42,6 +48,10 @@ class SellerProfileScreen extends StatelessWidget {
         ),
         title: const AppLogo(),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.report_gmailerrorred_outlined, color: Colors.white),
+            onPressed: () => _showReportDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -58,11 +68,13 @@ class SellerProfileScreen extends StatelessWidget {
           // ── Profile header ───────────────────────────────────────────────
           Container(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.primaryDark],
+                colors: isDark 
+                    ? [AppColors.primary, AppColors.primaryDark] 
+                    : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
               ),
             ),
             child: Column(
@@ -73,7 +85,7 @@ class SellerProfileScreen extends StatelessWidget {
                   height: 84,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.card,
+                    color: theme.cardTheme.color,
                     border: Border.all(color: AppColors.gold, width: 2.5),
                   ),
                   child: Center(
@@ -107,18 +119,18 @@ class SellerProfileScreen extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: isBusiness
-                        ? AppColors.gold.withOpacity(0.2)
-                        : Colors.blue.withOpacity(0.2),
+                        ? AppColors.gold.withValues(alpha: 0.2)
+                        : AppColors.bluePersonal.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: isBusiness
-                            ? AppColors.gold.withOpacity(0.5)
-                            : Colors.blue.withOpacity(0.5)),
+                            ? AppColors.gold.withValues(alpha: 0.5)
+                            : AppColors.bluePersonal.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     isBusiness ? '🏢 Business Seller' : '👤 Personal Seller',
                     style: TextStyle(
-                        color: isBusiness ? AppColors.gold : Colors.blue,
+                        color: isBusiness ? AppColors.gold : AppColors.bluePersonal,
                         fontSize: 12,
                         fontWeight: FontWeight.w500),
                   ),
@@ -127,21 +139,21 @@ class SellerProfileScreen extends StatelessWidget {
                 // Location
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.location_on,
-                      size: 14, color: AppColors.textMuted),
+                      size: 14, color: Colors.white70),
                   const SizedBox(width: 4),
                   Text(location,
                       style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13)),
+                          color: Colors.white70, fontSize: 13)),
                 ]),
                 const SizedBox(height: 20),
                 // Stats row
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
+                    color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                        color: Colors.white.withOpacity(0.08)),
+                        color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -182,19 +194,11 @@ class SellerProfileScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ConversationScreen(chat: {
-                            'name': sellerName,
-                            'avatar': '👤',
-                            'isOnline': true,
-                            'lastMessage': 'Hello, I have a question.',
-                            'time': 'now',
-                            'unread': 0,
-                          }),
-                        ),
-                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please start chat from one of the seller\'s ads')),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.green,
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -234,26 +238,35 @@ class SellerProfileScreen extends StatelessWidget {
   }
 
   void _showCallDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title: const Text('Call Seller',
-            style: TextStyle(color: Colors.white)),
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
+        title: Text('Call Seller',
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: Text('Call $sellerName at\n$sellerPhone',
-            style: const TextStyle(
-                color: AppColors.textSecondary, height: 1.5)),
+            style: TextStyle(
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, height: 1.5)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppColors.textMuted))),
+              child: Text('Cancel',
+                  style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode))),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Calling $sellerPhone…'),
-                  backgroundColor: AppColors.orange));
+              final url = Uri.parse('tel:$sellerPhone');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Could not launch dialer'),
+                      backgroundColor: Colors.red));
+                }
+              }
             },
             style:
             ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
@@ -261,6 +274,73 @@ class SellerProfileScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please login to report'),
+        backgroundColor: AppColors.orange,
+      ));
+      return;
+    }
+
+    ReportReason selectedReason = ReportReason.scam;
+    final descCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Report Seller'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...ReportReason.values.map((reason) => RadioListTile<ReportReason>(
+                  title: Text(reason.name.toUpperCase()),
+                  value: reason,
+                  // ignore: deprecated_member_use
+                  groupValue: selectedReason,
+                  // ignore: deprecated_member_use
+                  onChanged: (v) => setDialogState(() => selectedReason = v!),
+                )),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(hintText: 'Describe the issue...'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final report = ReportModel(
+                  id: '',
+                  reporterId: auth.firebaseUser!.uid,
+                  targetId: sellerId,
+                  targetType: ReportType.user,
+                  reason: selectedReason,
+                  description: descCtrl.text.trim(),
+                  timestamp: DateTime.now(),
+                );
+                await context.read<ReportProvider>().submitReport(report);
+                if (!context.mounted) return;
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Report submitted successfully'),
+                  backgroundColor: AppColors.green,
+                ));
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -272,19 +352,24 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Column(children: [
       Text(value,
           style: const TextStyle(
               color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
       const SizedBox(height: 2),
       Text(label,
-          style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+          style: TextStyle(color: isDark ? AppColors.textMuted : Colors.white.withValues(alpha: 0.7), fontSize: 10)),
     ]);
   }
 }
 
 class _Divider extends StatelessWidget {
   @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 28, color: AppColors.divider.withOpacity(0.4));
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(width: 1, height: 28, color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.4));
+  }
 }
+

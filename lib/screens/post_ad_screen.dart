@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
-import '../main.dart';
-import '../widgets/common_widgets.dart';
+import '../providers/auth_provider.dart';
+import '../providers/product_provider.dart';
+import '../services/language_provider.dart';
+import '../services/notification_service.dart';
+import '../services/currency_provider.dart';
 
 class PostAdScreen extends StatefulWidget {
-  const PostAdScreen({super.key});
+  final ProductModel? productToEdit;
+  const PostAdScreen({super.key, this.productToEdit});
 
   @override
   State<PostAdScreen> createState() => _PostAdScreenState();
@@ -19,18 +26,58 @@ class _PostAdScreenState extends State<PostAdScreen> {
   String? _selectedCategory;
 
   // Step 2 – details
-  final _titleCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController(text: '+974 ');
+  late TextEditingController _titleCtrl;
+  late TextEditingController _priceCtrl;
+  late TextEditingController _descCtrl;
+  late TextEditingController _phoneCtrl;
+  late TextEditingController _whatsAppCtrl; // NEW
+  late TextEditingController _cityCtrl; // NEW
+  late TextEditingController _villageCtrl; // NEW
   String _condition = 'Sale';
   String _sellerType = 'Personal';
-  String _location = 'Doha';
+  String _location = 'Pakistan'; // Changed from Doha
+
+  // Auction / Bidding
+  bool _isAuction = false;
+  DateTime? _auctionEndTime;
+
+  // Jobs
+  late TextEditingController _companyCtrl;
+  String _jobType = 'Full-time';
+  late TextEditingController _salaryCtrl;
 
   // Step 3 – photos
-  int _photoCount = 0;
+  final List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
 
   final _steps = ['Category', 'Details', 'Photos', 'Preview'];
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.productToEdit;
+    _titleCtrl = TextEditingController(text: p?.title ?? '');
+    _priceCtrl = TextEditingController(text: p?.price.toString() ?? '');
+    _descCtrl = TextEditingController(text: p?.description ?? '');
+    _phoneCtrl = TextEditingController(text: p?.sellerPhone ?? '+92 ');
+    _whatsAppCtrl = TextEditingController(text: p?.whatsAppNumber ?? '+92 '); // NEW
+    _cityCtrl = TextEditingController(text: p?.city ?? ''); // NEW
+    _villageCtrl = TextEditingController(text: p?.village ?? ''); // NEW
+    
+    // Jobs
+    _companyCtrl = TextEditingController(text: p?.companyName ?? '');
+    _salaryCtrl = TextEditingController(text: p?.salaryRange ?? '');
+    
+    if (p != null) {
+      _selectedCategory = p.category;
+      _condition = p.condition;
+      _sellerType = p.sellerType;
+      _location = p.location;
+      _isAuction = p.isAuction;
+      _auctionEndTime = p.auctionEndTime;
+      _jobType = p.jobType ?? 'Full-time';
+    }
+  }
 
   @override
   void dispose() {
@@ -38,6 +85,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
     _priceCtrl.dispose();
     _descCtrl.dispose();
     _phoneCtrl.dispose();
+    _whatsAppCtrl.dispose(); // NEW
+    _cityCtrl.dispose(); // NEW
+    _villageCtrl.dispose(); // NEW
+    _companyCtrl.dispose();
+    _salaryCtrl.dispose();
     super.dispose();
   }
 
@@ -50,29 +102,61 @@ class _PostAdScreenState extends State<PostAdScreen> {
       _titleCtrl.clear();
       _priceCtrl.clear();
       _descCtrl.clear();
-      _phoneCtrl.text = '+974 ';
+      _phoneCtrl.text = '+92 ';
+      _whatsAppCtrl.text = '+92 '; // NEW
+      _cityCtrl.clear(); // NEW
+      _villageCtrl.clear(); // NEW
       _condition = 'Sale';
       _sellerType = 'Personal';
-      _location = 'Doha';
-      _photoCount = 0;
+      _location = 'Pakistan'; // Changed from Doha
+      _selectedImages.clear();
+      _isAuction = false;
+      _auctionEndTime = null;
+      _companyCtrl.clear();
+      _salaryCtrl.clear();
+      _jobType = 'Full-time';
     });
   }
 
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70, // Optimize for free tier storage
+    );
+    if (image != null) {
+      setState(() {
+        _selectedImages.add(File(image.path));
+      });
+    }
+  }
+
   void _nextStep() {
+    final t = context.read<LanguageProvider>().t;
     if (_step == 0 && _selectedCategory == null) {
-      _snack('Please select a category first', AppColors.orange);
+      _snack(t['select_category_error'] ?? 'Please select a category first', AppColors.orange);
       return;
     }
     if (_step == 1) {
-      if (_titleCtrl.text.trim().isEmpty) {
-        _snack('Please enter a title', AppColors.orange);
+      final isJob = _selectedCategory == 'Jobs Center';
+      if (isJob && _companyCtrl.text.trim().isEmpty) {
+        _snack(t['enter_company_error'] ?? 'Please enter company name', AppColors.orange);
         return;
       }
-      if (_priceCtrl.text.trim().isEmpty) {
-        _snack('Please enter a price (or 0 for free)', AppColors.orange);
+      if (_titleCtrl.text.trim().isEmpty) {
+        _snack(t['enter_title_error'] ?? 'Please enter a title', AppColors.orange);
+        return;
+      }
+      if (!isJob && _priceCtrl.text.trim().isEmpty) {
+        _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
+        return;
+      }
+      if (_isAuction && _auctionEndTime == null) {
+        _snack(t['select_auction_end_error'] ?? 'Please select auction end date', AppColors.orange);
         return;
       }
     }
+
     if (_step < _steps.length - 1) setState(() => _step++);
   }
 
@@ -89,38 +173,96 @@ class _PostAdScreenState extends State<PostAdScreen> {
   }
 
   Future<void> _submit() async {
+    final auth = context.read<AuthProvider>();
+    final t = context.read<LanguageProvider>().t;
+    if (!auth.isAuthenticated) {
+      _snack('Please sign in to post an ad', AppColors.orange);
+      return;
+    }
+
+    final user = auth.firebaseUser;
+    if (user == null) {
+      _snack('User session not found. Please sign in again.', AppColors.orange);
+      return;
+    }
+
+    if (_selectedCategory == null) {
+      _snack('Please select a category', AppColors.orange);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    try {
+      final p = widget.productToEdit;
+      final isJob = _selectedCategory == 'Jobs Center';
+      final currencyProvider = context.read<CurrencyProvider>();
+      
+      final productData = ProductModel(
+        id: p?.id ?? '',
+        title: _titleCtrl.text.trim().isEmpty ? 'My Ad' : _titleCtrl.text.trim(),
+        price: double.tryParse(_priceCtrl.text.trim()) ?? 0,
+        currency: p?.currency ?? currencyProvider.selectedCurrency,
+        category: _selectedCategory!,
+        condition: _condition,
+        sellerType: _sellerType,
+        sellerId: user.uid,
+        sellerName: auth.userModel?.name ?? 'Anonymous',
+        sellerPhone: _phoneCtrl.text.trim(),
+        whatsAppNumber: _whatsAppCtrl.text.trim(), // NEW
+        location: _location,
+        city: _cityCtrl.text.trim(), // NEW
+        village: _villageCtrl.text.trim(), // NEW
+        description: _descCtrl.text.trim(),
+        createdAt: p?.createdAt ?? DateTime.now(),
+        views: p?.views ?? 0,
+        isFeatured: p?.isFeatured ?? false,
+        imageUrls: p?.imageUrls ?? [],
+        // Bidding
+        isAuction: _isAuction,
+        auctionEndTime: _auctionEndTime,
+        // Job
+        isJob: isJob,
+        companyName: isJob ? _companyCtrl.text.trim() : null,
+        jobType: isJob ? _jobType : null,
+        salaryRange: isJob ? _salaryCtrl.text.trim() : null,
+        // Initial status
+        status: p?.status ?? 'pending', // All new ads start as pending for admin review
+      );
 
-    if (!mounted) return;
 
-    final newAd = ProductModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleCtrl.text.trim().isEmpty ? 'My Ad' : _titleCtrl.text.trim(),
-      price: double.tryParse(_priceCtrl.text.trim()) ?? 0,
-      category: _selectedCategory!,
-      condition: _condition,
-      sellerType: _sellerType,
-      sellerPhone: _phoneCtrl.text.trim(),
-      location: _location,
-      description: _descCtrl.text.trim(),
-      postedTime: 'Just now',
-      views: 0,
-      isFeatured: false,
-    );
+      if (p == null) {
+        await context.read<ProductProvider>().addProduct(productData, _selectedImages);
+        // Send notification to seller that ad is pending review
+        await NotificationService.system(
+          userId: user.uid,
+          title: t['ad_submitted'] ?? 'Ad Submitted 📝',
+          body: t['ad_pending_review'] ?? 'Your "${productData.title}" ad has been submitted and is pending admin review.',
+        );
+      } else {
+        await context.read<ProductProvider>().updateProduct(productData, _selectedImages);
+      }
 
-    AppState().addMyAd(newAd);
-
-    setState(() => _isSubmitting = false);
-    _showSuccessDialog();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        _snack('Error posting ad: $e', Colors.redAccent);
+      }
+    }
   }
 
   void _showSuccessDialog() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -134,20 +276,22 @@ class _PostAdScreenState extends State<PostAdScreen> {
               child: const Icon(Icons.check, color: Colors.white, size: 40),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Ad Posted Successfully! 🎉',
+            Text(
+              widget.productToEdit == null ? 'Ad Posted Successfully! 🎉' : 'Ad Updated Successfully! 🎉',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: Colors.white,
+                  color: theme.textTheme.bodyLarge?.color,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Your ad is now live and visible to buyers.',
+            Text(
+              widget.productToEdit == null 
+                  ? 'Your ad has been submitted and is pending admin review. You will be notified once it is live.'
+                  : 'Your changes have been saved successfully.',
               textAlign: TextAlign.center,
               style:
-              TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              TextStyle(color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13),
             ),
             const SizedBox(height: 24),
 
@@ -194,90 +338,91 @@ class _PostAdScreenState extends State<PostAdScreen> {
     );
   }
 
-  // ── Discard confirmation ──────────────────────────────────────────────────
-  // PostAdScreen is a tab — "close" means reset, not pop. We only pop when
-  // it was pushed as a standalone route (e.g. from the drawer). Detect this
-  // by checking whether there is a previous route we can pop back to.
-  void _confirmDiscard() {
-    // If nothing has been entered, just reset silently.
-    if (_step == 0 && _selectedCategory == null) {
-      _resetForm();
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.primaryDark,
-        title:
-        const Text('Discard Ad?', style: TextStyle(color: Colors.white)),
-        content: const Text('Your progress will be lost.',
-            style: TextStyle(color: AppColors.textSecondary)),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
+    final steps = [
+      t['step_category'] ?? 'Category',
+      t['step_details'] ?? 'Details',
+      t['step_photos'] ?? 'Photos',
+      t['step_preview'] ?? 'Preview'
+    ];
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.productToEdit != null ? (t['edit_ad'] ?? 'Edit Ad') : (t['nav_post_ad'] ?? 'Post Ad'),
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Keep Editing',
-                  style: TextStyle(color: AppColors.gold))),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx); // close dialog
-              _resetForm();       // reset to step 0 — never pop the screen
-            },
-            child: const Text('Discard',
-                style: TextStyle(color: Colors.redAccent)),
-          ),
+          if (_step > 0)
+            TextButton(
+              onPressed: _resetForm,
+              child: Text(t['reset'] ?? 'Reset', style: const TextStyle(color: AppColors.gold)),
+            ),
         ],
+      ),
+      body: _isSubmitting
+          ? _buildSubmittingState(t)
+          : Column(
+              children: [
+                _buildStepIndicator(steps),
+                Expanded(
+                  child: _buildCurrentStep(),
+                ),
+                _buildNavButtons(t),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+      child: KeyedSubtree(
+        key: ValueKey(_step),
+        child: _step == 0
+            ? _buildCategoryStep()
+            : _step == 1
+                ? _buildDetailsStep()
+                : _step == 2
+                    ? _buildPhotosStep()
+                    : _buildPreviewStep(),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        automaticallyImplyLeading: false,
-        title: const AppLogo(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: _confirmDiscard,
-          ),
-        ],
-      ),
-      body: Column(
+  Widget _buildSubmittingState(Map<String, String> t) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildStepIndicator(),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: KeyedSubtree(
-                key: ValueKey(_step),
-                child: _step == 0
-                    ? _buildCategoryStep()
-                    : _step == 1
-                    ? _buildDetailsStep()
-                    : _step == 2
-                    ? _buildPhotosStep()
-                    : _buildPreviewStep(),
-              ),
-            ),
-          ),
-          _buildNavButtons(),
+          const CircularProgressIndicator(color: AppColors.gold),
+          const SizedBox(height: 24),
+          Text(t['submitting_ad'] ?? 'Submitting your ad...',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
   // ── Step indicator ────────────────────────────────────────────────────────
-  Widget _buildStepIndicator() {
+  Widget _buildStepIndicator(List<String> steps) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-      color: AppColors.primaryDark,
+      color: isDark ? AppColors.primaryDark : AppColors.primary,
       child: Row(
-        children: _steps.asMap().entries.map((e) {
+        children: steps.asMap().entries.map((e) {
           final i = e.key;
           final isActive = i == _step;
           final isDone = i < _step;
@@ -288,7 +433,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   Expanded(
                     child: Container(
                       height: 2,
-                      color: isDone ? AppColors.gold : AppColors.divider,
+                      color: isDone ? AppColors.gold : (isDark ? AppColors.divider : Colors.white24),
                     ),
                   ),
                 Column(
@@ -302,34 +447,28 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         color: isDone
                             ? AppColors.gold
                             : isActive
-                            ? AppColors.primary
-                            : AppColors.card,
+                                ? AppColors.primary
+                                : (isDark ? theme.cardTheme.color : Colors.white.withValues(alpha: 0.1)),
                         border: Border.all(
-                          color:
-                          isActive ? AppColors.gold : AppColors.divider,
+                          color: isActive ? AppColors.gold : (isDark ? AppColors.divider : Colors.white24),
                           width: isActive ? 2 : 1,
                         ),
                       ),
                       child: Center(
                         child: isDone
-                            ? const Icon(Icons.check,
-                            size: 14, color: Colors.white)
+                            ? const Icon(Icons.check, size: 14, color: Colors.white)
                             : Text('${i + 1}',
-                            style: TextStyle(
-                              color: isActive
-                                  ? AppColors.gold
-                                  : AppColors.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            )),
+                                style: TextStyle(
+                                  color: isActive ? AppColors.gold : (isDark ? AppColors.textMuted : Colors.white70),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                )),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(e.value,
                         style: TextStyle(
-                            color: isActive
-                                ? AppColors.gold
-                                : AppColors.textMuted,
+                            color: isActive ? AppColors.gold : (isDark ? AppColors.textMuted : Colors.white70),
                             fontSize: 10)),
                   ],
                 ),
@@ -343,28 +482,32 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   // ── Step 1: Category ──────────────────────────────────────────────────────
   Widget _buildCategoryStep() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
     final cats = [
       {'n': 'Vehicles', 'i': '🚗'},
       {'n': 'Properties', 'i': '🏠'},
-      {'n': 'Mobile & Tablets', 'i': '📱'},
       {'n': 'Electronics', 'i': '⚡'},
       {'n': 'Furniture & Décor', 'i': '🪑'},
-      {'n': 'Jewellery', 'i': '💎'},
-      {'n': 'Clothes', 'i': '👕'},
-      {'n': 'Jobs Center', 'i': '💼'},
-      {'n': 'Services', 'i': '🔧'},
       {'n': 'WaterCrafts', 'i': '⛵'},
-      {'n': 'Computers & Parts', 'i': '💻'},
-      {'n': 'Video Games', 'i': '🎮'},
+      {'n': 'Jewellery', 'i': '💎'},
+      {'n': 'Lifestyle', 'i': '🛍️'},
+      {'n': 'Market', 'i': '🛒'},
+      {'n': 'Outdoor & Leisure', 'i': '⛺'},
+      {'n': 'Special Numbers', 'i': '🔢'},
+      {'n': 'Heavy Equipments', 'i': '🏗️'},
+      {'n': 'Jobs Center', 'i': '💼'},
+      {'n': 'Super Ads', 'i': '⭐'},
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: Text('Select Category',
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+          child: Text(t['select_category'] ?? 'Select Category',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: theme.textTheme.bodyLarge?.color,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
         ),
@@ -374,20 +517,21 @@ class _PostAdScreenState extends State<PostAdScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.9,
+            childAspectRatio: 0.85,
             children: cats.map((c) {
               final sel = _selectedCategory == c['n'];
+              final label = t[c['n']!.toLowerCase().replaceAll(' ', '_')] ?? c['n']!;
               return GestureDetector(
                 onTap: () => setState(() => _selectedCategory = c['n']),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   decoration: BoxDecoration(
-                    color: sel ? AppColors.primary : AppColors.card,
+                    color: sel ? AppColors.primary : theme.cardTheme.color,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: sel
                           ? AppColors.gold
-                          : AppColors.divider.withOpacity(0.5),
+                          : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5),
                       width: sel ? 2 : 1,
                     ),
                   ),
@@ -396,19 +540,15 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     children: [
                       Text(c['i']!, style: const TextStyle(fontSize: 34)),
                       const SizedBox(height: 8),
-                      Text(c['n']!,
+                      Text(label,
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: sel
-                                ? AppColors.gold
-                                : AppColors.textPrimary,
-                            fontSize: 11,
-                            fontWeight: sel
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          )),
+                              color: sel ? Colors.white : theme.textTheme.bodyLarge?.color,
+                              fontSize: 12,
+                              fontWeight:
+                              sel ? FontWeight.bold : FontWeight.normal)),
                     ],
                   ),
                 ),
@@ -422,43 +562,119 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   // ── Step 2: Details ───────────────────────────────────────────────────────
   Widget _buildDetailsStep() {
+    final theme = Theme.of(context);
+    final t = context.watch<LanguageProvider>().t;
+    final isJob = _selectedCategory == 'Jobs Center';
+    final isAuctionable = _selectedCategory == 'Vehicles' || _selectedCategory == 'Properties';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Ad Details',
+          Text(t['ad_details'] ?? 'Ad Details',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: theme.textTheme.bodyLarge?.color,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
-          _field('Title *', 'e.g. iPhone 14 Pro 256GB', _titleCtrl),
+          
+          if (isJob) ...[
+            _field('Company Name *', 'e.g. Pakistan International Airlines', _companyCtrl),
+            const SizedBox(height: 12),
+            _dropdown('Job Type *', 
+                ['Full-time', 'Part-time', 'Contract', 'Temporary'], 
+                _jobType, 
+                (v) => setState(() => _jobType = v!)),
+            const SizedBox(height: 12),
+            _field('Salary Range', 'e.g. 50,000 - 80,000 Rs.', _salaryCtrl),
+            const SizedBox(height: 12),
+          ],
+
+          _field('${t['title'] ?? "Title"} *', isJob ? 'e.g. Senior Accountant' : 'e.g. iPhone 14 Pro 256GB', _titleCtrl),
           const SizedBox(height: 12),
-          _field('Price (Q.R)', 'e.g. 2000 (enter 0 if free)', _priceCtrl,
-              isNumber: true),
+          
+          if (!isJob) ...[
+            _field('${t['price'] ?? "Price"} (Rs.)', 'e.g. 50000 (enter 0 if free)', _priceCtrl,
+                isNumber: true),
+            const SizedBox(height: 12),
+          ],
+
+          if (isAuctionable) ...[
+            SwitchListTile(
+              title: const Text('List as Auction/Bidding', style: TextStyle(fontSize: 14)),
+              subtitle: const Text('Allow users to bid on this item', style: TextStyle(fontSize: 12)),
+              value: _isAuction,
+              activeThumbColor: AppColors.gold,
+              onChanged: (v) => setState(() => _isAuction = v),
+              contentPadding: EdgeInsets.zero,
+            ),
+            if (_isAuction) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                title: const Text('Auction End Date', style: TextStyle(fontSize: 14)),
+                subtitle: Text(_auctionEndTime == null ? 'Not set' : _auctionEndTime!.toString().split(' ')[0], style: const TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.calendar_today, size: 18),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now().add(const Duration(days: 7)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                  );
+                  if (date != null) setState(() => _auctionEndTime = date);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+
+          _dropdown('${t['condition'] ?? "Condition"} *', 
+              ['Sale', 'Rent', 'Exchange', 'Free'].map((x) => t[x.toLowerCase()] ?? x).toList(),
+              t[_condition.toLowerCase()] ?? _condition, 
+              (v) {
+                // Find original value from translated value
+                final original = ['Sale', 'Rent', 'Exchange', 'Free'].firstWhere((x) => (t[x.toLowerCase()] ?? x) == v, orElse: () => 'Sale');
+                setState(() => _condition = original);
+              }),
           const SizedBox(height: 12),
-          _dropdown('Condition *', ['Sale', 'Rent', 'Exchange', 'Free'],
-              _condition, (v) => setState(() => _condition = v!)),
-          const SizedBox(height: 12),
-          _dropdown('Seller Type', ['Personal', 'Business'], _sellerType,
-                  (v) => setState(() => _sellerType = v!)),
+          _dropdown(t['seller_type'] ?? 'Seller Type', 
+              ['Personal', 'Business'].map((x) => t[x.toLowerCase()] ?? x).toList(), 
+              t[_sellerType.toLowerCase()] ?? _sellerType,
+              (v) {
+                final original = ['Personal', 'Business'].firstWhere((x) => (t[x.toLowerCase()] ?? x) == v, orElse: () => 'Personal');
+                setState(() => _sellerType = original);
+              }),
           const SizedBox(height: 12),
           _field(
-              'Description', 'Describe your item in detail…', _descCtrl,
+              t['description'] ?? 'Description', 'Describe your item in detail…', _descCtrl,
               maxLines: 4),
           const SizedBox(height: 12),
-          _dropdown('Location',
-              ['Doha', 'Al Rayyan', 'Al Wakra', 'Al Khor', 'Lusail', 'West Bay'],
-              _location, (v) => setState(() => _location = v!)),
+          _dropdown(t['location'] ?? 'Location',
+              ['Pakistan', 'GCC Countries'].map((x) => t[x.toLowerCase().replaceAll(' ', '_')] ?? x).toList(),
+              t[_location.toLowerCase().replaceAll(' ', '_')] ?? _location, 
+              (v) {
+                final original = ['Pakistan', 'GCC Countries'].firstWhere((x) => (t[x.toLowerCase().replaceAll(' ', '_')] ?? x) == v, orElse: () => 'Pakistan');
+                setState(() => _location = original);
+              }),
           const SizedBox(height: 12),
-          _field('Phone Number *', '+974 XXXX XXXX', _phoneCtrl,
+          if (_location == 'Pakistan') ...[
+            _field('City *', 'e.g. Lahore', _cityCtrl),
+            const SizedBox(height: 12),
+            _field('Village/Area', 'e.g. Gulberg III', _villageCtrl),
+            const SizedBox(height: 12),
+          ],
+          _field('${t['phone_number'] ?? "Phone Number"} *', '+92 XXX XXXXXXX', _phoneCtrl,
+              isNumber: true),
+          const SizedBox(height: 12),
+          _field('WhatsApp Number', '+92 XXX XXXXXXX (optional)', _whatsAppCtrl,
               isNumber: true),
           const SizedBox(height: 80),
         ],
       ),
     );
   }
+
 
   Widget _field(
       String label,
@@ -467,24 +683,26 @@ class _PostAdScreenState extends State<PostAdScreen> {
         bool isNumber = false,
         int maxLines = 1,
       }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 13)),
+            style: TextStyle(
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
           keyboardType:
           isNumber ? TextInputType.number : TextInputType.text,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textMuted),
+            hintStyle: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
             filled: true,
-            fillColor: AppColors.card,
+            fillColor: theme.cardTheme.color,
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none),
@@ -496,24 +714,26 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   Widget _dropdown(String label, List<String> opts, String val,
       ValueChanged<String?> onChange) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 13)),
+            style: TextStyle(
+                color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: BoxDecoration(
-              color: AppColors.card,
+              color: theme.cardTheme.color,
               borderRadius: BorderRadius.circular(10)),
           child: DropdownButton<String>(
             value: val,
             isExpanded: true,
-            dropdownColor: AppColors.card,
+            dropdownColor: theme.cardTheme.color,
             underline: const SizedBox(),
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 15),
             items: opts
                 .map((o) => DropdownMenuItem(value: o, child: Text(o)))
                 .toList(),
@@ -526,48 +746,37 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   // ── Step 3: Photos ────────────────────────────────────────────────────────
   Widget _buildPhotosStep() {
-    return Padding(
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Text('Add Photos',
-                style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text('$_photoCount / 10',
-                style: TextStyle(
-                    color: _photoCount > 0
-                        ? AppColors.gold
-                        : AppColors.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500)),
-          ]),
+          Text('Upload Photos',
+              style: TextStyle(
+                  color: theme.textTheme.bodyLarge?.color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          const Text('Add up to 10 photos. Clear photos get more views.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          const SizedBox(height: 16),
-          Expanded(
+          Text('Add up to 10 photos of your product',
+              style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 300,
             child: GridView.count(
               crossAxisCount: 3,
-              crossAxisSpacing: 10,
               mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
               children: [
-                if (_photoCount < 10)
+                if (_selectedImages.length < 10)
                   GestureDetector(
-                    onTap: () {
-                      setState(() => _photoCount++);
-                      _snack('Photo added!', AppColors.green);
-                    },
+                    onTap: _pickImage,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.card,
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border:
-                        Border.all(color: AppColors.gold, width: 1.5),
+                        border: Border.all(color: AppColors.gold, width: 1.5),
                       ),
                       child: const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -581,24 +790,18 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           ]),
                     ),
                   ),
-                ...List.generate(
-                  _photoCount,
-                      (i) => Stack(
+                ..._selectedImages.asMap().entries.map(
+                      (entry) => Stack(
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                              color: AppColors.divider.withOpacity(0.5)),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _selectedCategory != null
-                                ? Icons.image
-                                : Icons.image_outlined,
-                            color: AppColors.textMuted,
-                            size: 36,
+                              color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
+                          image: DecorationImage(
+                            image: FileImage(entry.value),
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
@@ -606,7 +809,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => setState(() => _photoCount--),
+                          onTap: () => setState(() => _selectedImages.removeAt(entry.key)),
                           child: Container(
                             width: 22,
                             height: 22,
@@ -628,17 +831,17 @@ class _PostAdScreenState extends State<PostAdScreen> {
             margin: const EdgeInsets.only(top: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: AppColors.card,
+                color: theme.cardTheme.color,
                 borderRadius: BorderRadius.circular(10)),
-            child: const Row(children: [
-              Icon(Icons.lightbulb_outline,
+            child: Row(children: [
+              const Icon(Icons.lightbulb_outline,
                   color: AppColors.gold, size: 18),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Tip: Well-lit photos from multiple angles help your ad get up to 3× more views.',
                   style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12),
+                      color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 12),
                 ),
               ),
             ]),
@@ -650,24 +853,27 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   // ── Step 4: Preview ───────────────────────────────────────────────────────
   Widget _buildPreviewStep() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currencyProvider = context.watch<CurrencyProvider>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Preview Your Ad',
+          Text('Preview Your Ad',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: theme.textTheme.bodyLarge?.color,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: theme.cardTheme.color,
               borderRadius: BorderRadius.circular(14),
               border:
-              Border.all(color: AppColors.gold.withOpacity(0.3)),
+              Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,7 +885,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         width: 88,
                         height: 88,
                         decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
                             borderRadius: BorderRadius.circular(10)),
                         child: Center(
                           child: Text(
@@ -697,8 +903,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                               _titleCtrl.text.isEmpty
                                   ? 'Your Ad Title'
                                   : _titleCtrl.text,
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary,
+                              style: TextStyle(
+                                  color: theme.textTheme.bodyLarge?.color,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600),
                               maxLines: 2,
@@ -708,7 +914,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                             Text(
                               _priceCtrl.text.isEmpty
                                   ? 'Price not set'
-                                  : '${_priceCtrl.text} Q.R',
+                                  : currencyProvider.formatPrice(double.tryParse(_priceCtrl.text) ?? 0),
                               style: const TextStyle(
                                   color: AppColors.gold,
                                   fontSize: 18,
@@ -716,13 +922,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
                             ),
                             const SizedBox(height: 4),
                             Row(children: [
-                              const Icon(Icons.location_on,
+                              Icon(Icons.location_on,
                                   size: 12,
-                                  color: AppColors.textMuted),
+                                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                               const SizedBox(width: 2),
                               Text(_location,
-                                  style: const TextStyle(
-                                      color: AppColors.textMuted,
+                                  style: TextStyle(
+                                      color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
                                       fontSize: 12)),
                             ]),
                           ],
@@ -731,11 +937,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     ]),
                 if (_descCtrl.text.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Divider(color: AppColors.divider),
+                  Divider(color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                   const SizedBox(height: 8),
                   Text(_descCtrl.text,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary,
+                      style: TextStyle(
+                          color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
                           fontSize: 13,
                           height: 1.5),
                       maxLines: 3,
@@ -746,10 +952,14 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   _PreviewTag(
                       _selectedCategory ?? 'No category',
                       Icons.category_outlined),
+                  if (_isAuction)
+                    const _PreviewTag('Auction', Icons.gavel_outlined),
+                  if (_selectedCategory == 'Jobs Center')
+                    _PreviewTag(_jobType, Icons.work_outline),
                   _PreviewTag(_condition, Icons.sell_outlined),
                   _PreviewTag(_sellerType, Icons.person_outline),
                   _PreviewTag(
-                      '$_photoCount photo${_photoCount == 1 ? '' : 's'}',
+                      '${_selectedImages.length} photo${_selectedImages.length == 1 ? '' : 's'}',
                       Icons.photo_library_outlined),
                 ]),
               ],
@@ -757,43 +967,52 @@ class _PostAdScreenState extends State<PostAdScreen> {
           ),
           const SizedBox(height: 20),
           _ChecklistItem('Category selected', _selectedCategory != null),
+          if (_selectedCategory == 'Jobs Center')
+            _ChecklistItem('Company name provided', _companyCtrl.text.isNotEmpty),
           _ChecklistItem('Title provided', _titleCtrl.text.isNotEmpty),
-          _ChecklistItem('Price set', _priceCtrl.text.isNotEmpty),
+          if (_selectedCategory != 'Jobs Center')
+            _ChecklistItem('Price set', _priceCtrl.text.isNotEmpty),
+          if (_isAuction)
+            _ChecklistItem('Auction date set', _auctionEndTime != null),
           _ChecklistItem(
               'Description added', _descCtrl.text.trim().length > 10),
-          _ChecklistItem('Photos added ($_photoCount)', _photoCount > 0),
+          _ChecklistItem('Photos added (${_selectedImages.length})', _selectedImages.isNotEmpty),
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
+
   String _catEmoji(String cat) {
     const map = {
       'Vehicles': '🚗',
       'Properties': '🏠',
-      'Mobile & Tablets': '📱',
       'Electronics': '⚡',
       'Furniture & Décor': '🪑',
-      'Jewellery': '💎',
-      'Clothes': '👕',
-      'Jobs Center': '💼',
-      'Services': '🔧',
       'WaterCrafts': '⛵',
-      'Computers & Parts': '💻',
-      'Video Games': '🎮',
+      'Jewellery': '💎',
+      'Lifestyle': '🛍️',
+      'Market': '🛒',
+      'Outdoor & Leisure': '⛺',
+      'Special Numbers': '🔢',
+      'Heavy Equipments': '🏗️',
+      'Jobs Center': '💼',
+      'Super Ads': '⭐',
     };
     return map[cat] ?? '🛍️';
   }
 
   // ── Bottom nav buttons ────────────────────────────────────────────────────
-  Widget _buildNavButtons() {
+  Widget _buildNavButtons(Map<String, String> t) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryDark,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : Colors.white,
         border:
-        Border(top: BorderSide(color: AppColors.divider, width: 0.5)),
+        Border(top: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5), width: 0.5)),
       ),
       child: Row(children: [
         if (_step > 0) ...[
@@ -801,20 +1020,20 @@ class _PostAdScreenState extends State<PostAdScreen> {
             child: OutlinedButton(
               onPressed: _prevStep,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.divider),
+                side: BorderSide(color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Back',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(t['back'] ?? 'Back',
+                  style: TextStyle(color: isDark ? Colors.white : AppColors.primary)),
             ),
           ),
           const SizedBox(width: 12),
         ],
         Expanded(
           flex: 2,
-          child: _step == _steps.length - 1
+          child: _step == 3 // Last step is Preview
               ? ElevatedButton(
             onPressed: _isSubmitting ? null : _submit,
             style: ElevatedButton.styleFrom(
@@ -829,8 +1048,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 height: 20,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.white))
-                : const Text('Submit Ad',
-                style: TextStyle(
+                : Text(t['submit_ad'] ?? 'Submit Ad',
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w600)),
@@ -844,7 +1063,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
-              _step == _steps.length - 2 ? 'Preview Ad' : 'Next →',
+              _step == 2 ? (t['preview_ad'] ?? 'Preview Ad') : '${t['next'] ?? "Next"} →',
               style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -865,19 +1084,21 @@ class _PreviewTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider.withOpacity(0.5)),
+        border: Border.all(color: (isDark ? AppColors.divider : Colors.grey).withValues(alpha: 0.2)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 12, color: AppColors.textMuted),
         const SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 11)),
+            style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ?? AppColors.textSecondary, fontSize: 11)),
       ]),
     );
   }
@@ -890,6 +1111,7 @@ class _ChecklistItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [
@@ -902,9 +1124,10 @@ class _ChecklistItem extends StatelessWidget {
         Text(label,
             style: TextStyle(
                 color:
-                done ? AppColors.textPrimary : AppColors.textMuted,
+                done ? theme.textTheme.bodyLarge?.color ?? Colors.white : AppColors.textMuted,
                 fontSize: 14)),
       ]),
     );
   }
 }
+
