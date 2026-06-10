@@ -96,17 +96,19 @@ class UserModel {
   }
 
   UserModel copyWith({
-    String? id, String? name, String? email, String? phone, String? whatsAppNumber,
+    String? id, String? name, String? email, String? nicNumber, String? phone, String? whatsAppNumber,
     String? photoUrl, String? avatarUrl, bool? isVerified, String? sellerTier,
     bool? isBusinessSeller, bool? isAdminApproved, String? idVerificationStatus,
     String? city, String? village, int? activeAdsCount, int? totalViews,
     double? rating, bool? isSuspended, bool? isAdmin, DateTime? createdAt,
-  }) => UserModel(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    email: email ?? this.email,
-    phone: phone ?? this.phone,
-    whatsAppNumber: whatsAppNumber ?? this.whatsAppNumber,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      nicNumber: nicNumber ?? this.nicNumber,
+      phone: phone ?? this.phone,
+      whatsAppNumber: whatsAppNumber ?? this.whatsAppNumber,
     photoUrl: photoUrl ?? this.photoUrl,
     avatarUrl: avatarUrl ?? this.avatarUrl,
     isVerified: isVerified ?? this.isVerified,

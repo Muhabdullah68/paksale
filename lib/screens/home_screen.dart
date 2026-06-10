@@ -21,6 +21,8 @@ import 'compare_screen.dart';
 import 'chat_screen.dart';
 import 'search_filter_screen.dart';
 
+import '../providers/cms_provider.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -380,7 +382,7 @@ class _HomeBodyState extends State<_HomeBody> {
             const SizedBox(height: 4),
             _buildMainCategories(context),
             const SizedBox(height: 8),
-            const AdBannerPlaceholder(text: 'J SEVEN REAL ESTATE - Freehold For Expats'),
+            _buildDynamicBanners(context),
             _catSection(context, 'Real Estate & Living', [
               {'n': 'Properties', 'i': '🏠'},
               {'n': 'Furniture & Décor', 'i': '🪑'},
@@ -435,6 +437,33 @@ class _HomeBodyState extends State<_HomeBody> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicBanners(BuildContext context) {
+    final banners = context.watch<CMSProvider>().banners;
+    if (banners.isEmpty) {
+      return const AdBannerPlaceholder(text: 'J SEVEN REAL ESTATE - Freehold For Expats');
+    }
+
+    return SizedBox(
+      height: 120,
+      child: PageView.builder(
+        itemCount: banners.length,
+        itemBuilder: (context, index) {
+          final b = banners[index];
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              image: DecorationImage(
+                image: NetworkImage(b['imageUrl']),
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -526,13 +555,16 @@ class _HomeBodyState extends State<_HomeBody> {
   }
 
   Widget _buildMainCategories(BuildContext context) {
-    final cats = [
-      {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
-      {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
-      {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
-      {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
-      {'n': 'Outdoor & Leisure', 'i': '⛺'},
-    ];
+    final cmsProvider = context.watch<CMSProvider>();
+    final cats = cmsProvider.categories.isNotEmpty
+        ? cmsProvider.categories.map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()}).toList()
+        : [
+            {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
+            {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
+            {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
+            {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
+            {'n': 'Outdoor & Leisure', 'i': '⛺'},
+          ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: GridView.count(

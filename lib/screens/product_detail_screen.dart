@@ -72,19 +72,92 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _updateStatus(BuildContext context, String status) async {
     try {
       await context.read<ProductProvider>().updateProductStatus(widget.product.id, status);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Product $status successfully')),
-        );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar( 
+          content: Text('Product status updated to $status'),
+          backgroundColor: AppColors.green,
+        ));
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to update status: $e'),
+          backgroundColor: Colors.red,
+        ));
       }
     }
+  }
+
+  void _showMarkAsSoldDialog(BuildContext context) {
+    final locationCtrl = TextEditingController();
+    final nicCtrl = TextEditingController();
+    final isNicRequired = widget.product.price > 20000;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark as Sold'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: locationCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Sold Location',
+                hintText: 'Enter where the product was sold',
+              ),
+            ),
+            if (isNicRequired)
+              TextField(
+                controller: nicCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Buyer\'s NIC Number',
+                  hintText: 'Mandatory for products > 20,000 Rs',
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (locationCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter sold location')));
+                return;
+              }
+              if (isNicRequired && nicCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buyer\'s NIC is mandatory for items over 20,000 Rs')));
+                return;
+              }
+
+              try {
+                final updatedProduct = widget.product.copyWith(
+                  isSold: true,
+                  soldLocation: locationCtrl.text,
+                  buyerNic: nicCtrl.text,
+                  status: 'sold',
+                );
+                await context.read<ProductProvider>().updateProduct(updatedProduct);
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Product marked as sold successfully'),
+                    backgroundColor: AppColors.green,
+                  ));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
+            child: const Text('Confirm Sold', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _descExpanded = false;
@@ -480,6 +553,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (context.watch<AuthProvider>().isAuthenticated && 
+                    context.watch<AuthProvider>().firebaseUser!.uid == widget.product.sellerId && 
+                    !widget.product.isSold)
+                  Container(
+                    color: theme.cardTheme.color,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showMarkAsSoldDialog(context),
+                        icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+                        label: const Text('Mark as Sold', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (context.watch<AuthProvider>().userModel?.isAdmin == true && widget.product.status == 'pending')
                   Container(
                     color: theme.cardTheme.color,

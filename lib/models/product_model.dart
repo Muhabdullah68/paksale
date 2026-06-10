@@ -28,6 +28,8 @@ class ProductModel {
   final bool isFeatured;
   final bool isBoosted; // NEW
   final bool isSold;
+  final String? soldLocation; // NEW
+  final String? buyerNic; // NEW: Required if price > 20k
   final bool isActive;
   final bool isVerifiedSeller;
   final Map<String, String> specifications;
@@ -78,6 +80,8 @@ class ProductModel {
     this.isFeatured = false,
     this.isBoosted = false, // NEW
     this.isSold = false,
+    this.soldLocation,
+    this.buyerNic,
     this.isActive = true,
     this.isVerifiedSeller = false,
     this.specifications = const {},
@@ -191,6 +195,8 @@ class ProductModel {
     'isFeatured': isFeatured,
     'isBoosted': isBoosted,
     'isSold': isSold,
+    'soldLocation': soldLocation,
+    'buyerNic': buyerNic,
     'isActive': isActive,
     'isVerifiedSeller': isVerifiedSeller,
     'specifications': specifications,
@@ -232,7 +238,9 @@ class ProductModel {
     String? sellerAvatarUrl, String? sellerTier, String? location, String? city, String? village,
     String? description, int? views, int? favoritesCount,
     DateTime? createdAt, DateTime? expiresAt, DateTime? boostExpiresAt,
-    bool? isFavorite, bool? isFeatured, bool? isBoosted, bool? isSold, bool? isActive,
+    bool? isFavorite, bool? isFeatured, bool? isBoosted, bool? isSold,
+    String? soldLocation, String? buyerNic,
+    bool? isActive,
     bool? isVerifiedSeller, Map<String, String>? specifications, List<String>? imageUrls,
     bool? isAuction, double? currentBid, String? lastBidderId, DateTime? auctionEndTime,
     List<Map<String, dynamic>>? bidHistory, bool? isJob, String? companyName,
@@ -265,6 +273,8 @@ class ProductModel {
     isFeatured: isFeatured ?? this.isFeatured,
     isBoosted: isBoosted ?? this.isBoosted,
     isSold: isSold ?? this.isSold,
+    soldLocation: soldLocation ?? this.soldLocation,
+    buyerNic: buyerNic ?? this.buyerNic,
     isActive: isActive ?? this.isActive,
     isVerifiedSeller: isVerifiedSeller ?? this.isVerifiedSeller,
     specifications: specifications ?? this.specifications,

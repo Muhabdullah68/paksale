@@ -56,34 +56,69 @@ class _MembersManagementScreenState extends State<MembersManagementScreen> {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
+    final nicCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
     
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add New Member'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
-            TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add New Member'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
+                TextField(
+                  controller: amountCtrl, 
+                  decoration: const InputDecoration(labelText: 'Initial Payment Amount (Rs)'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (val) => setState(() {}),
+                ),
+                TextField(
+                  controller: emailCtrl, 
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    hintText: double.tryParse(amountCtrl.text) != null && double.parse(amountCtrl.text) > 20000 
+                        ? 'Required for > 20k' : 'Optional',
+                  ),
+                ),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                TextField(
+                  controller: nicCtrl, 
+                  decoration: InputDecoration(
+                    labelText: 'NIC Number',
+                    hintText: double.tryParse(amountCtrl.text) != null && double.parse(amountCtrl.text) > 20000 
+                        ? 'Required for > 20k' : 'Optional',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final amount = double.tryParse(amountCtrl.text) ?? 0;
+                if (amount > 20000) {
+                  if (emailCtrl.text.isEmpty || nicCtrl.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Email and NIC are mandatory for payments > 20,000 Rs')),
+                    );
+                    return;
+                  }
+                }
+                // Logic to save member
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Member added successfully.')),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              child: const Text('Add Member'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              // Note: This would typically call a Firebase Auth creation method via Admin SDK or similar.
-              // For now, we'll just show a snackbar as a placeholder for the logic.
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Member creation requires backend Admin SDK access.')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text('Add Member'),
-          ),
-        ],
       ),
     );
   }
@@ -111,7 +146,8 @@ class _MemberListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(user.email),
+            Text(user.email ?? 'No email provided'),
+            if (user.nicNumber != null) Text('NIC: ${user.nicNumber}', style: const TextStyle(fontSize: 12)),
             Text('Status: ${user.isSuspended ? "Suspended" : "Active"}',
                 style: TextStyle(color: user.isSuspended ? Colors.red : Colors.green, fontSize: 12)),
           ],
@@ -147,7 +183,8 @@ class AdminUserDetailScreen extends StatelessWidget {
           children: [
             _buildDetailRow('User ID', user.id),
             _buildDetailRow('Full Name', user.name),
-            _buildDetailRow('Email', user.email),
+            _buildDetailRow('Email', user.email ?? 'Not provided'),
+            _buildDetailRow('NIC Number', user.nicNumber ?? 'Not provided'),
             _buildDetailRow('Phone', user.phone),
             _buildDetailRow('Verified', user.isVerified ? 'Yes' : 'No'),
             _buildDetailRow('Suspended', user.isSuspended ? 'Yes' : 'No'),

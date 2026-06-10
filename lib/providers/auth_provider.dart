@@ -12,10 +12,12 @@ class AuthProvider extends ChangeNotifier {
   User? _firebaseUser;
   UserModel? _userModel;
   bool _isLoading = false;
+  String? _error;
 
   User? get firebaseUser => _firebaseUser;
   UserModel? get userModel => _userModel;
   bool get isLoading => _isLoading;
+  String? get error => _error;
   bool get isAuthenticated => _firebaseUser != null;
 
   AuthProvider() {
@@ -40,28 +42,32 @@ class AuthProvider extends ChangeNotifier {
             email: user.email ?? '',
             phone: user.phoneNumber ?? '',
             photoUrl: user.photoURL ?? '',
+            isAdminApproved: true,
             createdAt: DateTime.now(),
           );
           // Try to save it, but don't block the UI if it fails
           _userRepo.createUser(model).catchError((e) => debugPrint("Failed to create user doc: $e"));
         }
         
-        // CHECK SUSPENSION
-        if (model.isSuspended) {
-          await signOut();
+        // Check suspension/approval status
+        if (model.isSuspended || !model.isAdminApproved) {
+          _error = 'Your account is suspended';
+          await _authRepo.signOut();
+          _firebaseUser = null;
           _userModel = null;
-          // You might want to notify the UI about the suspension specifically
-          // For now, signing out is the primary requirement
+          notifyListeners();
           return;
         }
 
         _userModel = model;
       } catch (e) {
+        _error = e.toString();
         // Fallback to basic model from Auth if everything fails
         _userModel = UserModel(
           id: user.uid,
           name: user.displayName ?? 'User',
           email: user.email ?? '',
+          isAdminApproved: true,
           createdAt: DateTime.now(),
         );
       }
@@ -77,9 +83,9 @@ class AuthProvider extends ChangeNotifier {
       final credential = await _authRepo.signIn(email, password);
       if (credential.user != null) {
         final userModel = await _userRepo.getUserById(credential.user!.uid);
-        if (userModel != null && userModel.isSuspended) {
+        if (userModel != null && (userModel.isSuspended || !userModel.isAdminApproved)) {
           await signOut();
-          throw AuthException('Your account has been suspended. Please contact support.', 'suspended');
+          throw AuthException('Your account is suspended', 'suspended');
         }
       }
     } finally {
@@ -123,13 +129,14 @@ class AuthProvider extends ChangeNotifier {
             name: name,
             email: '',
             phone: credential.user!.phoneNumber ?? '',
+            isAdminApproved: true,
             createdAt: DateTime.now(),
           );
           await _userRepo.createUser(newUser);
           _userModel = newUser;
-        } else if (existingUser.isSuspended) {
+        } else if (existingUser.isSuspended || !existingUser.isAdminApproved) {
           await signOut();
-          throw AuthException('Your account has been suspended. Please contact support.', 'suspended');
+          throw AuthException('Your account is suspended', 'suspended');
         }
       }
     } finally {
@@ -147,6 +154,7 @@ class AuthProvider extends ChangeNotifier {
           name: name,
           email: email,
           phone: phone,
+          isAdminApproved: true,
           createdAt: DateTime.now(),
         );
         await _userRepo.createUser(newUser);

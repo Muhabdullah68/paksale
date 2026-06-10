@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'screens/maintenance_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
@@ -83,13 +84,20 @@ class MyApp extends StatelessWidget {
     final langProvider = context.watch<LanguageProvider>();
     
     return MaterialApp(
-      title: 'PakistanSale Marketplace',
+      title: 'FnB Market',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
       themeAnimationDuration: const Duration(milliseconds: 100), // Faster transition
       builder: (context, child) {
+        final cmsProvider = context.watch<CMSProvider>();
+        if (cmsProvider.maintenanceMode) {
+          return Directionality(
+            textDirection: langProvider.isRTL ? TextDirection.rtl : TextDirection.ltr,
+            child: const MaintenanceScreen(),
+          );
+        }
         return Directionality(
           textDirection: langProvider.isRTL ? TextDirection.rtl : TextDirection.ltr,
           child: child!,

@@ -140,10 +140,12 @@ class ProductRepository {
     });
   }
 
-  Future<List<ProductModel>> getProductsByUser(String userId) async {
-    final snapshot = await _productsRef
-        .where('sellerId', isEqualTo: userId)
-        .get();
+  Future<List<ProductModel>> getProductsByUser(String userId, {bool approvedOnly = false}) async {
+    Query query = _productsRef.where('sellerId', isEqualTo: userId);
+    if (approvedOnly) {
+      query = query.where('status', isEqualTo: 'approved');
+    }
+    final snapshot = await query.get();
     return snapshot.docs.map((doc) => ProductModel.fromFirestore(doc)).toList();
   }
 

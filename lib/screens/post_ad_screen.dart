@@ -10,6 +10,8 @@ import '../services/language_provider.dart';
 import '../services/notification_service.dart';
 import '../services/currency_provider.dart';
 
+import '../providers/cms_provider.dart';
+
 class PostAdScreen extends StatefulWidget {
   final ProductModel? productToEdit;
   const PostAdScreen({super.key, this.productToEdit});
@@ -120,6 +122,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
 
   Future<void> _pickImage() async {
+    if (_selectedImages.length >= 2) {
+      _snack('Photo limit reached. You can only upload up to 02 photos.', AppColors.orange);
+      return;
+    }
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 70, // Optimize for free tier storage
@@ -174,9 +180,24 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   Future<void> _submit() async {
     final auth = context.read<AuthProvider>();
+    final cms = context.read<CMSProvider>();
     final t = context.read<LanguageProvider>().t;
+
     if (!auth.isAuthenticated) {
       _snack('Please sign in to post an ad', AppColors.orange);
+      return;
+    }
+
+    if (auth.userModel?.isAdminApproved == false) {
+      _snack('Your account is suspended', AppColors.orange);
+      return;
+    }
+
+    // Check ID Verification if required
+    if (cms.requireIdVerification && 
+        auth.userModel?.idVerificationStatus != 'verified' && 
+        auth.userModel?.idVerificationStatus != 'approved') {
+      _snack('ID Verification is required to post ads. Please verify your account in settings.', AppColors.orange);
       return;
     }
 
@@ -485,21 +506,27 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
-    final cats = [
-      {'n': 'Vehicles', 'i': '🚗'},
-      {'n': 'Properties', 'i': '🏠'},
-      {'n': 'Electronics', 'i': '⚡'},
-      {'n': 'Furniture & Décor', 'i': '🪑'},
-      {'n': 'WaterCrafts', 'i': '⛵'},
-      {'n': 'Jewellery', 'i': '💎'},
-      {'n': 'Lifestyle', 'i': '🛍️'},
-      {'n': 'Market', 'i': '🛒'},
-      {'n': 'Outdoor & Leisure', 'i': '⛺'},
-      {'n': 'Special Numbers', 'i': '🔢'},
-      {'n': 'Heavy Equipments', 'i': '🏗️'},
-      {'n': 'Jobs Center', 'i': '💼'},
-      {'n': 'Super Ads', 'i': '⭐'},
-    ];
+    final cms = context.watch<CMSProvider>();
+    final cats = cms.categories.isNotEmpty
+        ? cms.categories.map((c) => {
+            'n': c['name']?.toString() ?? '',
+            'i': c['icon']?.toString() ?? '',
+          }).toList()
+        : [
+            {'n': 'Vehicles', 'i': '🚗'},
+            {'n': 'Properties', 'i': '🏠'},
+            {'n': 'Electronics', 'i': '⚡'},
+            {'n': 'Furniture & Décor', 'i': '🪑'},
+            {'n': 'WaterCrafts', 'i': '⛵'},
+            {'n': 'Jewellery', 'i': '💎'},
+            {'n': 'Lifestyle', 'i': '🛍️'},
+            {'n': 'Market', 'i': '🛒'},
+            {'n': 'Outdoor & Leisure', 'i': '⛺'},
+            {'n': 'Special Numbers', 'i': '🔢'},
+            {'n': 'Heavy Equipments', 'i': '🏗️'},
+            {'n': 'Jobs Center', 'i': '💼'},
+            {'n': 'Super Ads', 'i': '⭐'},
+          ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

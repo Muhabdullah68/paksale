@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../providers/cms_provider.dart';
 import 'listing_screen.dart';
 import 'notifications_screen.dart';
 
@@ -22,7 +23,21 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
-    const categories = SampleData.homeCategories;
+    
+    final cmsProvider = context.watch<CMSProvider>();
+    final categories = cmsProvider.categories.isNotEmpty
+        ? cmsProvider.categories.map((c) => {
+            'id': c['id']?.toString() ?? '',
+            'name': c['name']?.toString() ?? '',
+            'icon': c['icon']?.toString() ?? '',
+          }).toList()
+        : SampleData.homeCategories;
+
+    if (_selectedIndex >= categories.length) {
+      _selectedIndex = 0;
+    }
+
+    final String selectedCatName = categories.isNotEmpty ? (categories[_selectedIndex]['name'] as String) : '';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -120,7 +135,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ),
                 ),
                 Expanded(
-                  child: _buildSubCategoryList(categories[_selectedIndex]['name'] as String, isDark, theme),
+                  child: _buildSubCategoryList(selectedCatName, isDark, theme),
                 ),
               ],
             ),

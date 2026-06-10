@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/cms_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../services/language_provider.dart';
 import '../services/theme_provider.dart';
@@ -17,6 +18,7 @@ import 'post_ad_screen.dart';
 import 'product_detail_screen.dart';
 import 'admin/reports_screen.dart';
 import 'admin/admin_dashboard.dart';
+
 
 // ─── Main Account Screen ──────────────────────────────────────────────────────
 class AccountScreen extends StatefulWidget {
@@ -312,7 +314,19 @@ class _AccountScreenState extends State<AccountScreen>
               label: t['privacy_policy'] ?? 'Privacy Policy',
               onTap: () => _showInfoDialog(
                 t['privacy_policy'] ?? 'Privacy Policy',
-                t['privacy_content'] ?? '',
+                context.read<CMSProvider>().privacyContent.isNotEmpty
+                    ? context.read<CMSProvider>().privacyContent
+                    : (t['privacy_content'] ?? ''),
+              ),
+            ),
+            _MenuRow(
+              icon: Icons.gavel_outlined,
+              label: t['terms'] ?? 'Terms of Service',
+              onTap: () => _showInfoDialog(
+                t['terms'] ?? 'Terms of Service',
+                context.read<CMSProvider>().termsContent.isNotEmpty
+                    ? context.read<CMSProvider>().termsContent
+                    : (t['terms_content'] ?? ''),
               ),
             ),
           ], t),
@@ -1362,14 +1376,18 @@ class _SettingsTabState extends State<_SettingsTab> {
                 label: t['privacy_policy'] ?? 'Privacy Policy',
                 onTap: () => _showInfoDialog(
                     t['privacy_policy'] ?? 'Privacy Policy',
-                    t['privacy_content'] ?? ''),
+                    context.read<CMSProvider>().privacyContent.isNotEmpty 
+                      ? context.read<CMSProvider>().privacyContent 
+                      : (t['privacy_content'] ?? '')),
               ),
               _SettingsTile(
                 icon: Icons.gavel_outlined,
                 label: t['terms'] ?? 'Terms of Service',
                 onTap: () => _showInfoDialog(
                     t['terms'] ?? 'Terms of Service',
-                    t['terms_content'] ?? ''),
+                    context.read<CMSProvider>().termsContent.isNotEmpty 
+                      ? context.read<CMSProvider>().termsContent 
+                      : (t['terms_content'] ?? '')),
               ),
               _SettingsTile(
                 icon: Icons.help_outline,
