@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
-import '../repositories/product_repository.dart';
 
 class AdminProvider extends ChangeNotifier {
   final UserRepository _userRepo = UserRepository();
-  final ProductRepository _productRepo = ProductRepository();
 
   List<UserModel> _allUsers = [];
   bool _isLoading = false;

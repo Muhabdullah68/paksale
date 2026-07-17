@@ -8,6 +8,7 @@ import '../providers/compare_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/report_provider.dart';
+import '../providers/order_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../theme/app_theme.dart';
@@ -38,8 +39,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _launchCaller() async {
     final url = Uri.parse('tel:${widget.product.sellerPhone}');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
+    if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      // Success
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +139,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   buyerNic: nicCtrl.text,
                   status: 'sold',
                 );
-                await context.read<ProductProvider>().updateProduct(updatedProduct);
+                await context.read<ProductProvider>().updateProduct(updatedProduct, []);
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -161,9 +162,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   bool _descExpanded = false;
-
-  String _fmt(double p) => p.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
   IconData _catIcon(String cat) {
     switch (cat) {
@@ -329,6 +327,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         fontWeight: FontWeight.w600)),
                               ]),
                             ),
+                            if (p.acceptsCOD) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                    color: AppColors.green,
+                                    borderRadius: BorderRadius.circular(14)),
+                                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(Icons.money,
+                                      size: 14, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text('COD',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                ]),
+                              ),
+                            ],
                           ]),
                       const SizedBox(height: 8),
 
@@ -595,6 +613,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                if (p.acceptsCOD && !p.isSold &&
+                    context.watch<AuthProvider>().isAuthenticated &&
+                    context.watch<AuthProvider>().firebaseUser!.uid != p.sellerId)
+                  Container(
+                    color: theme.cardTheme.color,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showPlaceOrderDialog(context),
+                        icon: const Icon(Icons.money, color: Colors.white),
+                        label: const Text('Place COD Order', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
                   ),
                 ContactActionButtons(
@@ -977,6 +1015,140 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
     );
+  }
+
+  void _showPlaceOrderDialog(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final t = context.read<LanguageProvider>().t;
+    final nameCtrl = TextEditingController(text: auth.userModel?.name ?? '');
+    final phoneCtrl = TextEditingController(text: auth.userModel?.phone ?? '');
+    final addressCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(t['login_prompt'] ?? 'Please sign in to place an order'),
+        backgroundColor: AppColors.orange,
+      ));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Place COD Order'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.shopping_bag_outlined, color: AppColors.green, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(widget.product.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                ]),
+              ),
+              const SizedBox(height: 8),
+              Text('Total: ${context.read<CurrencyProvider>().formatPrice(widget.product.price)}', style: const TextStyle(color: AppColors.green, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Your Name', hintText: 'Enter your full name', prefixIcon: Icon(Icons.person_outline)),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: phoneCtrl,
+                decoration: const InputDecoration(labelText: 'Contact Number', hintText: '+92 XXX XXXXXXX', prefixIcon: Icon(Icons.phone_outlined)),
+                keyboardType: TextInputType.phone,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone number is required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: addressCtrl,
+                decoration: const InputDecoration(labelText: 'Delivery Address', hintText: 'Enter your full address', prefixIcon: Icon(Icons.location_on_outlined)),
+                maxLines: 2,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Delivery address is required' : null,
+              ),
+              if (widget.product.codDeliveryLocation != null && widget.product.codDeliveryLocation!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.store_outlined, size: 16, color: AppColors.gold),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('Seller delivers to: ${widget.product.codDeliveryLocation}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted))),
+                  ]),
+                ),
+              ],
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              Navigator.pop(ctx);
+              await _placeOrder(nameCtrl.text.trim(), phoneCtrl.text.trim(), addressCtrl.text.trim());
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
+            child: const Text('Confirm Order', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _placeOrder(String name, String phone, String address) async {
+    final auth = context.read<AuthProvider>();
+    final p = widget.product;
+    final order = OrderModel(
+      id: '',
+      productId: p.id,
+      productTitle: p.title,
+      productImage: p.imageUrls.isNotEmpty ? p.imageUrls[0] : '',
+      price: p.price,
+      currency: p.currency,
+      sellerId: p.sellerId,
+      sellerName: p.sellerName,
+      sellerPhone: p.codContactNumber ?? p.sellerPhone,
+      buyerId: auth.firebaseUser!.uid,
+      buyerName: name,
+      buyerPhone: phone,
+      buyerAddress: address,
+      deliveryLocation: p.codDeliveryLocation ?? '',
+      contactNumber: p.codContactNumber,
+      status: 'pending',
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      await context.read<OrderProvider>().placeOrder(order);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('COD order placed successfully! The seller will contact you soon.'),
+          backgroundColor: AppColors.green,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error placing order: $e'),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+    }
   }
 
   void _showReportDialog(BuildContext context) {

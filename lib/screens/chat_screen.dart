@@ -439,7 +439,31 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final ImagePicker _picker = ImagePicker();
 
   void _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    // Show bottom sheet to choose source
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final XFile? image = await _picker.pickImage(source: source);
     if (image == null) return;
 
     final auth = context.read<AuthProvider>();

@@ -146,26 +146,46 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Widget _buildSubCategoryList(String categoryName, bool isDark, ThemeData theme) {
-    // In a real app, this would fetch from a repository based on categoryName
-    // For now, we'll show a "See All" and some mock subcategories
-    final List<String> subCats = [
-      'All in $categoryName',
-      'Latest $categoryName',
-      'Featured $categoryName',
-      'Premium $categoryName',
-    ];
+    // Get the category with subcategories from cmsProvider or sample data
+    final cmsProvider = context.watch<CMSProvider>();
+    final categories = cmsProvider.categories.isNotEmpty
+        ? cmsProvider.categories
+        : SampleData.homeCategories;
+        
+    // Find the selected category
+    final selectedCategory = categories.firstWhere(
+      (cat) => cat['name'] == categoryName,
+      orElse: () => SampleData.homeCategories[0],
+    );
+    
+    // Get subcategories (fallback to empty list if not present)
+    final subCategoriesRaw = selectedCategory['subCategories'];
+    final List<Map<String, dynamic>> subCats = subCategoriesRaw is List
+            ? subCategoriesRaw.cast<Map<String, dynamic>>().toList()
+        : [];
+        
+    if (subCats.isEmpty) {
+      // Fallback to simple list if no subcategories
+      return Center(child: Text('No subcategories found', 
+        style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted)));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 80),
       itemCount: subCats.length,
       itemBuilder: (_, i) {
-        final name = subCats[i];
+        final subCat = subCats[i];
+        final name = subCat['name'] as String;
+        final icon = subCat['icon'] as String? ?? '';
         return InkWell(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => ListingScreen(categoryTitle: categoryName)),
+                  builder: (_) => ListingScreen(
+                    categoryTitle: categoryName,
+                    subCategoryTitle: name,
+                  )),
             );
           },
           child: Container(
@@ -175,6 +195,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     bottom: BorderSide(color: isDark ? AppColors.divider : AppColors.dividerLightMode, width: 0.3))),
             child: Row(
               children: [
+                Text(icon, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(name,
                       style: TextStyle(

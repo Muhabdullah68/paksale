@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product_model.dart';
 import '../repositories/product_repository.dart';
 import '../services/storage_service.dart';
-import '../services/data_seeder.dart';
 
 class ProductProvider extends ChangeNotifier {
   final ProductRepository _productRepo = ProductRepository();
@@ -16,7 +15,6 @@ class ProductProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
-  bool _isFirstFetch = true;
   String? _error;
   DocumentSnapshot? _lastDocument;
 
@@ -62,12 +60,7 @@ class ProductProvider extends ChangeNotifier {
       if (refresh) {
         _products = newProducts;
         
-        // Auto-seed if database is empty on first load
-        if (_isFirstFetch && _products.isEmpty && (category == null || category == 'All')) {
-          _isFirstFetch = false; // Prevent infinite loop
-          await DataSeeder.seedAllData();
-          return fetchProducts(category: category, refresh: true);
-        }
+
       } else {
         _products.addAll(newProducts);
       }
@@ -77,7 +70,6 @@ class ProductProvider extends ChangeNotifier {
       }
       
       _hasMore = newProducts.length == 10;
-      _isFirstFetch = false;
       _error = null;
     } catch (e) {
       _error = e.toString();

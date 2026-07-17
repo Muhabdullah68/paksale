@@ -34,7 +34,7 @@ class AppLogo extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
-    final appName = t['appName'] ?? 'PakistanSale';
+    final appName = t['appName'] ?? 'Pak Sale';
     
     // Split name for two-tone color if it contains 'Sale'
     String part1 = appName;
@@ -89,7 +89,7 @@ class CustomSearchBar extends StatelessWidget {
     this.onTap,
     this.onChanged,
     this.controller,
-    this.hint = 'Search in PakistanSale...',
+    this.hint = 'Search in Pak Sale...',
     this.onPrimaryBackground = false,
   });
 
@@ -208,12 +208,6 @@ class ProductCard extends StatelessWidget {
     this.onCompare,
     this.showCompareButton = true,
   });
-
-  String _formatPrice(double price) {
-    return price
-        .toStringAsFixed(0)
-        .replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-  }
 
   @override
   Widget build(BuildContext context) {

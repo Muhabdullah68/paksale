@@ -5,7 +5,6 @@ import '../models/models.dart';
 import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/notification_provider.dart';
-import '../providers/chat_provider.dart';
 import '../providers/cms_provider.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
@@ -20,8 +19,6 @@ import 'product_detail_screen.dart';
 import 'compare_screen.dart';
 import 'chat_screen.dart';
 import 'search_filter_screen.dart';
-
-import '../providers/cms_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -270,7 +267,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── App bar (Home tab only) ────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
     final unread = context.select<NotificationProvider, int>(
         (p) => p.unreadCount);

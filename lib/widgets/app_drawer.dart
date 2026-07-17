@@ -7,6 +7,7 @@ import '../screens/categories_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/compare_screen.dart';
 import '../screens/search_filter_screen.dart';
+import '../screens/orders_screen.dart';
 import '../providers/compare_provider.dart';
 import '../providers/notification_provider.dart';
 import '../services/language_provider.dart';
@@ -836,6 +837,11 @@ class _AppDrawerState extends State<AppDrawer> {
                   label: 'عربي / English',
                   trailing: currentLanguage,
                   onTap: _showLanguagePicker,
+                ),
+                _DrawerItem(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'My Orders',
+                  onTap: () => _push(const OrdersScreen()),
                 ),
                 _DrawerItem(
                   icon: Icons.notifications_outlined,

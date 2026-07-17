@@ -12,8 +12,9 @@ import 'notifications_screen.dart';
 class ListingScreen extends StatefulWidget {
   final ProductModel? product;
   final String? categoryTitle;
+  final String? subCategoryTitle;
 
-  const ListingScreen({super.key, this.product, this.categoryTitle});
+  const ListingScreen({super.key, this.product, this.categoryTitle, this.subCategoryTitle});
 
   @override
   State<ListingScreen> createState() => _ListingScreenState();
@@ -93,6 +94,11 @@ class _ListingScreenState extends State<ListingScreen> {
         p.city.contains(_selectedLocation!) || 
         p.village.contains(_selectedLocation!)
       ).toList();
+    }
+    
+    // Filter by subcategory if provided
+    if (widget.subCategoryTitle != null && widget.subCategoryTitle!.isNotEmpty && !widget.subCategoryTitle!.startsWith('All ')) {
+      filtered = filtered.where((p) => p.subCategory == widget.subCategoryTitle).toList();
     }
 
     return filtered;
@@ -180,9 +186,11 @@ class _ListingScreenState extends State<ListingScreen> {
                       border: Border.all(color: isDark ? AppColors.divider : Colors.white30),
                     ),
                     child: Text(
-                      widget.categoryTitle != null 
-                        ? (t[widget.categoryTitle?.toLowerCase().replaceAll(' ', '_')] ?? widget.categoryTitle ?? '')
-                        : (t['all_categories'] ?? 'All Categories'),
+                      widget.subCategoryTitle != null 
+                        ? widget.subCategoryTitle!
+                        : widget.categoryTitle != null 
+                          ? (t[widget.categoryTitle?.toLowerCase().replaceAll(' ', '_')] ?? widget.categoryTitle ?? '')
+                          : (t['all_categories'] ?? 'All Categories'),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                     ),

@@ -5,7 +5,9 @@ import '../theme/app_theme.dart';
 import '../services/language_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/cms_provider.dart';
 import '../models/notification_model.dart';
+import '../core/utils/timestamp_utils.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -17,6 +19,7 @@ class NotificationsScreen extends StatelessWidget {
     final t = context.watch<LanguageProvider>().t;
     final auth = context.watch<AuthProvider>();
     final notifProvider = context.watch<NotificationProvider>();
+    final cmsProvider = context.watch<CMSProvider>();
 
     // ── Guest state ──────────────────────────────────────────────────────────
     if (!auth.isAuthenticated) {
@@ -31,12 +34,15 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(context, t, notifProvider, isDark, auth),
-      body: notifProvider.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.gold))
-          : notifProvider.notifications.isEmpty
+      body: (notifProvider.isLoading)
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          : (notifProvider.notifications.isEmpty && cmsProvider.broadcastNotifications.isEmpty)
               ? _EmptyState(t: t, isDark: isDark)
-              : _NotificationList(notifProvider: notifProvider, t: t),
+              : _NotificationList(
+                  notifProvider: notifProvider,
+                  t: t,
+                  broadcastNotifications: cmsProvider.broadcastNotifications,
+                ),
     );
   }
 
@@ -147,7 +153,8 @@ class NotificationsScreen extends StatelessWidget {
 class _NotificationList extends StatelessWidget {
   final NotificationProvider notifProvider;
   final Map<String, String> t;
-  const _NotificationList({required this.notifProvider, required this.t});
+  final List<Map<String, dynamic>> broadcastNotifications;
+  const _NotificationList({required this.notifProvider, required this.t, required this.broadcastNotifications});
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +181,13 @@ class _NotificationList extends StatelessWidget {
 
     return ListView(
       children: [
+        if (broadcastNotifications.isNotEmpty) ...[
+          _GroupHeader(label: 'Announcements', isDark: isDark),
+          ...broadcastNotifications.map((n) => _BroadcastNotificationTile(
+                notification: n,
+                t: t,
+              )),
+        ],
         if (today.isNotEmpty) ...[
           _GroupHeader(label: t['today'] ?? 'Today', isDark: isDark),
           ...today.map((n) => _NotificationTile(
@@ -204,6 +218,97 @@ class _NotificationList extends StatelessWidget {
         const SizedBox(height: 24),
       ],
     );
+  }
+}
+
+// ── Broadcast notification tile ─────────────────────────────────────────────────────────
+class _BroadcastNotificationTile extends StatelessWidget {
+  final Map<String, dynamic> notification;
+  final Map<String, String> t;
+  const _BroadcastNotificationTile({required this.notification, required this.t});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.primaryDark.withValues(alpha: 0.35)
+            : AppColors.primary.withValues(alpha: 0.08),
+        border: Border(
+          left: BorderSide(
+            color: AppColors.gold,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon badge
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: const Icon(Icons.campaign, color: AppColors.gold, size: 22),
+          ),
+          const SizedBox(width: 14),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        notification['title'] ?? 'Announcement',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : AppColors.primary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (notification['createdAt'] != null)
+                      Text(
+                        _formatTime(notification['createdAt']),
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.textMuted
+                              : AppColors.textSecondaryLightMode,
+                          fontSize: 10,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  notification['body'] ?? '',
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(dynamic timestamp) {
+    return TimestampUtils.timeAgo(timestamp);
   }
 }
 

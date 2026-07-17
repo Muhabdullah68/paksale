@@ -17,18 +17,22 @@ class CMSProvider extends ChangeNotifier {
   bool _cardPaymentEnabled = true;
   bool _jazzCashEnabled = true;
   bool _easyPaisaEnabled = true;
-  String _maintenanceMsg = 'FnB Market is currently undergoing maintenance. Please check back later.';
+  String _maintenanceMsg = 'Pak Sale is currently undergoing maintenance. Please check back later.';
   
   // Content
   List<Map<String, dynamic>> _banners = [];
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _broadcastNotifications = [];
   String _termsContent = '';
   String _privacyContent = '';
+  String _helpContent = '';
   
   StreamSubscription? _cmsSub;
   StreamSubscription? _settingsSub;
   StreamSubscription? _bannersSub;
   StreamSubscription? _categoriesSub;
+  StreamSubscription? _notificationsSub;
+  StreamSubscription? _helpSub;
 
   bool get needsPolicyReacceptance => _needsPolicyReacceptance;
   bool get maintenanceMode => _maintenanceMode;
@@ -39,8 +43,10 @@ class CMSProvider extends ChangeNotifier {
   String get maintenanceMsg => _maintenanceMsg;
   List<Map<String, dynamic>> get banners => _banners;
   List<Map<String, dynamic>> get categories => _categories;
+  List<Map<String, dynamic>> get broadcastNotifications => _broadcastNotifications;
   String get termsContent => _termsContent;
   String get privacyContent => _privacyContent;
+  String get helpContent => _helpContent;
 
   CMSProvider() {
     _init();
@@ -69,6 +75,12 @@ class CMSProvider extends ChangeNotifier {
       if (doc.exists) _privacyContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
       notifyListeners();
     });
+    
+    // Listen to help content
+    _helpSub = _db.collection(FirestorePaths.cms).doc('help').snapshots().listen((doc) {
+      if (doc.exists) _helpContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
+      notifyListeners();
+    });
   }
 
   void _listenToSettings() {
@@ -77,6 +89,9 @@ class CMSProvider extends ChangeNotifier {
         final data = doc.data() as Map<String, dynamic>;
         _maintenanceMode = data['maintenanceMode'] ?? false;
         _requireIdVerification = data['requireIdVerification'] ?? false;
+        _cardPaymentEnabled = data['cardPaymentEnabled'] ?? true;
+        _jazzCashEnabled = data['jazzCashEnabled'] ?? true;
+        _easyPaisaEnabled = data['easyPaisaEnabled'] ?? true;
         _maintenanceMsg = data['maintenanceMessage'] ?? _maintenanceMsg;
         notifyListeners();
       }
@@ -91,6 +106,12 @@ class CMSProvider extends ChangeNotifier {
 
     _categoriesSub = _db.collection('categories').orderBy('order').snapshots().listen((snap) {
       _categories = snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+      notifyListeners();
+    });
+    
+    // Listen to broadcast notifications
+    _notificationsSub = _db.collection('broadcast_notifications').orderBy('createdAt', descending: true).snapshots().listen((snap) {
+      _broadcastNotifications = snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
       notifyListeners();
     });
   }
@@ -139,12 +160,58 @@ class CMSProvider extends ChangeNotifier {
     await _db.collection('settings').doc('general').update(updates);
   }
 
+  // Admin methods to update content
+  Future<void> updateTerms(String content) async {
+    await _db.collection(FirestorePaths.cms).doc('terms').set({'content': content}, SetOptions(merge: true));
+  }
+  
+  Future<void> updatePrivacy(String content) async {
+    await _db.collection(FirestorePaths.cms).doc('privacy').set({'content': content}, SetOptions(merge: true));
+  }
+  
+  Future<void> updateHelp(String content) async {
+    await _db.collection(FirestorePaths.cms).doc('help').set({'content': content}, SetOptions(merge: true));
+  }
+  
+  Future<void> addBanner(Map<String, dynamic> banner) async {
+    await _db.collection('banners').add(banner);
+  }
+  
+  Future<void> updateBanner(String id, Map<String, dynamic> data) async {
+    await _db.collection('banners').doc(id).update(data);
+  }
+  
+  Future<void> deleteBanner(String id) async {
+    await _db.collection('banners').doc(id).delete();
+  }
+  
+  Future<void> addCategory(Map<String, dynamic> category) async {
+    await _db.collection('categories').add(category);
+  }
+  
+  Future<void> updateCategory(String id, Map<String, dynamic> data) async {
+    await _db.collection('categories').doc(id).update(data);
+  }
+  
+  Future<void> deleteCategory(String id) async {
+    await _db.collection('categories').doc(id).delete();
+  }
+  
+  Future<void> sendBroadcastNotification(Map<String, dynamic> notification) async {
+    await _db.collection('broadcast_notifications').add({
+      ...notification,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+  
   @override
   void dispose() {
     _cmsSub?.cancel();
     _settingsSub?.cancel();
     _bannersSub?.cancel();
     _categoriesSub?.cancel();
+    _notificationsSub?.cancel();
+    _helpSub?.cancel();
     super.dispose();
   }
 }

@@ -42,6 +42,11 @@ class ProductModel {
   final DateTime? auctionEndTime;
   final List<Map<String, dynamic>> bidHistory;
 
+  // ── Cash on Delivery Fields ──────────────────────────────────────────────
+  final bool acceptsCOD;
+  final String? codDeliveryLocation;
+  final String? codContactNumber;
+
   // ── Job Logic Fields (Simplified or legacy) ──────────────────────────────
   final bool isJob;
   final String? companyName;
@@ -92,6 +97,10 @@ class ProductModel {
     this.lastBidderId,
     this.auctionEndTime,
     this.bidHistory = const [],
+    // COD
+    this.acceptsCOD = false,
+    this.codDeliveryLocation,
+    this.codContactNumber,
     // Job
     this.isJob = false,
     this.companyName,
@@ -155,6 +164,10 @@ class ProductModel {
       lastBidderId: d['lastBidderId'] as String?,
       auctionEndTime: (d['auctionEndTime'] as Timestamp?)?.toDate(),
       bidHistory: List<Map<String, dynamic>>.from(d['bidHistory'] as List? ?? []),
+      // COD
+      acceptsCOD: d['acceptsCOD'] as bool? ?? false,
+      codDeliveryLocation: d['codDeliveryLocation'] as String?,
+      codContactNumber: d['codContactNumber'] as String?,
       // Job
       isJob: d['isJob'] as bool? ?? false,
       companyName: d['companyName'] as String?,
@@ -207,6 +220,10 @@ class ProductModel {
     'lastBidderId': lastBidderId,
     'auctionEndTime': auctionEndTime != null ? Timestamp.fromDate(auctionEndTime!) : null,
     'bidHistory': bidHistory,
+    // COD
+    'acceptsCOD': acceptsCOD,
+    'codDeliveryLocation': codDeliveryLocation,
+    'codContactNumber': codContactNumber,
     // Job
     'isJob': isJob,
     'companyName': companyName,
@@ -243,7 +260,9 @@ class ProductModel {
     bool? isActive,
     bool? isVerifiedSeller, Map<String, String>? specifications, List<String>? imageUrls,
     bool? isAuction, double? currentBid, String? lastBidderId, DateTime? auctionEndTime,
-    List<Map<String, dynamic>>? bidHistory, bool? isJob, String? companyName,
+    List<Map<String, dynamic>>? bidHistory,
+    bool? acceptsCOD, String? codDeliveryLocation, String? codContactNumber,
+    bool? isJob, String? companyName,
     String? jobType, String? salaryRange, List<String>? applicationIds, String? status,
   }) => ProductModel(
     id: id ?? this.id,
@@ -284,6 +303,9 @@ class ProductModel {
     lastBidderId: lastBidderId ?? this.lastBidderId,
     auctionEndTime: auctionEndTime ?? this.auctionEndTime,
     bidHistory: bidHistory ?? this.bidHistory,
+    acceptsCOD: acceptsCOD ?? this.acceptsCOD,
+    codDeliveryLocation: codDeliveryLocation ?? this.codDeliveryLocation,
+    codContactNumber: codContactNumber ?? this.codContactNumber,
     isJob: isJob ?? this.isJob,
     companyName: companyName ?? this.companyName,
     jobType: jobType ?? this.jobType,

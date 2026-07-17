@@ -6,6 +6,7 @@ export 'chat_model.dart';
 export 'notification_model.dart';
 export 'category_model.dart';
 export 'report_model.dart';
+export 'order_model.dart';
 
 import 'product_model.dart';
 
@@ -15,19 +16,161 @@ import 'product_model.dart';
 class SampleData {
   // ── Categories ────────────────────────────────────────────────────────────
   static const List<Map<String, dynamic>> homeCategories = [
-    {'id': '1', 'name': 'Vehicles', 'icon': '🚗'},
-    {'id': '2', 'name': 'Properties', 'icon': '🏠'},
-    {'id': '3', 'name': 'Electronics', 'icon': '⚡'},
-    {'id': '4', 'name': 'Furniture & Décor', 'icon': '🪑'},
-    {'id': '5', 'name': 'WaterCrafts', 'icon': '⛵'},
-    {'id': '6', 'name': 'Jewellery', 'icon': '💎'},
-    {'id': '7', 'name': 'Lifestyle', 'icon': '🛍️'},
-    {'id': '8', 'name': 'Market', 'icon': '�'},
-    {'id': '9', 'name': 'Outdoor & Leisure', 'icon': '⛺'},
-    {'id': '10', 'name': 'Special Numbers', 'icon': '�'},
-    {'id': '11', 'name': 'Heavy Equipments', 'icon': '🏗️'},
-    {'id': '12', 'name': 'Jobs Center', 'icon': '�'},
-    {'id': '13', 'name': 'Super Ads', 'icon': '⭐'},
+    {
+      'id': '1', 
+      'name': 'Vehicles', 
+      'icon': '🚗',
+      'subCategories': [
+        {'name': 'All Vehicles', 'icon': '🚗'},
+        {'name': 'Cars', 'icon': '🚙'},
+        {'name': 'Motorcycles', 'icon': '🏍️'},
+        {'name': 'Trucks', 'icon': '🚛'},
+        {'name': 'Buses', 'icon': '🚌'},
+        {'name': 'Spare Parts', 'icon': '🔧'},
+      ]
+    },
+    {
+      'id': '2', 
+      'name': 'Properties', 
+      'icon': '🏠',
+      'subCategories': [
+        {'name': 'All Properties', 'icon': '🏠'},
+        {'name': 'Houses for Sale', 'icon': '🏡'},
+        {'name': 'Apartments for Rent', 'icon': '🏢'},
+        {'name': 'Commercial Properties', 'icon': '🏪'},
+        {'name': 'Plots & Lands', 'icon': '🏜️'},
+      ]
+    },
+    {
+      'id': '3', 
+      'name': 'Electronics', 
+      'icon': '⚡',
+      'subCategories': [
+        {'name': 'All Electronics', 'icon': '⚡'},
+        {'name': 'Mobile Phones', 'icon': '📱'},
+        {'name': 'iPads & Tablets', 'icon': '📟'},
+        {'name': 'Laptops & Computers', 'icon': '💻'},
+        {'name': 'TVs & Home Appliances', 'icon': '📺'},
+        {'name': 'Cameras & Photography', 'icon': '📷'},
+        {'name': 'Gaming Consoles', 'icon': '🎮'},
+        {'name': 'Mobile Accessories', 'icon': '🔌'},
+      ]
+    },
+    {
+      'id': '4', 
+      'name': 'Furniture & Décor', 
+      'icon': '🪑',
+      'subCategories': [
+        {'name': 'All Furniture', 'icon': '🪑'},
+        {'name': 'Sofas & Couches', 'icon': '🛋️'},
+        {'name': 'Tables & Chairs', 'icon': '🪑'},
+        {'name': 'Beds & Mattresses', 'icon': '🛏️'},
+        {'name': 'Home Decor', 'icon': '🎨'},
+      ]
+    },
+    {
+      'id': '5', 
+      'name': 'WaterCrafts', 
+      'icon': '⛵',
+      'subCategories': [
+        {'name': 'All WaterCrafts', 'icon': '⛵'},
+        {'name': 'Yachts', 'icon': '🚢'},
+        {'name': 'Jet Skis', 'icon': '🏄'},
+        {'name': 'Boats', 'icon': '⛵'},
+      ]
+    },
+    {
+      'id': '6', 
+      'name': 'Jewellery', 
+      'icon': '💎',
+      'subCategories': [
+        {'name': 'All Jewellery', 'icon': '💎'},
+        {'name': 'Rings', 'icon': '💍'},
+        {'name': 'Necklaces', 'icon': '📿'},
+        {'name': 'Watches', 'icon': '⌚'},
+        {'name': 'Gold & Silver', 'icon': '🥇'},
+      ]
+    },
+    {
+      'id': '7', 
+      'name': 'Lifestyle', 
+      'icon': '🛍️',
+      'subCategories': [
+        {'name': 'All Lifestyle', 'icon': '🛍️'},
+        {'name': 'Clothing & Shoes', 'icon': '👕'},
+        {'name': 'Health & Beauty', 'icon': '💄'},
+        {'name': 'Sports Equipment', 'icon': '⚽'},
+        {'name': 'Books & Stationery', 'icon': '📚'},
+      ]
+    },
+    {
+      'id': '8', 
+      'name': 'Market', 
+      'icon': '🛒',
+      'subCategories': [
+        {'name': 'All Market', 'icon': '🛒'},
+        {'name': 'Food & Groceries', 'icon': '🍎'},
+        {'name': 'Home & Garden', 'icon': '🌱'},
+        {'name': 'Pet Supplies', 'icon': '🐕'},
+        {'name': 'Tools & Hardware', 'icon': '🔨'},
+      ]
+    },
+    {
+      'id': '9', 
+      'name': 'Outdoor & Leisure', 
+      'icon': '⛺',
+      'subCategories': [
+        {'name': 'All Outdoor', 'icon': '⛺'},
+        {'name': 'Camping Gear', 'icon': '🏕️'},
+        {'name': 'Musical Instruments', 'icon': '🎸'},
+        {'name': 'Fishing', 'icon': '🎣'},
+        {'name': 'Cycling', 'icon': '🚲'},
+      ]
+    },
+    {
+      'id': '10', 
+      'name': 'Special Numbers', 
+      'icon': '🔢',
+      'subCategories': [
+        {'name': 'All Numbers', 'icon': '🔢'},
+        {'name': 'VIP Mobile Numbers', 'icon': '📱'},
+        {'name': 'Car Plate Numbers', 'icon': '🚗'},
+      ]
+    },
+    {
+      'id': '11', 
+      'name': 'Heavy Equipments', 
+      'icon': '🏗️',
+      'subCategories': [
+        {'name': 'All Equipment', 'icon': '🏗️'},
+        {'name': 'Excavators', 'icon': '🏗️'},
+        {'name': 'Cranes', 'icon': '🏗️'},
+        {'name': 'Loaders', 'icon': '🚜'},
+        {'name': 'Tractors', 'icon': '🚜'},
+      ]
+    },
+    {
+      'id': '12', 
+      'name': 'Jobs Center', 
+      'icon': '💼',
+      'subCategories': [
+        {'name': 'All Jobs', 'icon': '💼'},
+        {'name': 'IT & Software', 'icon': '💻'},
+        {'name': 'Sales & Marketing', 'icon': '📊'},
+        {'name': 'Engineering', 'icon': '🔧'},
+        {'name': 'Part Time', 'icon': '⏰'},
+      ]
+    },
+    {
+      'id': '13', 
+      'name': 'Super Ads', 
+      'icon': '⭐',
+      'subCategories': [
+        {'name': 'All Super Ads', 'icon': '⭐'},
+        {'name': 'Featured Ads', 'icon': '🌟'},
+        {'name': 'Urgent Sales', 'icon': '⚡'},
+      ]
+    },
   ];
 
   static const List<Map<String, dynamic>> allCategories = [

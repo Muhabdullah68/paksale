@@ -23,8 +23,6 @@ class _MembersManagementScreenState extends State<MembersManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final adminProvider = context.watch<AdminProvider>();
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -131,8 +129,6 @@ class _MemberListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
@@ -146,7 +142,7 @@ class _MemberListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(user.email ?? 'No email provided'),
+            Text(user.email),
             if (user.nicNumber != null) Text('NIC: ${user.nicNumber}', style: const TextStyle(fontSize: 12)),
             Text('Status: ${user.isSuspended ? "Suspended" : "Active"}',
                 style: TextStyle(color: user.isSuspended ? Colors.red : Colors.green, fontSize: 12)),
@@ -169,7 +165,6 @@ class AdminUserDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final adminProvider = context.watch<AdminProvider>();
-    final theme = Theme.of(context);
     
     return Scaffold(
       appBar: AppBar(
@@ -183,7 +178,7 @@ class AdminUserDetailScreen extends StatelessWidget {
           children: [
             _buildDetailRow('User ID', user.id),
             _buildDetailRow('Full Name', user.name),
-            _buildDetailRow('Email', user.email ?? 'Not provided'),
+            _buildDetailRow('Email', user.email),
             _buildDetailRow('NIC Number', user.nicNumber ?? 'Not provided'),
             _buildDetailRow('Phone', user.phone),
             _buildDetailRow('Verified', user.isVerified ? 'Yes' : 'No'),

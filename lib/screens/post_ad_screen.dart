@@ -43,6 +43,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
   bool _isAuction = false;
   DateTime? _auctionEndTime;
 
+  // Cash on Delivery
+  bool _acceptsCOD = false;
+  late TextEditingController _codLocationCtrl;
+  late TextEditingController _codContactCtrl;
+
   // Jobs
   late TextEditingController _companyCtrl;
   String _jobType = 'Full-time';
@@ -66,6 +71,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
     _cityCtrl = TextEditingController(text: p?.city ?? ''); // NEW
     _villageCtrl = TextEditingController(text: p?.village ?? ''); // NEW
     
+    // COD
+    _codLocationCtrl = TextEditingController(text: p?.codDeliveryLocation ?? '');
+    _codContactCtrl = TextEditingController(text: p?.codContactNumber ?? '');
+    if (p != null) _acceptsCOD = p.acceptsCOD;
     // Jobs
     _companyCtrl = TextEditingController(text: p?.companyName ?? '');
     _salaryCtrl = TextEditingController(text: p?.salaryRange ?? '');
@@ -90,6 +99,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
     _whatsAppCtrl.dispose(); // NEW
     _cityCtrl.dispose(); // NEW
     _villageCtrl.dispose(); // NEW
+    _codLocationCtrl.dispose();
+    _codContactCtrl.dispose();
     _companyCtrl.dispose();
     _salaryCtrl.dispose();
     super.dispose();
@@ -114,6 +125,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
       _selectedImages.clear();
       _isAuction = false;
       _auctionEndTime = null;
+      _acceptsCOD = false;
+      _codLocationCtrl.clear();
+      _codContactCtrl.clear();
       _companyCtrl.clear();
       _salaryCtrl.clear();
       _jobType = 'Full-time';
@@ -239,6 +253,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
         views: p?.views ?? 0,
         isFeatured: p?.isFeatured ?? false,
         imageUrls: p?.imageUrls ?? [],
+        // COD
+        acceptsCOD: _acceptsCOD,
+        codDeliveryLocation: _acceptsCOD ? _codLocationCtrl.text.trim() : null,
+        codContactNumber: _acceptsCOD ? _codContactCtrl.text.trim() : null,
         // Bidding
         isAuction: _isAuction,
         auctionEndTime: _auctionEndTime,
@@ -248,7 +266,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         jobType: isJob ? _jobType : null,
         salaryRange: isJob ? _salaryCtrl.text.trim() : null,
         // Initial status
-        status: p?.status ?? 'pending', // All new ads start as pending for admin review
+        status: p?.status ?? 'approved', // Ads show immediately without admin review
       );
 
 
@@ -656,6 +674,25 @@ class _PostAdScreenState extends State<PostAdScreen> {
             ],
           ],
 
+          // Cash on Delivery
+          if (!isJob) ...[
+            SwitchListTile(
+              title: const Text('Accept Cash on Delivery', style: TextStyle(fontSize: 14)),
+              subtitle: const Text('Buyers can pay in cash upon delivery', style: TextStyle(fontSize: 12)),
+              value: _acceptsCOD,
+              activeThumbColor: AppColors.green,
+              onChanged: (v) => setState(() => _acceptsCOD = v),
+              contentPadding: EdgeInsets.zero,
+            ),
+            if (_acceptsCOD) ...[
+              const SizedBox(height: 8),
+              _field('Delivery Location', 'e.g. Lahore, Gulberg', _codLocationCtrl),
+              const SizedBox(height: 12),
+              _field('Contact Number', '+92 XXX XXXXXXX', _codContactCtrl, isNumber: true),
+              const SizedBox(height: 12),
+            ],
+          ],
+
           _dropdown('${t['condition'] ?? "Condition"} *', 
               ['Sale', 'Rent', 'Exchange', 'Free'].map((x) => t[x.toLowerCase()] ?? x).toList(),
               t[_condition.toLowerCase()] ?? _condition, 
@@ -981,6 +1018,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       Icons.category_outlined),
                   if (_isAuction)
                     const _PreviewTag('Auction', Icons.gavel_outlined),
+                  if (_acceptsCOD)
+                    const _PreviewTag('COD Available', Icons.money_outlined),
                   if (_selectedCategory == 'Jobs Center')
                     _PreviewTag(_jobType, Icons.work_outline),
                   _PreviewTag(_condition, Icons.sell_outlined),

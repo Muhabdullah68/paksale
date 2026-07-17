@@ -4,15 +4,13 @@ import 'reports_screen.dart';
 import 'product_management_screen.dart';
 import 'members_management_screen.dart';
 import 'finance_screen.dart';
+import 'orders_management_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Control Panel'),
@@ -58,6 +56,15 @@ class AdminDashboard extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FinanceScreen()),
+            ),
+          ),
+          _AdminCard(
+            title: 'COD Orders',
+            icon: Icons.receipt_long_outlined,
+            color: Colors.teal,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminOrdersManagementScreen()),
             ),
           ),
         ],

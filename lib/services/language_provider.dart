@@ -23,7 +23,7 @@ class LanguageProvider extends ChangeNotifier {
 
   // ── Urdu strings ──────────────────────────────────────────────────────────
   static const Map<String, String> _ur = {
-    'appName': 'پاکستان سیل',
+    'appName': 'پاک سیل',
     'tagline': 'مارکیٹ آپ کے گھر پر',
 
     // Bottom nav
@@ -280,7 +280,7 @@ class LanguageProvider extends ChangeNotifier {
   // ── English strings ────────────────────────────────────────────────────────
   static const Map<String, String> _en = {
     // App name
-    'appName': 'PakistanSale',
+    'appName': 'Pak Sale',
     'tagline': 'THE MARKET AT YOUR HOME',
 
     // Bottom nav
@@ -292,14 +292,14 @@ class LanguageProvider extends ChangeNotifier {
     'nav_account': 'Account',
 
     // Home
-    'search_hint': 'Search in PakistanSale...',
+    'search_hint': 'Search in Pak Sale...',
     'categories': 'Categories',
     'featured': 'Featured',
     'recent': 'Recent Listings',
     'see_all': 'See All',
 
     // Account – guest
-    'welcome': 'Welcome to PakistanSale',
+    'welcome': 'Welcome to Pak Sale',
     'login_prompt': 'Login to manage your ads, favorites and messages',
     'login': 'Login',
     'register': 'Register',
@@ -313,7 +313,7 @@ class LanguageProvider extends ChangeNotifier {
     'information': 'INFORMATION',
     'language': 'Language',
     'help_support': 'Help & Support',
-    'about': 'About PakistanSale',
+    'about': 'About Pak Sale',
     'privacy_policy': 'Privacy Policy',
 
     // Account – logged in
@@ -370,7 +370,7 @@ class LanguageProvider extends ChangeNotifier {
 
     // About
     'about_content':
-    'PakistanSale is Pakistan\'s leading classified marketplace. Buy, sell and advertise products & services across multiple categories. Our platform connects buyers and sellers across the entire country.\n\nVersion: 1.0.0\nDeveloped by: JH IT Zone\nContact: info@jhitzone.com',
+    'Pak Sale is Pakistan\'s leading classified marketplace. Buy, sell and advertise products & services across multiple categories. Our platform connects buyers and sellers across the entire country.\n\nVersion: 1.0.0\nDeveloped by: JH IT Zone\nContact: info@jhitzone.com',
 
     // Privacy
     'privacy_content':
@@ -382,7 +382,7 @@ class LanguageProvider extends ChangeNotifier {
 
     // Terms
     'terms_content':
-    'By using PakistanSale you agree to:\n\n• Post only genuine listings\n• Respect other users\n• Not engage in fraudulent activity\n• Comply with Pakistan law\n\nWe reserve the right to remove any listing that violates these terms. Repeated violations will result in account suspension.',
+    'By using Pak Sale you agree to:\n\n• Post only genuine listings\n• Respect other users\n• Not engage in fraudulent activity\n• Comply with Pakistan law\n\nWe reserve the right to remove any listing that violates these terms. Repeated violations will result in account suspension.',
 
     // Help
     'help_q1': 'How do I post an ad?',
@@ -396,7 +396,7 @@ class LanguageProvider extends ChangeNotifier {
 
     // CV upload
     'cv_title': 'Upload Your CV',
-    'cv_body': 'Upload your CV to apply for jobs directly within PakistanSale. Employers can find your profile and contact you.\n\nFormats accepted: PDF, DOCX\nMax size: 5 MB',
+    'cv_body': 'Upload your CV to apply for jobs directly within Pak Sale. Employers can find your profile and contact you.\n\nFormats accepted: PDF, DOCX\nMax size: 5 MB',
     // Search & Filter
     'search_filter': 'Search & Filter',
     'reset_all': 'Reset All',
@@ -536,7 +536,7 @@ class LanguageProvider extends ChangeNotifier {
   // ── Arabic strings ─────────────────────────────────────────────────────────
   static const Map<String, String> _ar = {
     // App name
-    'appName': 'قطر سيل',
+    'appName': 'باك سيل',
     'tagline': 'السوق في بيتك',
 
     // Bottom nav

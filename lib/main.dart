@@ -15,6 +15,7 @@ import 'providers/notification_provider.dart';
 import 'providers/report_provider.dart';
 import 'providers/cms_provider.dart';
 import 'providers/admin_provider.dart';
+import 'providers/order_provider.dart';
 import 'services/theme_provider.dart';
 import 'services/currency_provider.dart';
 
@@ -45,6 +46,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => CMSProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
         // FavoritesProvider needs uid, so we use ProxyProvider
         ChangeNotifierProxyProvider<AuthProvider, FavoritesProvider?>(
           create: (_) => null,
@@ -84,7 +86,7 @@ class MyApp extends StatelessWidget {
     final langProvider = context.watch<LanguageProvider>();
     
     return MaterialApp(
-      title: 'FnB Market',
+      title: 'Pak Sale',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

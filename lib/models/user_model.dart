@@ -4,6 +4,7 @@ class UserModel {
   final String id;
   final String name;
   final String email;
+  final String? nicNumber;
   final String phone;
   final String whatsAppNumber; // NEW
   final String photoUrl;
@@ -26,6 +27,7 @@ class UserModel {
     required this.id,
     required this.name,
     required this.email,
+    this.nicNumber,
     this.phone = '',
     this.whatsAppNumber = '',
     this.photoUrl = '',
@@ -51,6 +53,7 @@ class UserModel {
       id: doc.id,
       name: data['name'] ?? '',
       email: data['email'] ?? '',
+      nicNumber: data['nicNumber'],
       phone: data['phone'] ?? '',
       whatsAppNumber: data['whatsAppNumber'] ?? '',
       photoUrl: data['photoUrl'] ?? '',
@@ -75,6 +78,7 @@ class UserModel {
     return {
       'name': name,
       'email': email,
+      'nicNumber': nicNumber,
       'phone': phone,
       'whatsAppNumber': whatsAppNumber,
       'photoUrl': photoUrl,
@@ -124,5 +128,6 @@ class UserModel {
     isSuspended: isSuspended ?? this.isSuspended,
     isAdmin: isAdmin ?? this.isAdmin,
     createdAt: createdAt ?? this.createdAt,
-  );
+    );
+  }
 }

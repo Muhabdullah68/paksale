@@ -16,8 +16,9 @@ import 'listing_screen.dart';
 import 'categories_screen.dart';
 import 'post_ad_screen.dart';
 import 'product_detail_screen.dart';
-import 'admin/reports_screen.dart';
 import 'admin/admin_dashboard.dart';
+import 'help_screen.dart';
+import 'orders_screen.dart';
 
 
 // ─── Main Account Screen ──────────────────────────────────────────────────────
@@ -186,7 +187,7 @@ class _AccountScreenState extends State<AccountScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(t['welcome'] ?? 'Welcome to PakistanSale',
+                Text(t['welcome'] ?? 'Welcome to Pak Sale',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -303,9 +304,9 @@ class _AccountScreenState extends State<AccountScreen>
             ),
             _MenuRow(
               icon: Icons.info_outline,
-              label: t['about'] ?? 'About PakistanSale',
+              label: t['about'] ?? 'About Pak Sale',
               onTap: () => _showInfoDialog(
-                t['about'] ?? 'About PakistanSale',
+                t['about'] ?? 'About Pak Sale',
                 t['about_content'] ?? '',
               ),
             ),
@@ -663,16 +664,7 @@ class _AccountScreenState extends State<AccountScreen>
   }
 
   void _showHelpSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _HelpSheet(t: _t),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
   }
 
   void _showCvUploadSheet() {
@@ -1253,6 +1245,12 @@ class _SettingsTabState extends State<_SettingsTab> {
             ),
           ),
           _SettingsTile(
+            icon: Icons.receipt_long_outlined,
+            label: 'My Orders',
+            subtitle: 'Track your purchases & sales',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen())),
+          ),
+          _SettingsTile(
             icon: Icons.lock_outline,
             label: t['change_password'] ?? 'Change Password',
             onTap: () => _showChangePasswordDialog(),
@@ -1357,7 +1355,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                 label: t['currency'] ?? 'Currency',
                 subtitle: context.watch<CurrencyProvider>().selectedCurrency == 'Rs.' 
                     ? 'Pakistani Rupee (Rs.)' 
-                    : 'Qatari Riyal (Q.R)',
+                    : 'US Dollar (\$)',
                 onTap: () => _showCurrencyPicker(),
               ),
             ]),
@@ -1393,16 +1391,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                 icon: Icons.help_outline,
                 label: t['help_support'] ?? 'Help & Support',
                 onTap: () {
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
-                    shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(20))),
-                    builder: (_) => _HelpSheet(t: t),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
                 },
               ),
               _SettingsTile(
@@ -1637,7 +1626,7 @@ class _SettingsTabState extends State<_SettingsTab> {
     final currencyProvider = context.read<CurrencyProvider>();
     final currencies = [
       {'name': 'Pakistani Rupee (Rs.)', 'symbol': 'Rs.'},
-      {'name': 'Qatari Riyal (Q.R)', 'symbol': 'Q.R'},
+      {'name': 'US Dollar (\$)', 'symbol': '\$'},
     ];
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
@@ -2358,7 +2347,7 @@ class _AuthSheetState extends State<_AuthSheet> {
             Text(
               _isRegister
                   ? 'Join thousands of buyers & sellers in Pakistan'
-                  : 'Login to your PakistanSale account',
+                  : 'Login to your Pak Sale account',
               style: TextStyle(
                   color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
             ),
