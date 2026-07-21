@@ -5,10 +5,11 @@ import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/report_provider.dart';
+import '../repositories/user_repository.dart';
 import '../widgets/common_widgets.dart';
 import 'product_detail_screen.dart';
 
-class SellerProfileScreen extends StatelessWidget {
+class SellerProfileScreen extends StatefulWidget {
   final String sellerId;
   final String sellerName;
   final String sellerPhone;
@@ -24,8 +25,31 @@ class SellerProfileScreen extends StatelessWidget {
     required this.location,
   });
 
+  @override
+  State<SellerProfileScreen> createState() => _SellerProfileScreenState();
+}
+
+class _SellerProfileScreenState extends State<SellerProfileScreen> {
+  PrivacySettings? _privacy;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrivacy();
+  }
+
+  Future<void> _loadPrivacy() async {
+    try {
+      final seller = await UserRepository().getUserById(widget.sellerId);
+      if (mounted) setState(() { _privacy = seller?.privacy; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   List<ProductModel> _sellerListings() => SampleData.products
-      .where((p) => p.sellerName == sellerName)
+      .where((p) => p.sellerName == widget.sellerName)
       .toList();
 
   @override
@@ -33,10 +57,10 @@ class SellerProfileScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final listings = _sellerListings();
-    // Use all products as demos if none matched (mock data)
     final displayListings =
     listings.isNotEmpty ? listings : SampleData.products.take(4).toList();
-    final isBusiness = sellerType.toLowerCase() == 'business';
+    final isBusiness = widget.sellerType.toLowerCase() == 'business';
+    final allowCall = _privacy == null || _privacy!.allowCalls;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -89,10 +113,10 @@ class SellerProfileScreen extends StatelessWidget {
                     border: Border.all(color: AppColors.gold, width: 2.5),
                   ),
                   child: Center(
-                    child: Text(
-                      sellerName.isNotEmpty
-                          ? sellerName[0].toUpperCase()
-                          : '?',
+                      child: Text(
+                        widget.sellerName.isNotEmpty
+                            ? widget.sellerName[0].toUpperCase()
+                            : '?',
                       style: const TextStyle(
                           color: AppColors.gold,
                           fontSize: 34,
@@ -103,11 +127,14 @@ class SellerProfileScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 // Name + verified
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(sellerName,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                  Flexible(
+                    child: Text(widget.sellerName,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis),
+                  ),
                   const SizedBox(width: 6),
                   const Icon(Icons.verified,
                       color: AppColors.gold, size: 18),
@@ -141,9 +168,12 @@ class SellerProfileScreen extends StatelessWidget {
                   const Icon(Icons.location_on,
                       size: 14, color: Colors.white70),
                   const SizedBox(width: 4),
-                  Text(location,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13)),
+                  Flexible(
+                    child: Text(widget.location,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13),
+                        overflow: TextOverflow.ellipsis),
+                  ),
                 ]),
                 const SizedBox(height: 20),
                 // Stats row
@@ -174,24 +204,25 @@ class SellerProfileScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 // Contact buttons
                 Row(children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showCallDialog(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                  if (allowCall)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showCallDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.orange,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.phone,
+                            color: Colors.white, size: 16),
+                        label: const Text('Call',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600)),
                       ),
-                      icon: const Icon(Icons.phone,
-                          color: Colors.white, size: 16),
-                      label: const Text('Call',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
                     ),
-                  ),
-                  const SizedBox(width: 10),
+                  if (allowCall) const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
@@ -238,6 +269,19 @@ class SellerProfileScreen extends StatelessWidget {
   }
 
   void _showCallDialog(BuildContext context) {
+    if (_privacy != null && !_privacy!.allowCalls) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Privacy Protected'),
+          content: const Text('The seller prefers in-app communication. Please use the chat feature from their listing.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     showDialog(
@@ -246,7 +290,7 @@ class SellerProfileScreen extends StatelessWidget {
         backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
         title: Text('Call Seller',
             style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
-        content: Text('Call $sellerName at\n$sellerPhone',
+        content: Text('Call ${widget.sellerName} at\n${widget.sellerPhone}',
             style: TextStyle(
                 color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, height: 1.5)),
         actions: [
@@ -257,7 +301,7 @@ class SellerProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final url = Uri.parse('tel:$sellerPhone');
+              final url = Uri.parse('tel:${widget.sellerPhone}');
               if (await canLaunchUrl(url)) {
                 await launchUrl(url);
               } else {
@@ -323,7 +367,7 @@ class SellerProfileScreen extends StatelessWidget {
                 final report = ReportModel(
                   id: '',
                   reporterId: auth.firebaseUser!.uid,
-                  targetId: sellerId,
+                  targetId: widget.sellerId,
                   targetType: ReportType.user,
                   reason: selectedReason,
                   description: descCtrl.text.trim(),

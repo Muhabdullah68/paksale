@@ -196,7 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Container(
-        height: 400,
+        height: MediaQuery.of(context).size.height * 0.5,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,20 +495,61 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
+    final text = _messageController.text.trim();
+    final sensitivePatterns = [
+      RegExp(r'03\d{2}[-\s]?\d{7}'),           // Pakistan mobile
+      RegExp(r'\+92[-\s]?\d{3}[-\s]?\d{7}'),   // +92 format
+      RegExp(r'\d{5}[-\s]?\d{7}[-\s]?\d'),     // CNIC
+      RegExp(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'), // bank card
+      RegExp(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'),             // bank account
+      RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'), // email
+    ];
+    final hasSensitive = sensitivePatterns.any((r) => r.hasMatch(text));
+
+    if (hasSensitive) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+            SizedBox(width: 8),
+            Text('Privacy Warning', style: TextStyle(fontSize: 18)),
+          ]),
+          content: const Text(
+            'For your safety, avoid sharing:\n'
+            '• Phone numbers\n'
+            '• CNIC numbers\n'
+            '• Bank account details\n'
+            '• Home addresses\n'
+            '• Passwords\n\n'
+            'Are you sure you want to send this message?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Edit Message')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
+              child: const Text('Send Anyway', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     final auth = context.read<AuthProvider>();
     final chatProvider = context.read<ChatProvider>();
 
     final myId = auth.firebaseUser!.uid;
     final myName = auth.userModel?.name ?? 'User';
 
-    // Determine the recipient (the other participant)
     final recipientId = widget.conversation.participants
         .firstWhere((id) => id != myId, orElse: () => '');
 
     final message = ChatMessage(
       id: '',
       senderId: myId,
-      text: _messageController.text.trim(),
+      text: text,
       createdAt: DateTime.now(),
     );
 
@@ -733,22 +774,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   final ChatMessage message;
   final bool isMe;
 
   const _MessageBubble({required this.message, required this.isMe});
 
   @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> {
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isMe) ...[
+          if (!widget.isMe) ...[
             Container(
               width: 28,
               height: 28,
@@ -763,73 +809,114 @@ class _MessageBubble extends StatelessWidget {
             ),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe ? AppColors.gold : theme.cardTheme.color,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: Radius.circular(isMe ? 18 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 18),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  if (message.imageUrl != null) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        message.imageUrl!,
-                        width: 200,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (ctx, child, lp) {
-                          if (lp == null) return child;
-                          return const SizedBox(
-                            width: 200,
-                            height: 150,
-                            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (message.text.isNotEmpty)
-                    Text(
-                      message.text,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : theme.textTheme.bodyLarge?.color ?? Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${message.createdAt.hour}:${message.createdAt.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          color: isMe ? Colors.white70 : AppColors.textMuted,
-                          fontSize: 10,
-                        ),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          message.status == 'read' ? Icons.done_all : Icons.done,
-                          size: 14,
-                          color: message.status == 'read' ? Colors.white : Colors.white70,
-                        ),
-                      ],
-                    ],
+            child: GestureDetector(
+              onLongPress: () => _showMessageMenu(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: widget.isMe ? AppColors.gold : theme.cardTheme.color,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(widget.isMe ? 18 : 4),
+                    bottomRight: Radius.circular(widget.isMe ? 4 : 18),
                   ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  children: [
+                    if (widget.message.imageUrl != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          widget.message.imageUrl!,
+                          width: 200,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (ctx, child, lp) {
+                            if (lp == null) return child;
+                            return const SizedBox(
+                              width: 200,
+                              height: 150,
+                              child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (widget.message.text.isNotEmpty)
+                      Text(
+                        widget.message.text,
+                        style: TextStyle(
+                          color: widget.isMe ? Colors.white : theme.textTheme.bodyLarge?.color ?? Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${widget.message.createdAt.hour}:${widget.message.createdAt.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            color: widget.isMe ? Colors.white70 : AppColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                        if (widget.isMe) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            widget.message.status == 'read' ? Icons.done_all : Icons.done,
+                            size: 14,
+                            color: widget.message.status == 'read' ? Colors.white : Colors.white70,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showMessageMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.report, color: AppColors.primary),
+              title: const Text('Report Message'),
+              onTap: () {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Message reported!')),
+                );
+              },
+            ),
+            if (widget.isMe)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete Message'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // TODO: Implement delete message functionality
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Delete functionality coming soon!')),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

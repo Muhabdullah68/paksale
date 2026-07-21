@@ -371,14 +371,31 @@ class _ListingScreenState extends State<ListingScreen> {
         mainAxisSpacing: 10,
         childAspectRatio: 0.72,
       ),
-      itemCount: products.length + (isLoadingMore ? 2 : 0),
+      itemCount: products.length + (isLoadingMore ? 2 : 1),
       itemBuilder: (ctx, i) {
         if (i >= products.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(color: AppColors.gold),
-            ),
+          if (isLoadingMore && i == products.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: AppColors.gold),
+              ),
+            );
+          }
+          return const SizedBox();
+        }
+        if (i == products.length - 1 && !isLoadingMore) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ProductCard(
+                product: products[i],
+                isGridView: true,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => ProductDetailScreen(product: products[i]))),
+              ),
+              const SocialMediaSection(),
+            ],
           );
         }
         return ProductCard(
@@ -396,15 +413,18 @@ class _ListingScreenState extends State<ListingScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: products.length + (isLoadingMore ? 1 : 0),
+      itemCount: products.length + (isLoadingMore ? 1 : 1),
       itemBuilder: (ctx, i) {
         if (i >= products.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(color: AppColors.gold),
-            ),
-          );
+          if (isLoadingMore && i == products.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(color: AppColors.gold),
+              ),
+            );
+          }
+          return const SocialMediaSection();
         }
         return ProductCard(
           product: products[i],

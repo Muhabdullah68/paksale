@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/firestore_paths.dart';
 
@@ -26,6 +27,7 @@ class CMSProvider extends ChangeNotifier {
   String _termsContent = '';
   String _privacyContent = '';
   String _helpContent = '';
+  String _privacyFallbackContent = '';
   
   StreamSubscription? _cmsSub;
   StreamSubscription? _settingsSub;
@@ -45,7 +47,7 @@ class CMSProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get categories => _categories;
   List<Map<String, dynamic>> get broadcastNotifications => _broadcastNotifications;
   String get termsContent => _termsContent;
-  String get privacyContent => _privacyContent;
+  String get privacyContent => _privacyContent.isNotEmpty ? _privacyContent : _privacyFallbackContent;
   String get helpContent => _helpContent;
 
   CMSProvider() {
@@ -66,13 +68,25 @@ class CMSProvider extends ChangeNotifier {
       }
     });
 
+    // Load local privacy fallback from assets
+    try {
+      _privacyFallbackContent = await rootBundle.loadString('assets/privacy_policy.txt');
+    } catch (_) {}
+
     // Fetch static CMS content
     _db.collection(FirestorePaths.cms).doc('terms').get().then((doc) {
       if (doc.exists) _termsContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
       notifyListeners();
     });
-    _db.collection(FirestorePaths.cms).doc('privacy').get().then((doc) {
-      if (doc.exists) _privacyContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
+    _db.collection(FirestorePaths.cms).doc('privacy').get().then((doc) async {
+      if (doc.exists) {
+        _privacyContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
+      } else if (_privacyFallbackContent.isNotEmpty) {
+        // Seed Firestore with local content so admin can edit it
+        await _db.collection(FirestorePaths.cms).doc('privacy').set({
+          'content': _privacyFallbackContent,
+        }, SetOptions(merge: true));
+      }
       notifyListeners();
     });
     
@@ -81,6 +95,16 @@ class CMSProvider extends ChangeNotifier {
       if (doc.exists) _helpContent = (doc.data() as Map<String, dynamic>)['content'] ?? '';
       notifyListeners();
     });
+  }
+
+  /// Seeds the local privacy policy from assets into Firestore so the
+  /// admin can edit it via the admin panel. Safe to call multiple times.
+  Future<void> seedPrivacyContent() async {
+    if (_privacyFallbackContent.isNotEmpty) {
+      await _db.collection(FirestorePaths.cms).doc('privacy').set({
+        'content': _privacyFallbackContent,
+      }, SetOptions(merge: true));
+    }
   }
 
   void _listenToSettings() {

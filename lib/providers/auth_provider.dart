@@ -180,6 +180,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updatePrivacy(PrivacySettings privacy) async {
+    if (_userModel == null) return;
+    final updated = _userModel!.copyWith(privacy: privacy);
+    await updateProfile(updated);
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

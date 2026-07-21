@@ -124,11 +124,12 @@ class _AppDrawerState extends State<AppDrawer> {
             right: 20,
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('My CV',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('My CV',
                 style: TextStyle(
                     color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 18,
@@ -162,6 +163,7 @@ class _AppDrawerState extends State<AppDrawer> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -404,12 +406,13 @@ class _AppDrawerState extends State<AppDrawer> {
               right: 20,
               top: 24,
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text('Post a Job',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text('Post a Job',
                     style: TextStyle(
                         color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                         fontSize: 18,
@@ -483,6 +486,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

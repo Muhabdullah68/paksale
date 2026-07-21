@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../services/currency_provider.dart';
 
 import '../providers/cms_provider.dart';
+import '../widgets/common_widgets.dart';
 
 class PostAdScreen extends StatefulWidget {
   final ProductModel? productToEdit;
@@ -136,13 +137,34 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
 
   Future<void> _pickImage() async {
-    if (_selectedImages.length >= 2) {
-      _snack('Photo limit reached. You can only upload up to 02 photos.', AppColors.orange);
+    if (_selectedImages.length >= 10) {
+      _snack('Photo limit reached. You can only upload up to 10 photos.', AppColors.orange);
       return;
     }
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
     final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70, // Optimize for free tier storage
+      source: source,
+      imageQuality: 70,
     );
     if (image != null) {
       setState(() {
@@ -530,7 +552,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
             'n': c['name']?.toString() ?? '',
             'i': c['icon']?.toString() ?? '',
           }).toList()
-        : [
+          : [
+            {'n': 'Offers', 'i': '🏷️'},
             {'n': 'Vehicles', 'i': '🚗'},
             {'n': 'Properties', 'i': '🏠'},
             {'n': 'Electronics', 'i': '⚡'},
@@ -560,9 +583,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
           child: GridView.count(
             crossAxisCount: 3,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            mainAxisSpacing: 12,
+            mainAxisSpacing: 8,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.85,
+            childAspectRatio: 1.0,
             children: cats.map((c) {
               final sel = _selectedCategory == c['n'];
               final label = t[c['n']!.toLowerCase().replaceAll(' ', '_')] ?? c['n']!;
@@ -583,8 +606,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(c['i']!, style: const TextStyle(fontSize: 34)),
-                      const SizedBox(height: 8),
+                      Text(c['i']!, style: const TextStyle(fontSize: 28)),
+                      const SizedBox(height: 6),
                       Text(label,
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -733,7 +756,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 12),
           _field('WhatsApp Number', '+92 XXX XXXXXXX (optional)', _whatsAppCtrl,
               isNumber: true),
-          const SizedBox(height: 80),
+          const SocialMediaSection(),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -1043,7 +1067,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
           _ChecklistItem(
               'Description added', _descCtrl.text.trim().length > 10),
           _ChecklistItem('Photos added (${_selectedImages.length})', _selectedImages.isNotEmpty),
-          const SizedBox(height: 80),
+          const SocialMediaSection(),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -1187,11 +1212,14 @@ class _ChecklistItem extends StatelessWidget {
           color: done ? AppColors.green : AppColors.textMuted,
         ),
         const SizedBox(width: 10),
-        Text(label,
-            style: TextStyle(
-                color:
-                done ? theme.textTheme.bodyLarge?.color ?? Colors.white : AppColors.textMuted,
-                fontSize: 14)),
+        Flexible(
+          child: Text(label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color:
+                  done ? theme.textTheme.bodyLarge?.color ?? Colors.white : AppColors.textMuted,
+                  fontSize: 14)),
+        ),
       ]),
     );
   }

@@ -17,6 +17,17 @@ class SampleData {
   // ── Categories ────────────────────────────────────────────────────────────
   static const List<Map<String, dynamic>> homeCategories = [
     {
+      'id': '0', 
+      'name': 'Offers', 
+      'icon': '🏷️',
+      'subCategories': [
+        {'name': 'All Offers', 'icon': '🏷️'},
+        {'name': 'Today\'s Deals', 'icon': '🔥'},
+        {'name': 'Limited Time', 'icon': '⏰'},
+        {'name': 'Buy One Get One', 'icon': '🎁'},
+      ]
+    },
+    {
       'id': '1', 
       'name': 'Vehicles', 
       'icon': '🚗',

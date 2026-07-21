@@ -110,6 +110,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w600)),
             ),
+            const SizedBox(height: 40),
+            const SocialMediaSection(),
           ],
         ),
       ),
@@ -119,46 +121,49 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildList(List<ProductModel> filteredFavs, List<String> categories, BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return Column(
-      children: [
-        if (categories.length > 1)
-          Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: categories.length,
-              itemBuilder: (_, i) {
-                final c = categories[i];
-                final isSel = _filter == c;
-                return GestureDetector(
-                  onTap: () => setState(() => _filter = c),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: isSel ? AppColors.gold : theme.cardTheme.color,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: isSel ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (categories.length > 1)
+            Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: categories.length,
+                itemBuilder: (_, i) {
+                  final c = categories[i];
+                  final isSel = _filter == c;
+                  return GestureDetector(
+                    onTap: () => setState(() => _filter = c),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isSel ? AppColors.gold : theme.cardTheme.color,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: isSel ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
+                      ),
+                      child: Center(
+                        child: Text(c,
+                            style: TextStyle(
+                                color: isSel ? Colors.white : theme.textTheme.bodyLarge?.color,
+                                fontSize: 12,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                      ),
                     ),
-                    child: Center(
-                      child: Text(c,
-                          style: TextStyle(
-                              color: isSel ? Colors.white : theme.textTheme.bodyLarge?.color,
-                              fontSize: 12,
-                              fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        Expanded(
-          child: ListView.builder(
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: filteredFavs.length,
-            padding: const EdgeInsets.only(top: 8, bottom: 20),
+            padding: const EdgeInsets.only(top: 8),
             itemBuilder: (_, i) => ProductCard(
               product: filteredFavs[i],
               onTap: () => Navigator.push(
@@ -168,8 +173,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           ProductDetailScreen(product: filteredFavs[i]))),
             ),
           ),
-        ),
-      ],
+          const SocialMediaSection(),
+        ],
+      ),
     );
   }
 

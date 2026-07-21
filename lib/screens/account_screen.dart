@@ -19,6 +19,7 @@ import 'product_detail_screen.dart';
 import 'admin/admin_dashboard.dart';
 import 'help_screen.dart';
 import 'orders_screen.dart';
+import 'privacy_settings_screen.dart';
 
 
 // ─── Main Account Screen ──────────────────────────────────────────────────────
@@ -332,6 +333,7 @@ class _AccountScreenState extends State<AccountScreen>
             ),
           ], t),
 
+          const SocialMediaSection(),
           const SizedBox(height: 80),
         ],
       ),
@@ -1008,33 +1010,40 @@ class _MyAdCard extends StatelessWidget {
         title: const Text('Boost Your Ad',
             style: TextStyle(
                 color: AppColors.gold, fontWeight: FontWeight.w600)),
-        content: Column(
+        content: SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-                'Boost your listing to appear at the top of search results.',
-                style: TextStyle(
-                    color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
-            const SizedBox(height: 16),
-            ...[
-              '3 Days — ${context.read<CurrencyProvider>().formatPrice(500)}',
-              '7 Days — ${context.read<CurrencyProvider>().formatPrice(1000)}',
-              '30 Days — ${context.read<CurrencyProvider>().formatPrice(3000)}'
-            ]
-                .map((opt) => ListTile(
-              leading: const Icon(Icons.star,
-                  color: AppColors.gold, size: 18),
-              title: Text(opt,
+              Text(
+                  'Boost your listing to appear at the top of search results.',
                   style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14)),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Boost selected: $opt'),
-                    backgroundColor: AppColors.gold));
-              },
-            )),
-          ],
+                      color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
+              const SizedBox(height: 16),
+              ...[
+                '3 Days — ${context.read<CurrencyProvider>().formatPrice(500)}',
+                '7 Days — ${context.read<CurrencyProvider>().formatPrice(1000)}',
+                '30 Days — ${context.read<CurrencyProvider>().formatPrice(3000)}'
+              ]
+                  .map((opt) => ListTile(
+                leading: const Icon(Icons.star,
+                    color: AppColors.gold, size: 18),
+                title: Text(opt,
+                    style: TextStyle(
+                        color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Boost selected: $opt'),
+                      backgroundColor: AppColors.gold));
+                },
+              )),
+            ],
+          ),
+        ),
         ),
         actions: [
           TextButton(
@@ -1458,7 +1467,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             borderRadius: BorderRadius.circular(16)),
         title: Text(t['change_password'] ?? 'Change Password',
             style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           _SimpleField(
               ctrl: oldCtrl,
               hint: context.read<LanguageProvider>().isArabic
@@ -1479,7 +1488,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                   ? 'تأكيد كلمة المرور'
                   : 'Confirm new password',
               obscure: true),
-        ]),
+        ])),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1525,7 +1534,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             borderRadius: BorderRadius.circular(16)),
         title: Text(t['verify_phone'] ?? 'Verify Phone Number',
             style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(
               context.read<LanguageProvider>().isArabic
                   ? 'سنرسل رمزًا إلى ${widget.user.phone.isNotEmpty ? widget.user.phone : "+92 XXX XXXXXXX"}'
@@ -1551,7 +1560,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                   borderSide: BorderSide.none),
             ),
           ),
-        ]),
+        ])),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1592,8 +1601,12 @@ class _SettingsTabState extends State<_SettingsTab> {
       builder: (_) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(t['default_location'] ?? 'Default Location',
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(t['default_location'] ?? 'Default Location',
                 style: TextStyle(
                     color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
                     fontSize: 16,
@@ -1618,6 +1631,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             )),
           ]),
         ),
+      ),
       ),
     );
   }
@@ -1666,66 +1680,9 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showPrivacySettings() {
-    bool showPhone = true;
-    bool showEmail = false;
-    bool allowMessages = true;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(t['privacy_settings'] ?? 'Privacy Settings',
-                style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            _PrivacyToggle(
-                context.read<LanguageProvider>().isArabic
-                    ? 'إظهار رقم الهاتف في الإعلانات'
-                    : 'Show phone number on listings',
-                showPhone,
-                    (v) => setModal(() => showPhone = v)),
-            _PrivacyToggle(
-                context.read<LanguageProvider>().isArabic
-                    ? 'إظهار البريد الإلكتروني في الملف'
-                    : 'Show email on profile',
-                showEmail,
-                    (v) => setModal(() => showEmail = v)),
-            _PrivacyToggle(
-                context.read<LanguageProvider>().isArabic
-                    ? 'السماح بالرسائل المباشرة'
-                    : 'Allow direct messages',
-                allowMessages,
-                    (v) => setModal(() => allowMessages = v)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(context.read<LanguageProvider>().isArabic
-                          ? 'تم حفظ إعدادات الخصوصية ✅'
-                          : 'Privacy settings saved ✅'),
-                      backgroundColor: AppColors.green));
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold),
-                child: Text(t['save'] ?? 'Save',
-                    style: const TextStyle(color: Colors.white)),
-              ),
-            ),
-          ]),
-        ),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PrivacySettingsScreen()),
     );
   }
 
@@ -2747,8 +2704,6 @@ class _QuickSettingsSheet extends StatelessWidget {
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  SMALL REUSABLE WIDGETS
-// ══════════════════════════════════════════════════════════════════════════════
-
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;

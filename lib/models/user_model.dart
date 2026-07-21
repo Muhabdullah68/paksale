@@ -1,26 +1,96 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class PrivacySettings {
+  final String contactPreference; // 'everyone', 'verified_only', 'women_only', 'nobody'
+  final String phoneVisibility;    // 'nobody', 'approved', 'contacts'
+  final String locationPrecision;  // 'city', 'area', 'approximate', 'exact'
+  final bool allowCalls;
+  final bool showGender;
+  final bool showProfilePhoto;
+  final bool anonymousProfile;
+  final bool quietMode;
+
+  const PrivacySettings({
+    this.contactPreference = 'everyone',
+    this.phoneVisibility = 'nobody',
+    this.locationPrecision = 'city',
+    this.allowCalls = false,
+    this.showGender = false,
+    this.showProfilePhoto = true,
+    this.anonymousProfile = false,
+    this.quietMode = false,
+  });
+
+  factory PrivacySettings.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const PrivacySettings();
+    return PrivacySettings(
+      contactPreference: map['contactPreference'] ?? 'everyone',
+      phoneVisibility: map['phoneVisibility'] ?? 'nobody',
+      locationPrecision: map['locationPrecision'] ?? 'city',
+      allowCalls: map['allowCalls'] ?? false,
+      showGender: map['showGender'] ?? false,
+      showProfilePhoto: map['showProfilePhoto'] ?? true,
+      anonymousProfile: map['anonymousProfile'] ?? false,
+      quietMode: map['quietMode'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'contactPreference': contactPreference,
+    'phoneVisibility': phoneVisibility,
+    'locationPrecision': locationPrecision,
+    'allowCalls': allowCalls,
+    'showGender': showGender,
+    'showProfilePhoto': showProfilePhoto,
+    'anonymousProfile': anonymousProfile,
+    'quietMode': quietMode,
+  };
+
+  PrivacySettings copyWith({
+    String? contactPreference,
+    String? phoneVisibility,
+    String? locationPrecision,
+    bool? allowCalls,
+    bool? showGender,
+    bool? showProfilePhoto,
+    bool? anonymousProfile,
+    bool? quietMode,
+  }) {
+    return PrivacySettings(
+      contactPreference: contactPreference ?? this.contactPreference,
+      phoneVisibility: phoneVisibility ?? this.phoneVisibility,
+      locationPrecision: locationPrecision ?? this.locationPrecision,
+      allowCalls: allowCalls ?? this.allowCalls,
+      showGender: showGender ?? this.showGender,
+      showProfilePhoto: showProfilePhoto ?? this.showProfilePhoto,
+      anonymousProfile: anonymousProfile ?? this.anonymousProfile,
+      quietMode: quietMode ?? this.quietMode,
+    );
+  }
+}
+
 class UserModel {
   final String id;
   final String name;
   final String email;
   final String? nicNumber;
   final String phone;
-  final String whatsAppNumber; // NEW
+  final String whatsAppNumber;
   final String photoUrl;
   final String avatarUrl;
   final bool isVerified;
-  final String sellerTier; // NEW: 'free', 'verified', 'premium'
-  final bool isBusinessSeller; // NEW
-  final bool isAdminApproved; // NEW: for business sellers
-  final String idVerificationStatus; // NEW: 'none', 'pending', 'verified', 'rejected'
-  final String city; // NEW
-  final String village; // NEW
+  final String sellerTier;
+  final bool isBusinessSeller;
+  final bool isAdminApproved;
+  final String idVerificationStatus;
+  final String city;
+  final String village;
   final int activeAdsCount;
   final int totalViews;
   final double rating;
-  final bool isSuspended; // NEW
-  final bool isAdmin; // NEW
+  final bool isSuspended;
+  final bool isAdmin;
+  final PrivacySettings privacy;
   final DateTime createdAt;
 
   UserModel({
@@ -44,6 +114,7 @@ class UserModel {
     this.rating = 0.0,
     this.isSuspended = false,
     this.isAdmin = false,
+    this.privacy = const PrivacySettings(),
     required this.createdAt,
   });
 
@@ -70,6 +141,7 @@ class UserModel {
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       isSuspended: data['isSuspended'] ?? false,
       isAdmin: data['isAdmin'] ?? false,
+      privacy: PrivacySettings.fromMap(data['privacy']),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -95,6 +167,7 @@ class UserModel {
       'rating': rating,
       'isSuspended': isSuspended,
       'isAdmin': isAdmin,
+      'privacy': privacy.toMap(),
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -104,7 +177,7 @@ class UserModel {
     String? photoUrl, String? avatarUrl, bool? isVerified, String? sellerTier,
     bool? isBusinessSeller, bool? isAdminApproved, String? idVerificationStatus,
     String? city, String? village, int? activeAdsCount, int? totalViews,
-    double? rating, bool? isSuspended, bool? isAdmin, DateTime? createdAt,
+    double? rating, bool? isSuspended, bool? isAdmin, PrivacySettings? privacy, DateTime? createdAt,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -127,7 +200,13 @@ class UserModel {
     rating: rating ?? this.rating,
     isSuspended: isSuspended ?? this.isSuspended,
     isAdmin: isAdmin ?? this.isAdmin,
+    privacy: privacy ?? this.privacy,
     createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  String get displayLocation {
+    if (village.isNotEmpty) return '$city, $village';
+    return city;
   }
 }

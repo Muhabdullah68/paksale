@@ -1,0 +1,331 @@
+1. Terms & Conditions / Terms of Use
+
+This is the main legal agreement between  app and users.
+
+The app is a marketplace platform, not the seller or buyer.
+
+The platform provides technology that allows users to publish listings, communicate, and arrange transactions. Unless specifically stated otherwise, the platform is not the owner, seller, buyer, agent, broker, guarantor, or manufacturer of listed products or services.
+Users must:
+Provide accurate information.
+Use their own mobile number.
+Not create fake accounts.
+Not impersonate another person.
+Not upload stolen images or copyrighted material.
+Not mislead other users.
+Not manipulate ratings or reviews.
+Not use the platform for fraud or illegal activity.
+2. Pakistan-Specific User Verification Policy
+
+Level 1 — Basic Account
+
+Required:
+
+Pakistani mobile number
+SMS OTP verification
+Name
+City/area
+
+Can:
+
+Browse listings
+Save listings
+Contact users with limitations
+Level 2 — Verified User
+
+Required:
+
+Verified mobile number
+Email address
+Additional identity verification where necessary
+
+Can:
+
+Publish more listings
+Chat freely
+Receive a verified badge
+Level 3 — Trusted Seller / Business
+
+Required:
+
+Business information
+CNIC or other legally appropriate verification through a secure process
+Business registration information where applicable
+Bank/payment information where relevant
+
+Can:
+
+Operate as a business seller
+Publish higher-volume listings
+Access seller tools
+Important
+
+Do not publicly display a user's complete CNIC number, full identity document, or unnecessary personal information. Collect only the information needed for a specific purpose. This is consistent with the data-minimization approach reflected in Pakistan's developing data-governance framework.
+
+3. Your Best Trust System for Pakistan
+
+I recommend this structure:
+
+🟢 Mobile Verified
+
+The phone number has been verified by OTP.
+
+🔵 Identity Verified
+
+The platform has completed an appropriate identity-verification process.
+
+🟡 Business Verified
+
+Business information has been checked.
+
+⭐ Trusted Seller
+
+The seller has:
+
+Completed multiple transactions
+Received positive feedback
+Avoided serious complaints
+Maintained a good account history
+⚠️ New Seller
+
+A new account should clearly display:
+
+New Seller — Trade Carefully
+
+This is much better than pretending that every user is equally trustworthy.
+
+4. Prohibited Items & Activities Policy
+
+Your app should have a clear Prohibited and Restricted Listings Policy.
+
+Listings should be removed if they involve:
+
+Illegal goods
+Stolen property
+Counterfeit products
+Fraudulent documents
+Fake identity documents
+Financial scams
+Pyramid or Ponzi schemes
+Misleading investment offers
+Illegal services
+Harassment or blackmail
+Sexually exploitative content
+Content involving exploitation of minors
+Any product or service prohibited by Pakistani law
+
+You should also include a rule that the platform may remove any listing that creates a legal, safety, or serious fraud risk.
+
+5. Fraud & Scam Policy
+
+This is one of the most important policies for your Pakistan app.
+
+Prohibited behaviour:
+Fake payment screenshots
+Fake bank-transfer confirmations
+Advance-payment scams
+Fake courier claims
+Fake employment offers
+Fake rental properties
+Selling an item that does not exist
+Using another person's identity
+Taking payment and disappearing
+Advertising a different product from the one delivered
+Your app should have:
+
+Report Listing
+
+Report User
+
+Report Scam
+
+Block User
+
+Dispute Case
+
+Emergency legal/safety report pathway where appropriate
+
+6. Transaction Policy
+
+Your policy should make clear:
+
+The platform does not automatically guarantee the quality, ownership, authenticity, condition, legality, or delivery of every item listed by a user.
+
+However, if you later introduce escrow, protected payments, delivery, or a managed marketplace, you should create separate rules for those services.
+
+For a high-value item, your app can display:
+
+For your protection, inspect the item before completing payment.
+
+Your system should discourage users from sending money merely because a seller sends a screenshot or makes an urgent demand.
+
+7. Privacy Policy
+
+Your Privacy Policy should explain:
+
+What you collect
+Mobile number
+Name
+Email, if provided
+City/location information
+Listing information
+Messages and reports (stored only to facilitate communication between buyers and sellers, and for dispute resolution purposes)
+Device and technical information
+App usage data
+Why you collect it
+Account creation
+OTP verification
+Fraud prevention
+Customer support
+Platform security
+Improving the app
+Legal compliance
+
+Important note about chat messages:
+- Chat messages are stored only to enable communication between users and for dispute resolution
+- Chat messages are not shared with third parties except as required by law or for platform safety
+- Users can report or delete conversations as needed
+Data sharing
+
+You should clearly explain when information may be shared with:
+
+Service providers
+Payment providers
+Hosting providers
+Fraud-prevention providers
+Law-enforcement authorities where legally required
+
+Pakistan's official draft personal-data framework emphasizes lawful collection, processing, storage, and disclosure of personal data, and the government has continued developing a broader data-governance framework.
+
+8. Location Privacy Policy
+
+For Pakistan, I strongly recommend:
+
+Do not show exact home addresses publicly.
+
+Instead show:
+
+Sargodha, Punjab
+
+or:
+
+3 km from Sargodha City Centre
+
+Users can share the exact meeting location privately if they choose.
+
+This protects users from:
+
+Theft
+Harassment
+Stalking
+Privacy risks
+9. Chat & Messaging Policy
+
+Your chat system should state that users must not use chat to:
+
+Threaten others
+Harass others
+Blackmail others
+Send abusive messages
+Send fraudulent payment proof
+Share illegal content
+Attempt to move users into a scam
+
+You should also give users:
+
+Block
+
+Report
+
+Delete chat
+
+Report scam
+
+10. Reviews & Ratings Policy
+
+To prevent fake reviews:
+
+Only allow a review when:
+A transaction or meaningful interaction has occurred, or
+The platform has a reasonable basis to allow the review.
+Prohibit:
+Paying for fake reviews
+Threatening someone to change a review
+Creating multiple accounts to manipulate ratings
+Reviewing your own listing
+
+Your system should preserve both:
+
+Seller Rating
+
+and
+
+Buyer Rating
+
+This is especially useful for Pakistani marketplaces.
+
+11. Account Suspension & Termination Policy
+
+Your app should have the right to:
+
+Remove listings
+Restrict accounts
+Suspend accounts
+Permanently ban accounts
+Remove fraudulent content
+Preserve relevant records for investigations
+
+But you should also provide a basic appeal process:
+
+A user may appeal an account action through customer support. The platform may request additional information before reviewing the appeal.
+
+12. Children & Age Policy
+
+I recommend:
+
+Users must be at least 18 years old to independently create listings or conduct marketplace transactions, unless the service is specifically designed for younger users with appropriate legal safeguards.
+
+This is especially important because buying and selling, identity verification, payments, and private communications can create additional risks for minors.
+
+13. Pakistan-Specific Business Policies You Should Have
+
+For your app, I recommend creating these separate documents:
+
+Mandatory Core Policies
+Terms & Conditions
+Privacy Policy
+Community Guidelines
+Prohibited Items Policy
+Fraud & Scam Prevention Policy
+User Verification Policy
+Reviews & Ratings Policy
+Account Suspension Policy
+Intellectual Property / Copyright Policy
+Complaint & Dispute Policy
+If you add additional services
+Payment Policy
+Refund Policy
+Delivery Policy
+Seller Agreement
+Business/Vendor Agreement
+Job Posting Policy
+Real Estate Listing Policy
+Vehicle Listing Policy
+Advertising Policy
+
+
+------------------------------------------------------------------
+
+“We do not promise that every user is honest. We create a system that makes dishonesty more difficult, identifies risk, preserves evidence, and gives users tools to protect themselves.”
+
+Your app should display a Trust Profile for every user:
+
+Trust Information	Example
+Mobile	✅ Verified
+Email	✅ Verified
+Identity	🔵 Verified
+Account age	2 years
+Successful interactions	47
+Complaints	Low
+Response rate	92%
+Seller rating	4.8/5
+Business	Verified

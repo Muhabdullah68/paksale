@@ -29,7 +29,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     'Jobs Center', 'Super Ads'
   ];
   final List<String> _locations = [
-    'All', 'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala'
+    'All', 'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala', 'Sargodha'
   ];
 
   @override

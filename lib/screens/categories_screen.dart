@@ -69,78 +69,83 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           ),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(t['categories_title'] ?? 'Categories',
-                style: TextStyle(
-                    color: theme.textTheme.titleLarge?.color,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-          ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 130,
-                  child: ListView.builder(
-                    itemCount: categories.length,
-                    itemBuilder: (_, i) {
-                      final cat = categories[i];
-                      final isSelected = _selectedIndex == i;
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedIndex = i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : theme.cardTheme.color,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2),
-                              width: isSelected ? 2 : 1,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(t['categories_title'] ?? 'Categories',
+                  style: TextStyle(
+                      color: theme.textTheme.titleLarge?.color,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+            ),
+            SizedBox(
+              height: 500,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 130,
+                    child: ListView.builder(
+                      itemCount: categories.length,
+                      itemBuilder: (_, i) {
+                        final cat = categories[i];
+                        final isSelected = _selectedIndex == i;
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedIndex = i),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primary : theme.cardTheme.color,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2),
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.transparent : (isDark ? AppColors.surface : AppColors.backgroundLightMode),
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                  ),
+                                  child: Center(
+                                      child: Text(cat['icon']!,
+                                          style: const TextStyle(fontSize: 30))),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(cat['name']!,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          color: isSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
+                                          fontSize: 11,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: isSelected ? Colors.transparent : (isDark ? AppColors.surface : AppColors.backgroundLightMode),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                ),
-                                child: Center(
-                                    child: Text(cat['icon']!,
-                                        style: const TextStyle(fontSize: 30))),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(cat['name']!,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        color: isSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
-                                        fontSize: 11,
-                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _buildSubCategoryList(selectedCatName, isDark, theme),
-                ),
-              ],
+                  Expanded(
+                    child: _buildSubCategoryList(selectedCatName, isDark, theme),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SocialMediaSection(),
+          ],
+        ),
       ),
     );
   }

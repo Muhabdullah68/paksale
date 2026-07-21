@@ -430,6 +430,7 @@ class _HomeBodyState extends State<_HomeBody> {
                 onTap: () => widget.onProductTap(p),
                 onCompare: () {},
               )),
+            const SocialMediaSection(),
             const SizedBox(height: 80),
           ],
         ),
@@ -555,6 +556,7 @@ class _HomeBodyState extends State<_HomeBody> {
     final cats = cmsProvider.categories.isNotEmpty
         ? cmsProvider.categories.map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()}).toList()
         : [
+            {'n': 'Offers', 'i': '🏷️'},
             {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
             {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
             {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
@@ -567,8 +569,8 @@ class _HomeBodyState extends State<_HomeBody> {
         crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 0.85,
-        mainAxisSpacing: 8,
+        childAspectRatio: 1.15,
+        mainAxisSpacing: 4,
         crossAxisSpacing: 8,
         children: cats.map((c) => CategoryCircle(
           name: c['n']!, icon: c['i']!, size: 70,

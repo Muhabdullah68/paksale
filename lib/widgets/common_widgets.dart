@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/favorites_provider.dart';
@@ -687,7 +689,7 @@ class CategoryCircle extends StatelessWidget {
               ),
               child: Center(child: Text(icon, style: TextStyle(fontSize: size * 0.42))),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 2),
             SizedBox(
               width: size + 10,
               child: Text(name,
@@ -766,14 +768,19 @@ class ContactActionButtons extends StatelessWidget {
   final VoidCallback? onWhatsApp;
   final VoidCallback? onCall;
   final VoidCallback? onChat;
+  final PrivacySettings? privacy;
 
-  const ContactActionButtons({super.key, this.onWhatsApp, this.onCall, this.onChat});
+  const ContactActionButtons({super.key, this.onWhatsApp, this.onCall, this.onChat, this.privacy});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
+
+    final showCall = privacy == null || privacy!.allowCalls;
+    final showWhatsApp = privacy == null || privacy!.phoneVisibility != 'nobody';
+
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
       decoration: BoxDecoration(
@@ -783,41 +790,46 @@ class ContactActionButtons extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (showCall)
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onCall,
+                icon: const Icon(Icons.phone, size: 18, color: Colors.white),
+                label: Text(t['call_now'] ?? 'Call Now', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          if (showCall && onChat != null) const SizedBox(width: 10),
+          if (showWhatsApp && onWhatsApp != null)
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onWhatsApp,
+                icon: const Icon(Icons.chat, size: 18, color: Colors.white),
+                label: Text(t['whatsapp'] ?? 'WhatsApp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          if (showWhatsApp && onWhatsApp != null) const SizedBox(width: 10),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: onCall,
-              icon: const Icon(Icons.phone, size: 18, color: Colors.white),
-              label: Text(t['call_now'] ?? 'Call Now', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              onPressed: onChat,
+              icon: const Icon(Icons.message_outlined, size: 18, color: Colors.white),
+              label: Text(t['message'] ?? 'Message', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.orange,
+                backgroundColor: AppColors.gold,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onWhatsApp,
-              icon: const Icon(Icons.chat, size: 18, color: Colors.white),
-              label: Text(t['whatsapp'] ?? 'WhatsApp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-          if (onChat != null) ...[
-            const SizedBox(width: 10),
-            Container(
-              decoration: BoxDecoration(
-                  color: theme.cardTheme.color,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? AppColors.divider : AppColors.dividerLightMode)),
-              child: IconButton(onPressed: onChat, icon: const Icon(Icons.message_outlined, color: AppColors.gold, size: 22)),
-            ),
-          ],
         ],
       ),
     );
@@ -906,4 +918,137 @@ class _ConditionBadge extends StatelessWidget {
       child: Text(condition, style: TextStyle(color: _color, fontSize: small ? 9 : 10, fontWeight: FontWeight.w600)),
     );
   }
+}
+
+// ─── Social Media Section ─────────────────────────────────────────────────────
+class SocialMediaSection extends StatefulWidget {
+  const SocialMediaSection({super.key});
+
+  @override
+  State<SocialMediaSection> createState() => _SocialMediaSectionState();
+}
+
+class _SocialMediaSectionState extends State<SocialMediaSection> {
+  late List<SocialMediaItem> _shuffledItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _shuffledItems = List.from(_socialMediaItems)..shuffle();
+  }
+
+  static const List<SocialMediaItem> _socialMediaItems = [
+    SocialMediaItem(
+      name: 'TikTok',
+      icon: FontAwesomeIcons.tiktok,
+      url: 'https://www.tiktok.com/',
+      color: Colors.black,
+    ),
+    SocialMediaItem(
+      name: 'Instagram',
+      icon: FontAwesomeIcons.instagram,
+      url: 'https://www.instagram.com/',
+      color: Color(0xFFE1306C),
+    ),
+    SocialMediaItem(
+      name: 'Snapchat',
+      icon: FontAwesomeIcons.snapchat,
+      url: 'https://www.snapchat.com/',
+      color: Color(0xFFFFFC00),
+    ),
+    SocialMediaItem(
+      name: 'YouTube',
+      icon: FontAwesomeIcons.youtube,
+      url: 'https://www.youtube.com/',
+      color: Color(0xFFFF0000),
+    ),
+    SocialMediaItem(
+      name: 'X',
+      icon: FontAwesomeIcons.xTwitter,
+      url: 'https://twitter.com/',
+      color: Colors.black,
+    ),
+  ];
+
+  Future<void> _launchSocialMedia(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark.withValues(alpha: 0.5) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Are you following us?',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: theme.textTheme.titleLarge?.color,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            alignment: WrapAlignment.center,
+            children: _shuffledItems.map((item) => GestureDetector(
+              onTap: () => _launchSocialMedia(item.url),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark 
+                      ? AppColors.gold.withValues(alpha: 0.4) 
+                      : AppColors.primary.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: FaIcon(
+                  item.icon,
+                  size: 32,
+                  color: isDark ? AppColors.gold : AppColors.primary,
+                ),
+              ),
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SocialMediaItem {
+  final String name;
+  final IconData icon;
+  final String url;
+  final Color color;
+
+  const SocialMediaItem({
+    required this.name,
+    required this.icon,
+    required this.url,
+    required this.color,
+  });
 }

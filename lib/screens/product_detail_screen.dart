@@ -9,6 +9,7 @@ import '../providers/favorites_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/report_provider.dart';
 import '../providers/order_provider.dart';
+import '../repositories/user_repository.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +17,7 @@ import '../widgets/common_widgets.dart';
 import 'chat_screen.dart';
 import 'compare_screen.dart';
 import 'listing_screen.dart';
+import 'privacy_settings_screen.dart';
 import 'seller_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -28,16 +30,37 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedImageIndex = 0;
+  PrivacySettings? _sellerPrivacy;
+  bool _loadingPrivacy = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().incrementViews(widget.product.id);
+      _loadSellerPrivacy();
     });
   }
 
+  Future<void> _loadSellerPrivacy() async {
+    try {
+      final seller = await UserRepository().getUserById(widget.product.sellerId);
+      if (mounted) {
+        setState(() {
+          _sellerPrivacy = seller?.privacy;
+          _loadingPrivacy = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPrivacy = false);
+    }
+  }
+
   void _launchCaller() async {
+    if (_sellerPrivacy != null && !_sellerPrivacy!.allowCalls) {
+      _showPrivacyChatRedirect('The seller prefers in-app communication. Send them a message instead?');
+      return;
+    }
     final url = Uri.parse('tel:${widget.product.sellerPhone}');
     if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
       // Success
@@ -51,12 +74,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _launchWhatsApp() async {
-    // Prefer whatsAppNumber if available, else fallback to sellerPhone
+    if (_sellerPrivacy != null && _sellerPrivacy!.phoneVisibility == 'nobody') {
+      _showPrivacyChatRedirect('The seller keeps their contact private. Send them a message instead?');
+      return;
+    }
     final phone = widget.product.whatsAppNumber.isNotEmpty 
         ? widget.product.whatsAppNumber 
         : widget.product.sellerPhone;
-    
-    // Format phone for WhatsApp (remove spaces and +)
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final url = Uri.parse('https://wa.me/$cleanPhone?text=Hi, I am interested in your ad: ${widget.product.title}');
     if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
@@ -68,6 +92,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
       }
     }
+  }
+
+  void _showPrivacyChatRedirect(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Privacy Protected'),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _startChat(context, context.read<ProductProvider>().products.firstWhere((p) => p.id == widget.product.id));
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: const Text('Send Message', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateStatus(BuildContext context, String status) async {
@@ -88,6 +133,76 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ));
       }
     }
+  }
+
+  void _startChat(BuildContext context, ProductModel product) async {
+    final auth = context.read<AuthProvider>();
+    final chatProvider = context.read<ChatProvider>();
+    final t = context.read<LanguageProvider>().t;
+
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(t['login_prompt'] ?? 'Please sign in to message the seller'),
+        backgroundColor: AppColors.orange,
+      ));
+      return;
+    }
+
+    if (auth.firebaseUser!.uid == product.sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('This is your own listing. You cannot chat with yourself.'),
+        backgroundColor: AppColors.orange,
+      ));
+      return;
+    }
+
+    ConversationModel? conv = chatProvider.findConversation(
+      auth.firebaseUser!.uid,
+      product.sellerId,
+      product.id,
+    );
+
+    if (conv == null) {
+      final newConv = ConversationModel(
+        id: '',
+        participants: [auth.firebaseUser!.uid, product.sellerId],
+        participantNames: {
+          auth.firebaseUser!.uid: auth.userModel?.name ?? 'Buyer',
+          product.sellerId: product.sellerName,
+        },
+        participantAvatars: {
+          auth.firebaseUser!.uid: auth.userModel?.avatarUrl ?? '',
+          product.sellerId: '',
+        },
+        lastMessage: 'Interested in ${product.title}',
+        lastMessageAt: DateTime.now(),
+        lastSenderId: auth.firebaseUser!.uid,
+        unreadCount: {product.sellerId: 1},
+        productId: product.id,
+        productTitle: product.title,
+        productImageUrl: product.imageUrls.isNotEmpty ? product.imageUrls[0] : '',
+      );
+
+      try {
+        final id = await chatProvider.startConversation(newConv);
+        conv = newConv.copyWith(id: id);
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error starting conversation: $e'),
+          backgroundColor: Colors.redAccent,
+        ));
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConversationScreen(conversation: conv!),
+      ),
+    );
   }
 
   void _showMarkAsSoldDialog(BuildContext context) {
@@ -561,6 +676,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     );
                   },
                 ),
+                const SocialMediaSection(),
                 const SizedBox(height: 20),
               ],
             ),
@@ -638,77 +754,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ContactActionButtons(
                   onCall: _launchCaller,
                   onWhatsApp: _launchWhatsApp,
-                  onChat: () async {
-                final auth = context.read<AuthProvider>();
-                final chatProvider = context.read<ChatProvider>();
-                final t = context.read<LanguageProvider>().t;
-
-                if (!auth.isAuthenticated) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(t['login_prompt'] ?? 'Please sign in to message the seller'),
-                    backgroundColor: AppColors.orange,
-                  ));
-                  return;
-                }
-
-                if (auth.firebaseUser!.uid == p.sellerId) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('This is your own listing. You cannot chat with yourself.'),
-                    backgroundColor: AppColors.orange,
-                  ));
-                  return;
-                }
-
-                ConversationModel? conv = chatProvider.findConversation(
-                  auth.firebaseUser!.uid,
-                  p.sellerId,
-                  p.id,
-                );
-
-                if (conv == null) {
-                  // Create new conversation model
-                  final newConv = ConversationModel(
-                    id: '', // Will be set by repository
-                    participants: [auth.firebaseUser!.uid, p.sellerId],
-                    participantNames: {
-                      auth.firebaseUser!.uid: auth.userModel?.name ?? 'Buyer',
-                      p.sellerId: p.sellerName,
-                    },
-                    participantAvatars: {
-                      auth.firebaseUser!.uid: auth.userModel?.avatarUrl ?? '',
-                      p.sellerId: '', // Ideally fetch seller avatar
-                    },
-                    lastMessage: 'Interested in ${p.title}',
-                    lastMessageAt: DateTime.now(),
-                    lastSenderId: auth.firebaseUser!.uid,
-                    unreadCount: {p.sellerId: 1},
-                    productId: p.id,
-                    productTitle: p.title,
-                    productImageUrl: p.imageUrls.isNotEmpty ? p.imageUrls[0] : '',
-                  );
-
-                  try {
-                    final id = await chatProvider.startConversation(newConv);
-                    conv = newConv.copyWith(id: id);
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Error starting conversation: $e'),
-                      backgroundColor: Colors.redAccent,
-                    ));
-                    return;
-                  }
-                }
-
-                if (!context.mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ConversationScreen(conversation: conv!),
-                  ),
-                );
-              },
-            ),
+                  onChat: () => _startChat(context, p),
+                  privacy: _sellerPrivacy,
+                ),
           ],
         ),
       ),
@@ -846,11 +894,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   child: Text(spec.key,
                       style: TextStyle(
                           color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 14))),
-              Text(spec.value,
-                  style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500)),
+              Flexible(
+                  child: Text(spec.value,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500))),
             ]),
           );
         }).toList(),
