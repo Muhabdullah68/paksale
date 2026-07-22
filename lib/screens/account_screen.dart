@@ -1587,9 +1587,10 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   void _showLocationPicker() {
+    final t = context.read<LanguageProvider>().t;
     final locations = context.read<LanguageProvider>().isArabic
-        ? ['لاهور', 'كاراتشي', 'إسلام أباد', 'فيصل أباد', 'روالبندي', 'مولتان']
-        : ['Lahore', 'Karachi', 'Islamabad', 'Faisalabad', 'Rawalpindi', 'Multan'];
+        ? ['لاهور', 'كاراتشي', 'إسلام أباد', 'فيصل أباد', 'روالبندي', 'مولتان', 'سرگودھا']
+        : ['Lahore', 'Karachi', 'Islamabad', 'Faisalabad', 'Rawalpindi', 'Multan', 'Sargodha'];
     String selected = locations.first;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(

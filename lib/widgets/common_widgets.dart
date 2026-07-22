@@ -983,16 +983,16 @@ class _SocialMediaSectionState extends State<SocialMediaSection> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.primaryDark.withValues(alpha: 0.5) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1002,32 +1002,32 @@ class _SocialMediaSectionState extends State<SocialMediaSection> {
           Text(
             'Are you following us?',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
               color: theme.textTheme.titleLarge?.color,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Wrap(
-            spacing: 16,
-            runSpacing: 16,
+            spacing: 12,
+            runSpacing: 12,
             alignment: WrapAlignment.center,
             children: _shuffledItems.map((item) => GestureDetector(
               onTap: () => _launchSocialMedia(item.url),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isDark 
-                      ? AppColors.gold.withValues(alpha: 0.4) 
-                      : AppColors.primary.withValues(alpha: 0.3),
-                    width: 2,
+                      ? AppColors.gold.withValues(alpha: 0.5) 
+                      : AppColors.primary.withValues(alpha: 0.4),
+                    width: 1.5,
                   ),
                 ),
                 child: FaIcon(
                   item.icon,
-                  size: 32,
+                  size: 24,
                   color: isDark ? AppColors.gold : AppColors.primary,
                 ),
               ),
