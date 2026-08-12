@@ -10,8 +10,7 @@ flutter pub get
 echo "=== Build step: flutter build web ==="
 flutter build web \
   --release \
-  --base-href=/ \
-  --web-renderer=canvaskit
+  --base-href=/
 
 echo "=== Build complete: build/web ==="
 ls -la build/web | head -n 20
