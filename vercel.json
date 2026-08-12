@@ -1,6 +1,6 @@
 {
-  "installCommand": "curl -sL https://raw.githubusercontent.com/flutter-actions/setup-flutter/main/setup.sh | bash -s -- --flutter-version 3.29.0 && export PATH=\"$HOME/.flutter-sdk/bin:$HOME/.flutter-sdk/bin/cache/dart-sdk/bin:$PATH\" && flutter --version",
-  "buildCommand": "export PATH=\"$HOME/.flutter-sdk/bin:$HOME/.flutter-sdk/bin/cache/dart-sdk/bin:$PATH\" && flutter pub get && flutter build web --release --base-href=/ --web-renderer=canvaskit",
+  "installCommand": "chmod +x install-flutter.sh build-flutter-web.sh && bash install-flutter.sh",
+  "buildCommand": "bash build-flutter-web.sh",
   "outputDirectory": "build/web",
   "framework": null,
   "rewrites": [
