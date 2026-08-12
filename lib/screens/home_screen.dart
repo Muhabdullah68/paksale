@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
@@ -9,6 +10,8 @@ import '../providers/cms_provider.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/app_drawer.dart';
+import '../web/web_shell.dart';
+import '../web/web_home.dart';
 import 'categories_screen.dart';
 import 'listing_screen.dart';
 import 'post_ad_screen.dart';
@@ -136,6 +139,10 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    if (kIsWeb) {
+      return _buildWeb(context, t);
+    }
+
     return PopScope(
       canPop: _currentNavIndex == _tabHome,
       onPopInvokedWithResult: (didPop, result) {
@@ -182,6 +189,39 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         bottomNavigationBar: _buildBottomNav(),
+      ),
+    );
+  }
+
+  // ── Web shell layout ────────────────────────────────────────────────────
+  Widget _buildWeb(BuildContext context, Map<String, String> t) {
+    final webNav = context.watch<WebNav>();
+    if (webNav.tab != _currentNavIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _currentNavIndex = webNav.tab);
+      });
+    }
+    return WebPage(
+      content: IndexedStack(
+        index: _currentNavIndex,
+        children: [
+          WebHomeBody(
+            onProductTap: (p) => _navToProduct(p),
+            onCategoryTap: (name) => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ListingScreen(categoryTitle: name),
+              ),
+            ),
+            onSeeAllAds: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ListingScreen()),
+            ),
+          ),
+          const CategoriesScreen(webEmbedded: true),
+          const PostAdScreen(webEmbedded: true),
+          const FavoritesScreen(webEmbedded: true),
+          const ChatScreen(webEmbedded: true),
+          const AccountScreen(webEmbedded: true),
+        ],
       ),
     );
   }
@@ -270,6 +310,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final t = context.watch<LanguageProvider>().t;
     final unread = context.select<NotificationProvider, int>(
         (p) => p.unreadCount);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Adjust sizes for small screens
+    final double logoSize = screenWidth < 360 ? 34 : 38;
+    final double appLogoIconSize = screenWidth < 360 ? 22 : 24;
+    final double menuPadding = screenWidth < 360 ? 8 : 12;
+    final double spaceAfterLogo = screenWidth < 360 ? 8 : 10;
+    final double hintFontSize = screenWidth < 360 ? 12 : 13;
+
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: AppBar(
@@ -280,26 +329,26 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: menuPadding),
             tooltip: t['menu'] ?? 'Menu',
           ),
           Container(
-            width: 38, height: 38,
+            width: logoSize, height: logoSize,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
-            child: const Center(
-              child: AppLogoIcon(size: 24),
+            child: Center(
+              child: AppLogoIcon(size: appLogoIconSize),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: spaceAfterLogo),
           Expanded(
             child: TextField(
               decoration: InputDecoration(
                 hintText: t['search_hint'] ?? 'Search in PakistanSale...',
-                hintStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                hintStyle: TextStyle(color: Colors.white70, fontSize: hintFontSize),
                 prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.15),
@@ -495,6 +544,7 @@ class _HomeBodyState extends State<_HomeBody> {
   Widget _buildStoriesRow(BuildContext context) {
     final stories = [
       {'l': 'PS Updates', 'f': true, 'cat': ''},
+      {'l': 'Offers', 'f': false, 'cat': 'Offers'},
       {'l': 'Vehicles', 'f': false, 'cat': 'Vehicles'},
       {'l': 'Real Estate', 'f': false, 'cat': 'Properties'},
       {'l': 'Electronics', 'f': false, 'cat': 'Electronics'},
@@ -553,27 +603,50 @@ class _HomeBodyState extends State<_HomeBody> {
 
   Widget _buildMainCategories(BuildContext context) {
     final cmsProvider = context.watch<CMSProvider>();
-    final cats = cmsProvider.categories.isNotEmpty
-        ? cmsProvider.categories.map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()}).toList()
-        : [
-            {'n': 'Offers', 'i': '🏷️'},
-            {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
-            {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
-            {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
-            {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
-            {'n': 'Outdoor & Leisure', 'i': '⛺'},
-          ];
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    List<Map<String, String>> cats;
+    if (cmsProvider.categories.isNotEmpty) {
+      // Get categories from Firestore, ensure Offers is first
+      final firestoreCats = cmsProvider.categories.map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()}).toList();
+      // Check if Offers is already present
+      final offersIndex = firestoreCats.indexWhere((c) => c['n'] == 'Offers');
+      if (offersIndex != -1) {
+        // Move it to first place
+        final offersCat = firestoreCats.removeAt(offersIndex);
+        firestoreCats.insert(0, offersCat);
+      } else {
+        // Add Offers at first place
+        firestoreCats.insert(0, {'n': 'Offers', 'i': '🏷️'});
+      }
+      cats = firestoreCats;
+    } else {
+      // Fallback list already has Offers first
+      cats = [
+        {'n': 'Offers', 'i': '🏷️'},
+        {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
+        {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
+        {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
+        {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
+        {'n': 'Outdoor & Leisure', 'i': '⛺'},
+      ];
+    }
+    
+    // Adjust grid parameters for different screen sizes
+    final double categorySize = screenWidth < 360 ? 60 : 70;
+    final double childAspectRatio = screenWidth < 360 ? 1.1 : 1.15;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: GridView.count(
         crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.15,
+        childAspectRatio: childAspectRatio,
         mainAxisSpacing: 4,
         crossAxisSpacing: 8,
         children: cats.map((c) => CategoryCircle(
-          name: c['n']!, icon: c['i']!, size: 70,
+          name: c['n']!, icon: c['i']!, size: categorySize,
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => ListingScreen(categoryTitle: c['n']))),
         )).toList(),

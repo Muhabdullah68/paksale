@@ -102,31 +102,34 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                           DataCell(Text('${p.price} ${p.currency}')),
                           DataCell(Text(p.location)),
                           DataCell(_buildStatusBadge(p.status)),
-                          DataCell(Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.visibility,
-                                    color: AppColors.gold, size: 20),
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          ProductDetailScreen(product: p)),
-                                ),
-                              ),
-                              if (p.status == 'pending') ...[
+                          DataCell(SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
                                 IconButton(
-                                  icon: const Icon(Icons.check_circle,
-                                      color: Colors.green, size: 20),
-                                  onPressed: () => _updateStatus(p.id, 'approved'),
+                                  icon: const Icon(Icons.visibility,
+                                      color: AppColors.gold, size: 20),
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            ProductDetailScreen(product: p)),
+                                  ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.cancel,
-                                      color: Colors.red, size: 20),
-                                  onPressed: () => _updateStatus(p.id, 'rejected'),
-                                ),
+                                if (p.status == 'pending') ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.check_circle,
+                                        color: Colors.green, size: 20),
+                                    onPressed: () => _updateStatus(p.id, 'approved'),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.cancel,
+                                        color: Colors.red, size: 20),
+                                    onPressed: () => _updateStatus(p.id, 'rejected'),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           )),
                         ]);
                       }).toList(),

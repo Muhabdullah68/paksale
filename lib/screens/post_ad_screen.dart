@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
@@ -12,10 +12,12 @@ import '../services/currency_provider.dart';
 
 import '../providers/cms_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../web/web_shell.dart';
 
 class PostAdScreen extends StatefulWidget {
   final ProductModel? productToEdit;
-  const PostAdScreen({super.key, this.productToEdit});
+  final bool webEmbedded;
+  const PostAdScreen({super.key, this.productToEdit, this.webEmbedded = false});
 
   @override
   State<PostAdScreen> createState() => _PostAdScreenState();
@@ -55,7 +57,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
   late TextEditingController _salaryCtrl;
 
   // Step 3 – photos
-  final List<File> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
+  final Map<String, Uint8List> _imageCache = {};
   final ImagePicker _picker = ImagePicker();
 
   final _steps = ['Category', 'Details', 'Photos', 'Preview'];
@@ -124,6 +127,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       _sellerType = 'Personal';
       _location = 'Pakistan'; // Changed from Doha
       _selectedImages.clear();
+      _imageCache.clear();
       _isAuction = false;
       _auctionEndTime = null;
       _acceptsCOD = false;
@@ -147,11 +151,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
-              title: const Text('Take a Photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Choose from Gallery'),
@@ -167,9 +172,20 @@ class _PostAdScreenState extends State<PostAdScreen> {
       imageQuality: 70,
     );
     if (image != null) {
+      await _addImage(image);
+    }
+  }
+
+  Future<void> _addImage(XFile image) async {
+    try {
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
       setState(() {
-        _selectedImages.add(File(image.path));
+        _selectedImages.add(image);
+        _imageCache[image.path] = bytes;
       });
+    } catch (e) {
+      _snack('Could not read the selected image.', AppColors.orange);
     }
   }
 
@@ -410,6 +426,34 @@ class _PostAdScreenState extends State<PostAdScreen> {
       t['step_preview'] ?? 'Preview'
     ];
 
+    final body = _isSubmitting
+        ? _buildSubmittingState(t)
+        : Column(
+            children: [
+              _buildStepIndicator(steps),
+              if (widget.webEmbedded)
+                _buildCurrentStep()
+              else
+                Expanded(
+                  child: _buildCurrentStep(),
+                ),
+              _buildNavButtons(t),
+            ],
+          );
+
+    if (kIsWeb) {
+      return widget.webEmbedded
+          ? body
+          : WebPage(
+              breadcrumbs: [
+                WebCrumb(widget.productToEdit != null
+                    ? (t['edit_ad'] ?? 'Edit Ad')
+                    : (t['nav_post_ad'] ?? 'Post Ad')),
+              ],
+              content: body,
+            );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -430,17 +474,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             ),
         ],
       ),
-      body: _isSubmitting
-          ? _buildSubmittingState(t)
-          : Column(
-              children: [
-                _buildStepIndicator(steps),
-                Expanded(
-                  child: _buildCurrentStep(),
-                ),
-                _buildNavButtons(t),
-              ],
-            ),
+      body: body,
     );
   }
 
@@ -579,14 +613,17 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
         ),
-        Expanded(
-          child: GridView.count(
-            crossAxisCount: 3,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.0,
-            children: cats.map((c) {
+        GridView.count(
+          crossAxisCount: 3,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.0,
+          shrinkWrap: widget.webEmbedded,
+          physics: widget.webEmbedded
+              ? const NeverScrollableScrollPhysics()
+              : null,
+          children: cats.map((c) {
               final sel = _selectedCategory == c['n'];
               final label = t[c['n']!.toLowerCase().replaceAll(' ', '_')] ?? c['n']!;
               return GestureDetector(
@@ -622,7 +659,6 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 ),
               );
             }).toList(),
-          ),
         ),
       ],
     );
@@ -888,7 +924,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           border: Border.all(
                               color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
                           image: DecorationImage(
-                            image: FileImage(entry.value),
+                            image: MemoryImage(_imageCache[entry.value.path] ?? Uint8List(0)),
                             fit: BoxFit.cover,
                           ),
                         ),

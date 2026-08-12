@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../providers/auth_provider.dart';
-import '../services/language_provider.dart';
 
 class FemaleSupportScreen extends StatefulWidget {
   const FemaleSupportScreen({super.key});
@@ -54,8 +51,6 @@ class _FemaleSupportScreenState extends State<FemaleSupportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final t = context.watch<LanguageProvider>().t;
-    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,

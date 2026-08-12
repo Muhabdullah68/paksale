@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
-import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -119,8 +118,9 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
             Row(children: [
               const Icon(Icons.person_outline, size: 12, color: AppColors.textMuted),
               const SizedBox(width: 4),
-              Text(order.sellerId == context.read<AuthProvider>().firebaseUser?.uid ? 'Buyer: ${order.buyerName}' : 'Seller: ${order.sellerName}',
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              Flexible(child: Text(order.sellerId == context.read<AuthProvider>().firebaseUser?.uid ? 'Buyer: ${order.buyerName}' : 'Seller: ${order.sellerName}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11))),
               const Spacer(),
               const Icon(Icons.calendar_today, size: 12, color: AppColors.textMuted),
               const SizedBox(width: 4),
@@ -132,7 +132,9 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
               Row(children: [
                 const Icon(Icons.location_on, size: 12, color: AppColors.textMuted),
                 const SizedBox(width: 4),
-                Text('Delivery: ${order.deliveryLocation}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                Flexible(child: Text('Delivery: ${order.deliveryLocation}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11))),
               ]),
             ],
             if (order.status == 'pending' && order.sellerId == context.read<AuthProvider>().firebaseUser?.uid)
@@ -197,7 +199,6 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final t = context.watch<LanguageProvider>().t;
     final orderProvider = context.watch<OrderProvider>();
 
     return Scaffold(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../widgets/common_widgets.dart';
 import '../services/language_provider.dart';
 import '../services/theme_provider.dart';
 import '../services/currency_provider.dart';
+import '../web/web_shell.dart';
 import 'listing_screen.dart';
 import 'categories_screen.dart';
 import 'post_ad_screen.dart';
@@ -24,7 +26,8 @@ import 'privacy_settings_screen.dart';
 
 // ─── Main Account Screen ──────────────────────────────────────────────────────
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key});
+  final bool webEmbedded;
+  const AccountScreen({super.key, this.webEmbedded = false});
 
   @override
   State<AccountScreen> createState() => _AccountScreenState();
@@ -128,6 +131,19 @@ class _AccountScreenState extends State<AccountScreen>
     final t = context.watch<LanguageProvider>().t;
     final isAr = context.watch<LanguageProvider>().isArabic;
 
+    final body = isLoggedIn
+        ? _buildLoggedIn(auth.userModel, t, isAr)
+        : _buildGuest(t);
+
+    if (kIsWeb) {
+      return widget.webEmbedded
+          ? body
+          : WebPage(
+              breadcrumbs: const [WebCrumb('My Account')],
+              content: body,
+            );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -145,7 +161,7 @@ class _AccountScreenState extends State<AccountScreen>
           ),
         ],
       ),
-      body: isLoggedIn ? _buildLoggedIn(auth.userModel, t, isAr) : _buildGuest(t),
+      body: body,
     );
   }
 
@@ -156,11 +172,10 @@ class _AccountScreenState extends State<AccountScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final lang = context.watch<LanguageProvider>();
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Hero
-          Container(
+    final content = Column(
+      children: [
+        // Hero
+        Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
             decoration: BoxDecoration(
@@ -334,10 +349,13 @@ class _AccountScreenState extends State<AccountScreen>
           ], t),
 
           const SocialMediaSection(),
-          const SizedBox(height: 80),
+          const SizedBox(height: 40),
         ],
-      ),
     );
+
+    return widget.webEmbedded
+        ? content
+        : SingleChildScrollView(child: content);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -359,7 +377,57 @@ class _AccountScreenState extends State<AccountScreen>
         ),
       );
     }
-    
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final tabBar = TabBar(
+      controller: _tabController,
+      indicatorColor: AppColors.gold,
+      indicatorWeight: 3,
+      labelColor: AppColors.gold,
+      unselectedLabelColor: Colors.white70,
+      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      tabs: [
+        Tab(text: t['my_ads'] ?? 'My Ads'),
+        Tab(text: t['favorites'] ?? 'Favorites'),
+        Tab(text: t['settings'] ?? 'Settings'),
+      ],
+    );
+
+    final tabs = <Widget>[
+      _MyAdsTab(t: t, webEmbedded: widget.webEmbedded),
+      _FavoritesTab(t: t, webEmbedded: widget.webEmbedded),
+      _SettingsTab(
+        user: user,
+        onLogout: _logout,
+        t: t,
+        onLanguageChanged: () => setState(() {}),
+        webEmbedded: widget.webEmbedded,
+      ),
+    ];
+
+    // On the web shell the page scroll owns the scrolling, so the logged-in
+    // view must be a natural-height column (IndexedStack, no NestedScrollView).
+    if (kIsWeb && widget.webEmbedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildProfileHeader(user, t),
+          Container(
+            color: isDark ? AppColors.primaryDark : AppColors.primaryLightMode,
+            child: tabBar,
+          ),
+          IndexedStack(
+            index: _tabController.index,
+            children: tabs,
+          ),
+          const SocialMediaSection(),
+          const SizedBox(height: 40),
+        ],
+      );
+    }
+
     return NestedScrollView(
       headerSliverBuilder: (ctx, innerBoxIsScrolled) => [
         SliverOverlapAbsorber(
@@ -368,36 +436,12 @@ class _AccountScreenState extends State<AccountScreen>
         ),
         SliverPersistentHeader(
           pinned: true,
-          delegate: _TabBarDelegate(
-            TabBar(
-              controller: _tabController,
-              indicatorColor: AppColors.gold,
-              indicatorWeight: 3,
-              labelColor: AppColors.gold,
-              unselectedLabelColor: Colors.white70,
-              labelStyle: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600),
-              tabs: [
-                Tab(text: t['my_ads'] ?? 'My Ads'),
-                Tab(text: t['favorites'] ?? 'Favorites'),
-                Tab(text: t['settings'] ?? 'Settings'),
-              ],
-            ),
-          ),
+          delegate: _TabBarDelegate(tabBar),
         ),
       ],
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _MyAdsTab(t: t),
-          _FavoritesTab(t: t),
-          _SettingsTab(
-            user: user,
-            onLogout: _logout,
-            t: t,
-            onLanguageChanged: () => setState(() {}),
-          ),
-        ],
+        children: tabs,
       ),
     );
   }
@@ -687,7 +731,8 @@ class _AccountScreenState extends State<AccountScreen>
 // ══════════════════════════════════════════════════════════════════════════════
 class _MyAdsTab extends StatefulWidget {
   final Map<String, String> t;
-  const _MyAdsTab({required this.t});
+  final bool webEmbedded;
+  const _MyAdsTab({required this.t, this.webEmbedded = false});
 
   @override
   State<_MyAdsTab> createState() => _MyAdsTabState();
@@ -714,6 +759,10 @@ class _MyAdsTabState extends State<_MyAdsTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
+      shrinkWrap: widget.webEmbedded,
+      physics: widget.webEmbedded
+          ? const NeverScrollableScrollPhysics()
+          : null,
       children: [
         // Post new ad banner
         GestureDetector(
@@ -1108,7 +1157,8 @@ class _MyAdCard extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 class _FavoritesTab extends StatefulWidget {
   final Map<String, String> t;
-  const _FavoritesTab({required this.t});
+  final bool webEmbedded;
+  const _FavoritesTab({required this.t, this.webEmbedded = false});
 
   @override
   State<_FavoritesTab> createState() => _FavoritesTabState();
@@ -1169,6 +1219,10 @@ class _FavoritesTabState extends State<_FavoritesTab> {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      shrinkWrap: widget.webEmbedded,
+      physics: widget.webEmbedded
+          ? const NeverScrollableScrollPhysics()
+          : null,
       itemCount: favs.length,
       itemBuilder: (ctx, i) {
         final product = favs[i];
@@ -1194,12 +1248,14 @@ class _SettingsTab extends StatefulWidget {
   final VoidCallback onLogout;
   final Map<String, String> t;
   final VoidCallback onLanguageChanged;
+  final bool webEmbedded;
 
   const _SettingsTab({
     required this.user,
     required this.onLogout,
     required this.t,
     required this.onLanguageChanged,
+    this.webEmbedded = false,
   });
 
   @override
@@ -1239,6 +1295,10 @@ class _SettingsTabState extends State<_SettingsTab> {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.only(bottom: 80),
+      shrinkWrap: widget.webEmbedded,
+      physics: widget.webEmbedded
+          ? const NeverScrollableScrollPhysics()
+          : null,
       children: [
         // ACCOUNT
         _SettingsSection(title: t['account_section'] ?? 'ACCOUNT', items: [
@@ -1419,7 +1479,7 @@ class _SettingsTabState extends State<_SettingsTab> {
               items: [
                 _SettingsTile(
                   icon: Icons.admin_panel_settings_outlined,
-                  label: 'Admin Control Panel',
+                  label: 'Admin Panel',
                   subtitle: 'Manage Products, Members, Finance & Reports',
                   onTap: () => Navigator.push(
                     context,
@@ -1599,40 +1659,58 @@ class _SettingsTabState extends State<_SettingsTab> {
       shape: const RoundedRectangleBorder(
           borderRadius:
           BorderRadius.vertical(top: Radius.circular(20))),
+      isScrollControlled: true,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.5,
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(t['default_location'] ?? 'Default Location',
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 40,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                t['default_location'] ?? 'Default Location',
                 style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            ...locations.map((loc) => ListTile(
-              leading: Icon(Icons.location_on_outlined,
-                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
-              title: Text(loc,
-                  style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
-              trailing: selected == loc
-                  ? const Icon(Icons.check_circle,
-                  color: AppColors.gold)
-                  : null,
-              onTap: () {
-                setModal(() => selected = loc);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Default location: $loc'),
-                    backgroundColor: AppColors.gold));
-              },
-            )),
-          ]),
+                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: locations.length,
+                  itemBuilder: (ctx, index) {
+                    final loc = locations[index];
+                    return ListTile(
+                      leading: Icon(Icons.location_on_outlined,
+                          color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
+                      title: Text(loc,
+                          style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode)),
+                      trailing: selected == loc
+                          ? const Icon(Icons.check_circle, color: AppColors.gold)
+                          : null,
+                      onTap: () {
+                        setModal(() => selected = loc);
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Default location: $loc'),
+                            backgroundColor: AppColors.gold,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -3083,36 +3161,6 @@ class _SimpleField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none),
       ),
-    );
-  }
-}
-
-// ── Privacy toggle ────────────────────────────────────────────────────────────
-class _PrivacyToggle extends StatelessWidget {
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  const _PrivacyToggle(this.label, this.value, this.onChanged);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
-        Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14))),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.gold,
-          activeTrackColor: AppColors.gold.withValues(alpha: 0.3),
-          inactiveThumbColor: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
-          inactiveTrackColor: isDark ? AppColors.card : AppColors.backgroundLightMode,
-        ),
-      ]),
     );
   }
 }

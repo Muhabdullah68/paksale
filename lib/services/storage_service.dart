@@ -1,26 +1,32 @@
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  Future<String> uploadProductImage(String productId, File file) async {
+  /// Cross-platform upload: reads the [XFile] into bytes and uploads them.
+  /// Works on mobile, desktop, and web.
+  Future<String> uploadProductImage(String productId, XFile file) async {
     try {
-      // Ensure file exists before uploading
-      if (!await file.exists()) {
-        debugPrint('Firebase Storage Error: File does not exist at path: ${file.path}');
-        throw Exception("File does not exist at path: ${file.path}");
-      }
-      
+      final bytes = await file.readAsBytes();
+      return await uploadProductImageBytes(productId, bytes);
+    } catch (e) {
+      debugPrint('Firebase Storage Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> uploadProductImageBytes(String productId, Uint8List bytes) async {
+    try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref().child('products').child(productId).child(fileName);
-      
-      final uploadTask = ref.putFile(
-        file,
+
+      final uploadTask = ref.putData(
+        bytes,
         SettableMetadata(contentType: 'image/jpeg'),
       );
-      
+
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
@@ -30,9 +36,13 @@ class StorageService {
     }
   }
 
-  Future<String> uploadAvatar(String uid, File file) async {
+  Future<String> uploadAvatar(String uid, XFile file) async {
+    final bytes = await file.readAsBytes();
     final ref = _storage.ref().child('avatars/$uid/profile.jpg');
-    final uploadTask = await ref.putFile(file);
+    final uploadTask = await ref.putData(
+      bytes,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
     return await uploadTask.ref.getDownloadURL();
   }
 

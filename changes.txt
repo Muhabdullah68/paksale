@@ -1,0 +1,206 @@
+================================================================================
+  DESIGN AUDIT REPORT - Pak Sale Web Build
+  Auditor : Senior UI/UX + Flutter Web Expert (10+ years)
+  Date    : 2026-08-12
+  Scope   : Desktop website layout, scrolling, overlap issues, widget hierarchy
+================================================================================
+
+================================================================================
+  CRITICAL ISSUES (Severity = BLOCKER)
+================================================================================
+
+# C1 - MISSING MATERIAL ANCESTOR
+   Severity : RED / BLOCKER
+   Screenshot : Screenshot 4 (Home page)
+   Root Cause : RangeSlider in _LeftSidebar requires a Material widget ancestor.
+                Flutter renders a giant yellow/red error box that breaks the
+                entire left sidebar + overlays page content. Price filter
+                is unusable.
+   Visual Impact : Full sidebar rendered as error banner, page content broken.
+
+# C2 - MIDDLE-ONLY SCROLLING (Nested ScrollViews)
+   Severity : RED / BLOCKER
+   Screenshot : All 4 screenshots
+   Root Cause : WebPage.build() uses Column -> Expanded -> content -> WebFooter.
+                Expanded forces content into a fixed height box, so only the
+                middle band scrolls via internal SingleChildScrollViews. Header
+                stays glued to top, footer glued to viewport bottom. User
+                experiences "stuck" middle scroll instead of natural document
+                scroll.
+   Visual Impact : Whole page feels "broken" like an iframe instead of a website.
+
+# C3 - WIDGET OVERLAPPING / Z-INDEX STACKING
+   Severity : RED / BLOCKER
+   Screenshot : Screenshots 1, 2, 3
+   Root Cause : 2 simultaneous causes:
+                (a) The Categories mega-menu overlay (Positioned in Stack)
+                    does NOT close on tab navigation -> when user clicks
+                    Account/Saved, mega-menu stays in DOM partially covering
+                    content.
+                (b) AccountScreen/FavoritesScreen with webEmbedded=true include
+                    their own SubTab bar (My Ads/Favorites/Settings) which stack
+                    on top of the categories grid because IndexedStack doesn't
+                    clip/sandbox children properly and all pages share the same
+                    viewport layer - the mobile layout grids bleed through.
+   Visual Impact : Screenshot 2 shows 4 layers visible at once:
+                   SubTabs bar -> CTA banner -> Filter pills -> Category tile
+                   grid - all overlapping.
+
+# C4 - BOTTOM OVERFLOW (2.0px hazard bar)
+   Severity : RED / BLOCKER
+   Screenshot : Screenshot 3 (Favorites page)
+   Root Cause : SocialMediaSection at the bottom of Favorites/Account content
+                has fixed height that exceeds the Expanded content area.
+                Combined with the Footer pushed by WebPage Column, there's a
+                render overflow - Flutter shows the yellow/black warning
+                stripes. Also affects Home Page when sidebar RangeSlider
+                causes height overflow.
+   Visual Impact : Professional-looking site ruined with "safety tape" visual.
+
+================================================================================
+  HIGH SEVERITY ISSUES (Design / UX)
+================================================================================
+
+# H1 - Expanded in WebPage forces footer as pseudo-fixed
+   Severity : YELLOW / HIGH
+   Location : web_shell.dart line 78
+   Problem  : Footer sits at viewport bottom regardless of content. Expected
+              behavior: Footer should be END OF DOCUMENT, not viewport bottom.
+              User explicitly stated: "the buttom is not fixed" - current
+              layout contradicts this.
+
+# H2 - Mega-menu hover leaks across tabs
+   Severity : YELLOW / HIGH
+   Location : web_shell.dart lines 618-623
+   Problem  : onEnter opens menu BUT no onExit handler to close menu when mouse
+              leaves trigger. When user navigates to Account tab via header
+              link BEFORE menu closes, menu remains open on next page.
+
+# H3 - No Material ancestor around sidebar content
+   Severity : YELLOW / HIGH
+   Location : web_home.dart line 686
+   Problem  : _LeftSidebar starts with SingleChildScrollView -> Column. No
+              Material wrapper above RangeSlider/InkWells. Ink splashes fail,
+              RangeSlider fails, widgets render without material ripples.
+              This is direct cause of C1.
+
+# H4 - IndexedStack children may contain their own Scaffolds/AppBars
+   Severity : YELLOW / HIGH
+   Location : home_screen.dart lines 219-223
+   Problem  : CategoriesScreen, FavoritesScreen, AccountScreen with
+              webEmbedded: true - if they still include their own AppBar/
+              Scaffold body padding, they'll duplicate the header space (adding
+              extra 56-80px top padding that WebPage header already used). This
+              is the most likely cause of the overlapping SubTabs bar being
+              pushed down into Category grid.
+
+================================================================================
+  MEDIUM / POLISH ISSUES
+================================================================================
+
+# M1 - Center column still uses BouncingScrollPhysics (mobile-only) on web
+   Severity : BLUE / MEDIUM
+   Location : web_home.dart line 108
+   Problem  : Desktop marketplaces use ClampingScrollPhysics for professional
+              feel. The whole point of the _WebScrollBehavior was to enforce
+              this globally, but widget-level physics: parameters override it.
+
+# M2 - Left sidebar uses BouncingScrollPhysics
+   Severity : BLUE / MEDIUM
+   Location : web_home.dart line 688
+   Problem  : Same as M1 - inconsistent with web experience.
+
+# M3 - WebPage ConstrainedBox nested in Expanded -> layout is fragile
+   Severity : BLUE / MEDIUM
+   Location : web_shell.dart lines 78-100
+   Problem  : Using Expanded child with Column -> Expanded means any content
+              exceeding viewport height triggers overflow yellow/black, since
+              Expanded child has unbounded height only when Column is inside
+              SingleChildScrollView (which it ISN'T in current WebPage).
+
+================================================================================
+  ARCHITECTURAL FIX SUMMARY (6 Root Fixes)
+================================================================================
+
+Priority  Fix                                  Files Affected     Solves
+--------  -----------------------------------  -----------------  -----------
+1         REFACTOR WebPage: Wrap entire page   web_shell.dart     C2, C4, H1,
+          in ONE outer SingleChildScrollView   (L59-L105)         M3
+          - remove both Expanded widgets.
+          Header + Content + Footer flow
+          naturally as ONE scrollable doc.
+
+2         Wrap _LeftSidebar body in Material   web_home.dart      C1, H3
+          widget (type: MaterialType.canvas)   (L682-L860)
+          + ensure proper Material ancestor
+          for RangeSlider.
+
+3         Fix mega-menu close logic: Add       web_shell.dart     C3, H2
+          onExit on trigger MouseRegion;       (L183-L685)
+          ensure _goTab() and all _go* nav
+          setters call setState(() =>
+          _menuOpen = false) explicitly;
+          add Listener for tab changes.
+
+4         Audit & wrap WebPage.content in a    web_shell.dart     C3, H4
+          SizedBox.shrinkWrap or ClipRect to   (L80-L95) AND
+          prevent IndexedStack pages from      home_screen.dart
+          visually bleeding into each other.   (L197-L227)
+          Consider wrapping each webEmbedded
+          screen in top-padded Container
+          accounting for WebHeader (138px).
+
+5         Change sidebar and center-column     web_home.dart      M1, M2
+          physics to Clamping (match web       (L75, L108, L688)
+          scroll behavior config).
+
+6         Give WebHomeBody Row layout an       web_home.dart      C4, M3
+          outer SingleChildScrollView wrapper  (L58-L133)
+          when both sidebars display. Current
+          Row has left-sidebar independent
+          scroll, center independent scroll,
+          right sidebar fixed - causes footer
+          overflow on short viewports.
+
+================================================================================
+  QUICK METRICS
+================================================================================
+
+Metric                               Current                    Target    Pass?
+-----------------------------------  -------------------------  --------  -----
+Scrollable regions                   3 (header-fix, mid-scroll,  1 (full   NO
+                                     footer-fix)                 page doc
+                                                                  scroll)
+Overlapping visible layers (Scr 2)  4+                         1         NO
+Flutter error banners visible        1 huge yellow/red box       0         NO
+Overflow hazard stripes              1 bar                       0         NO
+Material ancestors present           Broken (sidebar)           Every     NO
+                                                              subtree
+Footer position                      Pinned viewport bottom     End-of-   NO
+                                     (via Expanded)              document
+                                                                  (flows
+                                                                  with
+                                                                  scroll)
+Mega-menu closes on navigation       Leaks across tabs          Auto-     NO
+                                                                  close on
+                                                                  any nav
+
+================================================================================
+  FILES REFERENCED (Clickable paths)
+================================================================================
+
+  web_shell.dart  (WebPage + WebHeader + MegaMenu + WebFooter)
+    -> file:///C:/Users/Admin/AndroidStudioProjects/marketplace_app/lib/web/web_shell.dart
+
+  web_home.dart   (WebHomeBody + LeftSidebar + RightSidebar + widgets)
+    -> file:///C:/Users/Admin/AndroidStudioProjects/marketplace_app/lib/web/web_home.dart
+
+  home_screen.dart (_buildWeb method: IndexedStack inside WebPage.content)
+    -> file:///C:/Users/Admin/AndroidStudioProjects/marketplace_app/lib/screens/home_screen.dart
+
+  main.dart       (_WebScrollBehavior + scrollbarTheme config)
+    -> file:///C:/Users/Admin/AndroidStudioProjects/marketplace_app/lib/main.dart
+
+================================================================================
+  END OF REPORT
+================================================================================

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import '../models/chat_model.dart';
 import '../repositories/chat_repository.dart';
 import '../services/notification_service.dart';
@@ -67,7 +67,7 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> sendImageMessage(
     String conversationId,
-    File image,
+    XFile image,
     String senderId, {
     String? recipientId,
     String? senderName,

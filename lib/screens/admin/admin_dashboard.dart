@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common_widgets.dart';
 import 'reports_screen.dart';
 import 'product_management_screen.dart';
 import 'members_management_screen.dart';
@@ -13,7 +14,18 @@ class AdminDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Control Panel'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppLogoIcon(size: 28),
+            SizedBox(width: 8),
+            Text('Admin',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
         backgroundColor: AppColors.primary,
       ),
       body: GridView.count(

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/language_provider.dart';
 
 class SafeMeetingScreen extends StatelessWidget {
   const SafeMeetingScreen({super.key});
@@ -27,7 +25,6 @@ class SafeMeetingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final t = context.watch<LanguageProvider>().t;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,

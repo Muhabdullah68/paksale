@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../providers/cms_provider.dart';
+import '../web/web_shell.dart';
 import 'listing_screen.dart';
 import 'notifications_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key});
+  final bool webEmbedded;
+  const CategoriesScreen({super.key, this.webEmbedded = false});
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -38,6 +41,102 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
 
     final String selectedCatName = categories.isNotEmpty ? (categories[_selectedIndex]['name'] as String) : '';
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(t['categories_title'] ?? 'Categories',
+              style: TextStyle(
+                  color: theme.textTheme.titleLarge?.color,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold)),
+        ),
+        SizedBox(
+          height: widget.webEmbedded
+              ? null
+              : MediaQuery.of(context).size.height * 0.65,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 130,
+                child: ListView.builder(
+                  shrinkWrap: widget.webEmbedded,
+                  physics: widget.webEmbedded
+                      ? const NeverScrollableScrollPhysics()
+                      : null,
+                  itemCount: categories.length,
+                    itemBuilder: (_, i) {
+                      final cat = categories[i];
+                      final isSelected = _selectedIndex == i;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedIndex = i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary : theme.cardTheme.color,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2),
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? Colors.transparent : (isDark ? AppColors.surface : AppColors.backgroundLightMode),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                ),
+                                child: Center(
+                                    child: Text(cat['icon']!,
+                                        style: const TextStyle(fontSize: 30))),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(cat['name']!,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        color: isSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
+                                        fontSize: 11,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _buildSubCategoryList(selectedCatName, isDark, theme),
+                ),
+              ],
+            ),
+          ),
+          const SocialMediaSection(),
+        ],
+    );
+
+    final scrollableBody = widget.webEmbedded
+        ? body
+        : SingleChildScrollView(child: body);
+
+    if (kIsWeb) {
+      return widget.webEmbedded
+          ? scrollableBody
+          : WebPage(
+              breadcrumbs: const [WebCrumb('Categories')],
+              content: scrollableBody,
+            );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -69,84 +168,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(t['categories_title'] ?? 'Categories',
-                  style: TextStyle(
-                      color: theme.textTheme.titleLarge?.color,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(
-              height: 500,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 130,
-                    child: ListView.builder(
-                      itemCount: categories.length,
-                      itemBuilder: (_, i) {
-                        final cat = categories[i];
-                        final isSelected = _selectedIndex == i;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedIndex = i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary : theme.cardTheme.color,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected ? AppColors.gold : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2),
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 70,
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? Colors.transparent : (isDark ? AppColors.surface : AppColors.backgroundLightMode),
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                  ),
-                                  child: Center(
-                                      child: Text(cat['icon']!,
-                                          style: const TextStyle(fontSize: 30))),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(cat['name']!,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          color: isSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
-                                          fontSize: 11,
-                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildSubCategoryList(selectedCatName, isDark, theme),
-                  ),
-                ],
-              ),
-            ),
-            const SocialMediaSection(),
-          ],
-        ),
-      ),
+      body: body,
     );
   }
 
@@ -177,6 +199,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 80),
+      shrinkWrap: widget.webEmbedded,
+      physics: widget.webEmbedded
+          ? const NeverScrollableScrollPhysics()
+          : null,
       itemCount: subCats.length,
       itemBuilder: (_, i) {
         final subCat = subCats[i];

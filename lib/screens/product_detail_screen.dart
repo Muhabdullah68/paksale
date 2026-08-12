@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/models.dart';
@@ -14,15 +16,17 @@ import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../web/web_shell.dart';
 import 'chat_screen.dart';
 import 'compare_screen.dart';
 import 'listing_screen.dart';
-import 'privacy_settings_screen.dart';
 import 'seller_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
-  const ProductDetailScreen({super.key, required this.product});
+  final bool webEmbedded;
+  const ProductDetailScreen(
+      {super.key, required this.product, this.webEmbedded = false});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -31,7 +35,6 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedImageIndex = 0;
   PrivacySettings? _sellerPrivacy;
-  bool _loadingPrivacy = true;
 
   @override
   void initState() {
@@ -48,11 +51,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (mounted) {
         setState(() {
           _sellerPrivacy = seller?.privacy;
-          _loadingPrivacy = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingPrivacy = false);
     }
   }
 
@@ -299,14 +300,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final p = widget.product;
-    final compareProvider = context.watch<CompareProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
-    final currencyProvider = context.watch<CurrencyProvider>();
+    final compareProvider = context.watch<CompareProvider>();
     final cmpCount = compareProvider.compareList.length;
     final isFav = favoritesProvider?.isFavorite(p.id) ?? false;
-    final inCompare = compareProvider.isInCompare(p.id);
 
     final t = context.watch<LanguageProvider>().t;
+
+    final bodyContent = _buildBodyContent(context, theme, isDark, p);
+    final bottomActions = _buildBottomActions(context, theme, isDark, p);
+
+    if (kIsWeb) {
+      final webContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          bodyContent,
+          bottomActions,
+          const SizedBox(height: 16),
+        ],
+      );
+      return widget.webEmbedded
+          ? webContent
+          : WebPage(
+              breadcrumbs: [WebCrumb(p.category), WebCrumb(p.title)],
+              content: webContent,
+            );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -369,11 +388,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 100),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildGallery(p, isDark),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 120),
+            child: bodyContent,
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+              child: bottomActions,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The main scrollable content column (gallery + details + seller + similar).
+  Widget _buildBodyContent(
+      BuildContext context, ThemeData theme, bool isDark, ProductModel p) {
+    final compareProvider = context.watch<CompareProvider>();
+    final inCompare = compareProvider.isInCompare(p.id);
+    final currencyProvider = context.watch<CurrencyProvider>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildGallery(p, isDark),
                 const SizedBox(height: 12),
 
                 Padding(
@@ -645,10 +686,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 SectionHeader(
                     title: 'Similar Products',
                     actionText: 'See All',
-                    onAction: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => ListingScreen(categoryTitle: p.category)))),
+                    onAction: () {
+                      if (kIsWeb) {
+                        context.push(
+                            '/browse?category=${Uri.encodeQueryComponent(p.category)}');
+                      } else {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    ListingScreen(categoryTitle: p.category)));
+                      }
+                    }),
                 Consumer<ProductProvider>(
                   builder: (context, provider, _) {
                     final similar = provider.products
@@ -667,10 +716,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     return Column(
                       children: similar.map((prod) => ProductCard(
                         product: prod,
-                        onTap: () => Navigator.pushReplacement(context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    ProductDetailScreen(product: prod))),
+                        onTap: () {
+                          if (kIsWeb) {
+                            context.pushReplacement('/listing/${prod.id}');
+                          } else {
+                            Navigator.pushReplacement(context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        ProductDetailScreen(product: prod)));
+                          }
+                        },
                         onCompare: () {},
                       )).toList(),
                     );
@@ -678,15 +733,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 const SocialMediaSection(),
                 const SizedBox(height: 20),
-              ],
-            ),
-          ),
+      ],
+    );
+  }
 
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+  /// Bottom action bar (Mark as Sold / Approve / COD / contact buttons),
+  /// pinned to the bottom on mobile, in the document flow on web.
+  Widget _buildBottomActions(
+      BuildContext context, ThemeData theme, bool isDark, ProductModel p) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
                 if (context.watch<AuthProvider>().isAuthenticated && 
                     context.watch<AuthProvider>().firebaseUser!.uid == widget.product.sellerId && 
                     !widget.product.isSold)
@@ -757,13 +814,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   onChat: () => _startChat(context, p),
                   privacy: _sellerPrivacy,
                 ),
-          ],
-        ),
-      ),
-    ],
-  ),
-);
-}
+      ],
+    );
+  }
 
   Widget _buildGallery(ProductModel p, bool isDark) {
     return Column(children: [

@@ -31,7 +31,6 @@ class SellerProfileScreen extends StatefulWidget {
 
 class _SellerProfileScreenState extends State<SellerProfileScreen> {
   PrivacySettings? _privacy;
-  bool _loading = true;
 
   @override
   void initState() {
@@ -42,9 +41,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   Future<void> _loadPrivacy() async {
     try {
       final seller = await UserRepository().getUserById(widget.sellerId);
-      if (mounted) setState(() { _privacy = seller?.privacy; _loading = false; });
+      if (mounted) setState(() { _privacy = seller?.privacy; });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
     }
   }
 

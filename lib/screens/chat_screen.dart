@@ -1,6 +1,6 @@
 // screens/chat_screen.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
@@ -9,9 +9,11 @@ import '../providers/chat_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/chat_model.dart';
 import '../services/language_provider.dart';
+import '../web/web_shell.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final bool webEmbedded;
+  const ChatScreen({super.key, this.webEmbedded = false});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -39,10 +41,195 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     if (!auth.isAuthenticated) {
-      return Center(
-        child: Text(t['login_prompt'] ?? 'Please sign in to see your chats',
-            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+      final prompt = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(t['login_prompt'] ?? 'Please sign in to see your chats',
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+        ),
       );
+      if (kIsWeb) {
+        return widget.webEmbedded
+            ? prompt
+            : WebPage(
+                breadcrumbs: const [WebCrumb('Chat')],
+                content: prompt,
+              );
+      }
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          title: const AppLogo(),
+        ),
+        body: prompt,
+      );
+    }
+
+    final listBody = chatProvider.isLoading
+        ? const Center(
+            child: Padding(
+              padding: EdgeInsets.all(48),
+              child: CircularProgressIndicator(color: AppColors.gold),
+            ),
+          )
+        : chatProvider.error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 64, color: Colors.redAccent),
+                      const SizedBox(height: 16),
+                      Text(
+                        t['chat_error'] ?? 'Unable to load chats',
+                        style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        chatProvider.error!.contains('suspended')
+                            ? 'Firebase service is currently suspended. Please check your project settings.'
+                            : chatProvider.error!,
+                        style: const TextStyle(
+                            color: AppColors.textMuted, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          final auth = context.read<AuthProvider>();
+                          if (auth.isAuthenticated) {
+                            context.read<ChatProvider>().listenToConversations(
+                                auth.firebaseUser!.uid);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold),
+                        child: Text(t['retry'] ?? 'Retry',
+                            style: const TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : chatProvider.conversations.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 64,
+                              color:
+                                  AppColors.textMuted.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            t['no_conversations'] ?? 'No conversations yet',
+                            style: TextStyle(
+                                color: isDark
+                                    ? AppColors.textMuted
+                                    : AppColors.textSecondaryLightMode,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            t['start_chat_prompt'] ??
+                                'Find a product you like and start a conversation with the seller!',
+                            style: const TextStyle(
+                                color: AppColors.textMuted, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: widget.webEmbedded,
+                    physics: widget.webEmbedded
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    itemCount: chatProvider.conversations.length,
+                    itemBuilder: (ctx, i) => _ChatListItem(
+                      conversation: chatProvider.conversations[i],
+                      currentUserId: auth.firebaseUser!.uid,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ConversationScreen(
+                              conversation: chatProvider.conversations[i]),
+                        ),
+                      ),
+                    ),
+                  );
+
+    final body = Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: isDark ? AppColors.primaryDark : AppColors.primary,
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      const Icon(Icons.search, color: AppColors.textMuted, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          t['search_conversations'] ?? 'Search conversations...',
+                          style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.gold,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                  onPressed: () => _showNewMessageDialog(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        widget.webEmbedded
+            ? Flexible(child: listBody)
+            : Expanded(child: listBody),
+      ],
+    );
+
+    if (kIsWeb) {
+      return widget.webEmbedded
+          ? body
+          : WebPage(
+              breadcrumbs: const [WebCrumb('Chat')],
+              content: body,
+            );
     }
 
     return Scaffold(
@@ -57,132 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: isDark ? AppColors.primaryDark : AppColors.primary,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: theme.cardTheme.color,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 12),
-                        const Icon(Icons.search, color: AppColors.textMuted, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            t['search_conversations'] ?? 'Search conversations...',
-                            style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.gold,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    onPressed: () => _showNewMessageDialog(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: chatProvider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-                : chatProvider.error != null
-                ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
-                    const SizedBox(height: 16),
-                    Text(
-                      t['chat_error'] ?? 'Unable to load chats',
-                      style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      chatProvider.error!.contains('suspended')
-                          ? 'Firebase service is currently suspended. Please check your project settings.'
-                          : chatProvider.error!,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        final auth = context.read<AuthProvider>();
-                        if (auth.isAuthenticated) {
-                          context.read<ChatProvider>().listenToConversations(auth.firebaseUser!.uid);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-                      child: Text(t['retry'] ?? 'Retry', style: const TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ),
-            )
-                : chatProvider.conversations.isEmpty
-                ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.chat_bubble_outline, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
-                    const SizedBox(height: 16),
-                    Text(
-                      t['no_conversations'] ?? 'No conversations yet',
-                      style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 16, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      t['start_chat_prompt'] ?? 'Find a product you like and start a conversation with the seller!',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-                : ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: chatProvider.conversations.length,
-              itemBuilder: (ctx, i) => _ChatListItem(
-                conversation: chatProvider.conversations[i],
-                currentUserId: auth.firebaseUser!.uid,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ConversationScreen(
-                        conversation: chatProvider.conversations[i]),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: body,
     );
   }
 
@@ -446,11 +508,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
-              title: const Text('Take a Photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Choose from Gallery'),
@@ -477,7 +540,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       await chatProvider.sendImageMessage(
         widget.conversation.id,
-        File(image.path),
+        image,
         myId,
         recipientId: recipientId.isNotEmpty ? recipientId : null,
         senderName: myName,
@@ -832,6 +895,14 @@ class _MessageBubbleState extends State<_MessageBubble> {
                           widget.message.imageUrl!,
                           width: 200,
                           fit: BoxFit.cover,
+                          errorBuilder: (ctx, error, stackTrace) => Container(
+                            width: 200,
+                            height: 150,
+                            color: AppColors.surface,
+                            child: const Center(
+                                child: Icon(Icons.broken_image_outlined,
+                                    color: AppColors.textMuted, size: 32)),
+                          ),
                           loadingBuilder: (ctx, child, lp) {
                             if (lp == null) return child;
                             return const SizedBox(

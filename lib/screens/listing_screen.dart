@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/product_provider.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../web/web_shell.dart';
 import 'product_detail_screen.dart';
 import 'search_filter_screen.dart';
 import 'notifications_screen.dart';
@@ -13,8 +16,17 @@ class ListingScreen extends StatefulWidget {
   final ProductModel? product;
   final String? categoryTitle;
   final String? subCategoryTitle;
+  final String? initialQuery;
+  final bool webEmbedded;
 
-  const ListingScreen({super.key, this.product, this.categoryTitle, this.subCategoryTitle});
+  const ListingScreen({
+    super.key,
+    this.product,
+    this.categoryTitle,
+    this.subCategoryTitle,
+    this.initialQuery,
+    this.webEmbedded = false,
+  });
 
   @override
   State<ListingScreen> createState() => _ListingScreenState();
@@ -32,7 +44,11 @@ class _ListingScreenState extends State<ListingScreen> {
   @override
   void initState() {
     super.initState();
+    _searchQuery = widget.initialQuery ?? '';
     _scrollController.addListener(_onScroll);
+    if (kIsWeb) {
+      webPageScrollController.addListener(_onWebScroll);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchProducts();
     });
@@ -52,11 +68,22 @@ class _ListingScreenState extends State<ListingScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    if (kIsWeb) {
+      webPageScrollController.removeListener(_onWebScroll);
+    }
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _fetchProducts(refresh: false);
+    }
+  }
+
+  void _onWebScroll() {
+    if (!webPageScrollController.hasClients) return;
+    final pos = webPageScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) {
       _fetchProducts(refresh: false);
     }
   }
@@ -139,6 +166,33 @@ class _ListingScreenState extends State<ListingScreen> {
     final t = context.watch<LanguageProvider>().t;
     final filteredProducts = _getFilteredList(productProvider.products);
 
+    final body = Column(
+      children: [
+        _buildListHeader(context, theme, isDark, t, filteredProducts.length),
+        Expanded(
+          child: RepaintBoundary(
+            child: productProvider.isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+                : productProvider.error != null
+                    ? _buildErrorState(productProvider.error!)
+                    : filteredProducts.isEmpty
+                        ? _buildEmptyState()
+                        : _isGridView
+                            ? _buildGrid(filteredProducts, productProvider.isLoadingMore)
+                            : _buildList(filteredProducts, productProvider.isLoadingMore),
+          ),
+        ),
+      ],
+    );
+
+    if (kIsWeb) {
+      final webContent = _buildWebContent(
+          context, theme, isDark, productProvider, t, filteredProducts);
+      return widget.webEmbedded
+          ? webContent
+          : WebPage(breadcrumbs: _breadcrumbs(t), content: webContent);
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
@@ -156,121 +210,171 @@ class _ListingScreenState extends State<ListingScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // ── Search bar ──────────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: isDark ? AppColors.primaryDark : AppColors.primary,
-            child: CustomSearchBar(
-              onPrimaryBackground: true,
-              hint: '${t['search_hint'] ?? "Search in PakistanSale..."} ${widget.categoryTitle ?? ""}',
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-              },
-            ),
-          ),
-
-          // ── Category chip + view-mode toggles ──────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: isDark ? AppColors.primaryDark : AppColors.primary.withValues(alpha: 0.9),
-            child: Row(
-              children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.card : Colors.white24,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? AppColors.divider : Colors.white30),
-                    ),
-                    child: Text(
-                      widget.subCategoryTitle != null 
-                        ? widget.subCategoryTitle!
-                        : widget.categoryTitle != null 
-                          ? (t[widget.categoryTitle?.toLowerCase().replaceAll(' ', '_')] ?? widget.categoryTitle ?? '')
-                          : (t['all_categories'] ?? 'All Categories'),
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                _ViewToggle(
-                  icon: Icons.view_list,
-                  active: !_isGridView,
-                  onTap: () => setState(() => _isGridView = false),
-                ),
-                const SizedBox(width: 6),
-                _ViewToggle(
-                  icon: Icons.grid_view,
-                  active: _isGridView,
-                  onTap: () => setState(() => _isGridView = true),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Filter / results row ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _navigateToFilter,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: theme.cardTheme.color,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: (isDark ? AppColors.divider : Colors.grey).withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.filter_list,
-                            size: 14,
-                            color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87)),
-                        const SizedBox(width: 4),
-                        Text(
-                          _selectedCondition != null ? (t['filtered'] ?? 'Filtered') : (t['filter'] ?? 'Filter'),
-                          style: TextStyle(
-                            color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${filteredProducts.length} ${t['results'] ?? "results"}',
-                  style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.sort, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: RepaintBoundary(
-              child: productProvider.isLoading 
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-                  : productProvider.error != null
-                      ? _buildErrorState(productProvider.error!)
-                      : filteredProducts.isEmpty
-                          ? _buildEmptyState()
-                          : _isGridView
-                              ? _buildGrid(filteredProducts, productProvider.isLoadingMore)
-                              : _buildList(filteredProducts, productProvider.isLoadingMore),
-            ),
-          ),
-        ],
-      ),
+      body: body,
     );
+  }
+
+  /// The three header rows shared by mobile and web: search bar, category chip
+  /// + view toggles, and the filter / results row.
+  Widget _buildListHeader(BuildContext context, ThemeData theme, bool isDark,
+      Map<String, String> t, int resultCount) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Search bar ──────────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: isDark ? AppColors.primaryDark : AppColors.primary,
+          child: CustomSearchBar(
+            onPrimaryBackground: true,
+            hint: '${t['search_hint'] ?? "Search in PakistanSale..."} ${widget.categoryTitle ?? ""}',
+            onChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+          ),
+        ),
+
+        // ── Category chip + view-mode toggles ──────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          color: isDark ? AppColors.primaryDark : AppColors.primary.withValues(alpha: 0.9),
+          child: Row(
+            children: [
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.card : Colors.white24,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? AppColors.divider : Colors.white30),
+                  ),
+                  child: Text(
+                    widget.subCategoryTitle != null
+                        ? widget.subCategoryTitle!
+                        : widget.categoryTitle != null
+                            ? (t[widget.categoryTitle?.toLowerCase().replaceAll(' ', '_')] ?? widget.categoryTitle ?? '')
+                            : (t['all_categories'] ?? 'All Categories'),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              _ViewToggle(
+                icon: Icons.view_list,
+                active: !_isGridView,
+                onTap: () => setState(() => _isGridView = false),
+              ),
+              const SizedBox(width: 6),
+              _ViewToggle(
+                icon: Icons.grid_view,
+                active: _isGridView,
+                onTap: () => setState(() => _isGridView = true),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Filter / results row ────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: _navigateToFilter,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: (isDark ? AppColors.divider : Colors.grey).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.filter_list,
+                          size: 14,
+                          color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87)),
+                      const SizedBox(width: 4),
+                      Text(
+                        _selectedCondition != null ? (t['filtered'] ?? 'Filtered') : (t['filter'] ?? 'Filter'),
+                        style: TextStyle(
+                          color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$resultCount ${t['results'] ?? "results"}',
+                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.sort, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Breadcrumb trail for the web version of the page.
+  List<WebCrumb> _breadcrumbs(Map<String, String> t) {
+    final crumbs = <WebCrumb>[
+      if (widget.categoryTitle != null) WebCrumb(widget.categoryTitle!),
+      if (widget.subCategoryTitle != null &&
+          !widget.subCategoryTitle!.startsWith('All '))
+        WebCrumb(widget.subCategoryTitle!),
+      if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty)
+        WebCrumb("Search: '${widget.initialQuery}'"),
+    ];
+    if (crumbs.isEmpty) crumbs.add(WebCrumb(t['all_ads'] ?? 'All Ads'));
+    return crumbs;
+  }
+
+  /// Web version of the page: the same header rows followed by a responsive
+  /// grid that flows inside WebPage's document scroll (no inner scrolling).
+  Widget _buildWebContent(BuildContext context, ThemeData theme, bool isDark,
+      ProductProvider productProvider, Map<String, String> t,
+      List<ProductModel> filteredProducts) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cols = _webColumns(c.maxWidth);
+        final grid = productProvider.isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(48),
+                child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+              )
+            : productProvider.error != null
+                ? _buildErrorState(productProvider.error!)
+                : filteredProducts.isEmpty
+                    ? _buildEmptyState(web: true)
+                    : _isGridView
+                        ? _buildGrid(filteredProducts, productProvider.isLoadingMore,
+                            columns: cols, shrinkWrap: true)
+                        : _buildList(filteredProducts, productProvider.isLoadingMore,
+                            shrinkWrap: true);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildListHeader(context, theme, isDark, t, filteredProducts.length),
+            grid,
+            const SizedBox(height: 12),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Column count for the web product grid, based on available width.
+  int _webColumns(double width) {
+    if (width >= 1100) return 4;
+    if (width >= 850) return 3;
+    if (width >= 480) return 2;
+    return 1;
   }
 
   // ── Error state ─────────────────────────────────────────────────────────────
@@ -310,63 +414,68 @@ class _ListingScreenState extends State<ListingScreen> {
   }
 
   // ── Empty state ─────────────────────────────────────────────────────────────
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({bool web = false}) {
+    final content = Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off,
+                size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
+            const SizedBox(height: 20),
+            Text(
+              'No listings found',
+              style: TextStyle(
+                  color: Theme.of(context).textTheme.titleLarge?.color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your filters or search query',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _clearFilters,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25)),
+              ),
+              child: const Text('Clear Filters',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (web) return content;
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           minHeight: MediaQuery.of(context).size.height * 0.38,
         ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search_off,
-                    size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
-                const SizedBox(height: 20),
-                Text(
-                  'No listings found',
-                  style: TextStyle(
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Try adjusting your filters or search query',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _clearFilters,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25)),
-                  ),
-                  child: const Text('Clear Filters',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-          ),
-        ),
+        child: content,
       ),
     );
   }
 
   // ── Grid ────────────────────────────────────────────────────────────────────
-  Widget _buildGrid(List<ProductModel> products, bool isLoadingMore) {
+  Widget _buildGrid(List<ProductModel> products, bool isLoadingMore,
+      {int? columns, bool shrinkWrap = false}) {
     return GridView.builder(
-      controller: _scrollController,
+      controller: shrinkWrap ? null : _scrollController,
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns ?? 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         childAspectRatio: 0.72,
@@ -391,8 +500,7 @@ class _ListingScreenState extends State<ListingScreen> {
               ProductCard(
                 product: products[i],
                 isGridView: true,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => ProductDetailScreen(product: products[i]))),
+                onTap: () => _openDetail(products[i]),
               ),
               const SocialMediaSection(),
             ],
@@ -401,17 +509,19 @@ class _ListingScreenState extends State<ListingScreen> {
         return ProductCard(
           product: products[i],
           isGridView: true,
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => ProductDetailScreen(product: products[i]))),
+          onTap: () => _openDetail(products[i]),
         );
       },
     );
   }
 
   // ── List ────────────────────────────────────────────────────────────────────
-  Widget _buildList(List<ProductModel> products, bool isLoadingMore) {
+  Widget _buildList(List<ProductModel> products, bool isLoadingMore,
+      {bool shrinkWrap = false}) {
     return ListView.builder(
-      controller: _scrollController,
+      controller: shrinkWrap ? null : _scrollController,
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: products.length + (isLoadingMore ? 1 : 1),
       itemBuilder: (ctx, i) {
@@ -428,11 +538,19 @@ class _ListingScreenState extends State<ListingScreen> {
         }
         return ProductCard(
           product: products[i],
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => ProductDetailScreen(product: products[i]))),
+          onTap: () => _openDetail(products[i]),
         );
       },
     );
+  }
+
+  void _openDetail(ProductModel product) {
+    if (kIsWeb) {
+      context.push('/listing/${product.id}');
+    } else {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)));
+    }
   }
 }
 

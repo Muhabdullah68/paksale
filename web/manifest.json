@@ -1,12 +1,12 @@
 {
-    "name": "marketplace_app",
-    "short_name": "marketplace_app",
+    "name": "Pak Sale",
+    "short_name": "Pak Sale",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#6B0F2B",
+    "theme_color": "#6B0F2B",
+    "description": "Pak Sale — Buy and sell cars, properties, electronics, jobs and more across Pakistan.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

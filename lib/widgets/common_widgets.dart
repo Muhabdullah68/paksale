@@ -670,6 +670,12 @@ class CategoryCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Scale down size for smaller screens
+    final adjustedSize = screenWidth < 360 ? size * 0.85 : size;
+    final iconSize = adjustedSize * 0.42;
+    final textSize = screenWidth < 360 ? 10.0 : 11.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -678,7 +684,7 @@ class CategoryCircle extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: size, height: size,
+              width: adjustedSize, height: adjustedSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: theme.cardTheme.color,
@@ -687,18 +693,18 @@ class CategoryCircle extends StatelessWidget {
                   BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
                 ],
               ),
-              child: Center(child: Text(icon, style: TextStyle(fontSize: size * 0.42))),
+              child: Center(child: Text(icon, style: TextStyle(fontSize: iconSize))),
             ),
             const SizedBox(height: 2),
             SizedBox(
-              width: size + 10,
+              width: adjustedSize + 10,
               child: Text(name,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                       color: theme.textTheme.bodyLarge?.color, 
-                      fontSize: 11, 
+                      fontSize: textSize, 
                       height: 1.2)),
             ),
           ],

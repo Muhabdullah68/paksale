@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +20,8 @@ import 'providers/admin_provider.dart';
 import 'providers/order_provider.dart';
 import 'services/theme_provider.dart';
 import 'services/currency_provider.dart';
+import 'web/app_router.dart';
+import 'web/web_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +75,8 @@ void main() async {
             return provider;
           },
         ),
+        // Web navigation state (only meaningful on web builds)
+        ChangeNotifierProvider.value(value: WebNav.instance),
       ],
       child: const MyApp(),
     ),
@@ -84,28 +90,90 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final langProvider = context.watch<LanguageProvider>();
-    
+
+    final theme = AppTheme.lightTheme.copyWith(
+      scrollbarTheme: _webScrollbarTheme(Brightness.light),
+    );
+    final darkTheme = AppTheme.darkTheme.copyWith(
+      scrollbarTheme: _webScrollbarTheme(Brightness.dark),
+    );
+
+    if (kIsWeb) {
+      return MaterialApp.router(
+        title: 'Pak Sale',
+        debugShowCheckedModeBanner: false,
+        theme: theme,
+        darkTheme: darkTheme,
+        themeMode: themeProvider.themeMode,
+        themeAnimationDuration: const Duration(milliseconds: 100),
+        scrollBehavior: _WebScrollBehavior(),
+        builder: (context, child) => _wrapApp(context, child, langProvider),
+        routerConfig: appRouter,
+      );
+    }
+
     return MaterialApp(
       title: 'Pak Sale',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: theme,
+      darkTheme: darkTheme,
       themeMode: themeProvider.themeMode,
-      themeAnimationDuration: const Duration(milliseconds: 100), // Faster transition
-      builder: (context, child) {
-        final cmsProvider = context.watch<CMSProvider>();
-        if (cmsProvider.maintenanceMode) {
-          return Directionality(
-            textDirection: langProvider.isRTL ? TextDirection.rtl : TextDirection.ltr,
-            child: const MaintenanceScreen(),
-          );
-        }
-        return Directionality(
-          textDirection: langProvider.isRTL ? TextDirection.rtl : TextDirection.ltr,
-          child: child!,
-        );
-      },
+      themeAnimationDuration: const Duration(milliseconds: 100),
+      builder: (context, child) => _wrapApp(context, child, langProvider),
       home: const SplashScreen(),
     );
   }
+
+  Widget _wrapApp(
+      BuildContext context, Widget? child, LanguageProvider langProvider) {
+    final cmsProvider = context.watch<CMSProvider>();
+    final direction = Directionality(
+      textDirection:
+          langProvider.isRTL ? TextDirection.rtl : TextDirection.ltr,
+      child: cmsProvider.maintenanceMode ? const MaintenanceScreen() : child!,
+    );
+    if (!kIsWeb) return direction;
+    return ScrollConfiguration(
+      behavior: _WebScrollBehavior(),
+      child: direction,
+    );
+  }
+
+  ScrollbarThemeData _webScrollbarTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return ScrollbarThemeData(
+      thickness: WidgetStateProperty.all(kIsWeb ? 8.0 : 4.0),
+      radius: const Radius.circular(10),
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered)) {
+          return AppColors.gold;
+        }
+        if (states.contains(WidgetState.dragged)) {
+          return AppColors.goldLight;
+        }
+        return isDark
+            ? Colors.white.withValues(alpha: 0.25)
+            : Colors.black.withValues(alpha: 0.2);
+      }),
+      trackColor: WidgetStateProperty.all(Colors.transparent),
+      crossAxisMargin: 2,
+      mainAxisMargin: 6,
+      interactive: kIsWeb,
+    );
+  }
+}
+
+class _WebScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.trackpad,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
 }

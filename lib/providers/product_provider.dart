@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product_model.dart';
 import '../repositories/product_repository.dart';
@@ -91,7 +91,7 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addProduct(ProductModel product, List<File> images) async {
+  Future<void> addProduct(ProductModel product, List<XFile> images) async {
     _setLoading(true);
     try {
       // Generate the document reference first to get the final ID
@@ -123,7 +123,7 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateProduct(ProductModel product, List<File> newImages) async {
+  Future<void> updateProduct(ProductModel product, List<XFile> newImages) async {
     _setLoading(true);
     try {
       List<String> imageUrls = List.from(product.imageUrls);

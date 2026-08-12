@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
-import '../services/language_provider.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -36,7 +35,6 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final t = context.watch<LanguageProvider>().t;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
@@ -6,11 +7,13 @@ import '../providers/favorites_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../web/web_shell.dart';
 import 'listing_screen.dart';
 import 'product_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
-  const FavoritesScreen({super.key});
+  final bool webEmbedded;
+  const FavoritesScreen({super.key, this.webEmbedded = false});
 
   @override
   State<FavoritesScreen> createState() => _FavoritesScreenState();
@@ -27,17 +30,26 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final t = context.watch<LanguageProvider>().t;
 
     if (!authProvider.isAuthenticated) {
+      final locked = EmptyState(
+        icon: Icons.lock_outline,
+        title: t['sign_in_required'] ?? 'Sign In Required',
+        subtitle: t['sign_in_favorites'] ?? 'Please sign in to see your favorite listings.',
+      );
+      if (kIsWeb) {
+        return widget.webEmbedded
+            ? locked
+            : WebPage(
+                breadcrumbs: const [WebCrumb('Saved')],
+                content: locked,
+              );
+      }
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: AppColors.primary,
           title: const AppLogo(),
         ),
-        body: EmptyState(
-          icon: Icons.lock_outline,
-          title: t['sign_in_required'] ?? 'Sign In Required',
-          subtitle: t['sign_in_favorites'] ?? 'Please sign in to see your favorite listings.',
-        ),
+        body: locked,
       );
     }
 
@@ -47,6 +59,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         : favs.where((p) => p.category == _filter).toList();
 
     final cats = ['All', ...favs.map((p) => p.category).toSet()];
+
+    final body = favoritesProvider?.isLoading == true 
+        ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+        : favs.isEmpty 
+            ? _buildEmptyState(context) 
+            : _buildList(filteredFavs, cats, context);
+
+    if (kIsWeb) {
+      return widget.webEmbedded
+          ? body
+          : WebPage(
+              breadcrumbs: const [WebCrumb('Saved')],
+              content: body,
+            );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -62,11 +89,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
         ],
       ),
-      body: favoritesProvider?.isLoading == true 
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-          : favs.isEmpty 
-              ? _buildEmptyState(context) 
-              : _buildList(filteredFavs, cats, context),
+      body: body,
     );
   }
 
@@ -121,10 +144,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildList(List<ProductModel> filteredFavs, List<String> categories, BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
           if (categories.length > 1)
             Container(
               height: 50,
@@ -175,8 +197,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
           const SocialMediaSection(),
         ],
-      ),
     );
+
+    return widget.webEmbedded
+        ? content
+        : SingleChildScrollView(child: content);
   }
 
   void _confirmClearAll(FavoritesProvider? provider) {

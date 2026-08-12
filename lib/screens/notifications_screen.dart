@@ -476,14 +476,17 @@ class _NotificationTile extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            notif.actorName!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark
-                                  ? AppColors.textMuted
-                                  : AppColors.textSecondaryLightMode,
-                              fontStyle: FontStyle.italic,
+                          Flexible(
+                            child: Text(
+                              notif.actorName!,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textMuted
+                                    : AppColors.textSecondaryLightMode,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ],
