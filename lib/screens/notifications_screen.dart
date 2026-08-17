@@ -238,7 +238,7 @@ class _BroadcastNotificationTile extends StatelessWidget {
         color: isDark
             ? AppColors.primaryDark.withValues(alpha: 0.35)
             : AppColors.primary.withValues(alpha: 0.08),
-        border: Border(
+        border: const Border(
           left: BorderSide(
             color: AppColors.gold,
             width: 3,

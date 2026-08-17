@@ -134,7 +134,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       color: Colors.white, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(height: 40),
-            const SocialMediaSection(),
           ],
         ),
       ),
@@ -195,7 +194,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           ProductDetailScreen(product: filteredFavs[i]))),
             ),
           ),
-          const SocialMediaSection(),
         ],
     );
 

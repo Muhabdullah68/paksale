@@ -213,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             onSeeAllAds: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => ListingScreen()),
+              MaterialPageRoute(builder: (_) => const ListingScreen()),
             ),
           ),
           const CategoriesScreen(webEmbedded: true),
@@ -479,7 +479,6 @@ class _HomeBodyState extends State<_HomeBody> {
                 onTap: () => widget.onProductTap(p),
                 onShare: () {},
               )),
-            const SocialMediaSection(),
             const SizedBox(height: 80),
           ],
         ),

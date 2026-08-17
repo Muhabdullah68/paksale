@@ -11,7 +11,6 @@ import '../services/notification_service.dart';
 import '../services/currency_provider.dart';
 
 import '../providers/cms_provider.dart';
-import '../widgets/common_widgets.dart';
 import '../web/web_shell.dart';
 
 class PostAdScreen extends StatefulWidget {
@@ -820,7 +819,6 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 12),
           _field('WhatsApp Number', '+92 XXX XXXXXXX (optional)', _whatsAppCtrl,
               isNumber: true),
-          const SocialMediaSection(),
           const SizedBox(height: 20),
         ],
       ),
@@ -1254,7 +1252,6 @@ class _PostAdScreenState extends State<PostAdScreen> {
           _ChecklistItem(
               'Description added', _descCtrl.text.trim().length > 10),
           _ChecklistItem('Photos added (${_selectedImages.length})', _selectedImages.isNotEmpty),
-          const SocialMediaSection(),
           const SizedBox(height: 20),
         ],
       ),

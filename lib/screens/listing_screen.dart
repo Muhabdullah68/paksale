@@ -502,7 +502,6 @@ class _ListingScreenState extends State<ListingScreen> {
                 isGridView: true,
                 onTap: () => _openDetail(products[i]),
               ),
-              const SocialMediaSection(),
             ],
           );
         }
@@ -534,7 +533,7 @@ class _ListingScreenState extends State<ListingScreen> {
               ),
             );
           }
-          return const SocialMediaSection();
+          return const SizedBox();
         }
         return ProductCard(
           product: products[i],

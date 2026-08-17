@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -378,10 +379,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
+            onPressed: () async {
+              final pid = widget.product.id;
+              final url = kIsWeb
+                  ? (() {
+                      final base = Uri.base;
+                      return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$pid';
+                    })()
+                  : 'https://paksale.app/listing/$pid';
+              await Clipboard.setData(ClipboardData(text: url));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(t['link_copied'] ?? 'Link copied to clipboard!'),
-                    backgroundColor: AppColors.gold)),
+                    backgroundColor: AppColors.gold));
+              }
+            },
           ),
         ],
       ),
@@ -521,10 +533,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(height: 12),
 
                       GestureDetector(
-                        onTap: () => ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(
-                            content: Text('Link shared!'),
-                            backgroundColor: AppColors.gold)),
+                        onTap: () async {
+                          final pid = widget.product.id;
+                          final url = kIsWeb
+                              ? (() {
+                                  final base = Uri.base;
+                                  return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$pid';
+                                })()
+                              : 'https://paksale.app/listing/$pid';
+                          await Clipboard.setData(ClipboardData(text: url));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text('Link copied to clipboard!'),
+                              backgroundColor: AppColors.gold,
+                            ));
+                          }
+                        },
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -534,9 +558,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             border: Border.all(
                                 color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                           ),
-                          child: Row(
+                          child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Icon(
                                     Icons.share_outlined,
                                     size: 16,
@@ -688,7 +712,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     );
                   },
                 ),
-                const SocialMediaSection(),
                 const SizedBox(height: 20),
       ],
     );

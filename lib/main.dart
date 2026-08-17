@@ -91,9 +91,6 @@ class MyApp extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
     final langProvider = context.watch<LanguageProvider>();
 
-    final theme = AppTheme.lightTheme.copyWith(
-      scrollbarTheme: _webScrollbarTheme(Brightness.light),
-    );
     final darkTheme = AppTheme.darkTheme.copyWith(
       scrollbarTheme: _webScrollbarTheme(Brightness.dark),
     );
@@ -102,9 +99,9 @@ class MyApp extends StatelessWidget {
       return MaterialApp.router(
         title: 'Pak Sale',
         debugShowCheckedModeBanner: false,
-        theme: theme,
+        theme: darkTheme,
         darkTheme: darkTheme,
-        themeMode: themeProvider.themeMode,
+        themeMode: ThemeMode.dark,
         themeAnimationDuration: const Duration(milliseconds: 100),
         scrollBehavior: _WebScrollBehavior(),
         builder: (context, child) => _wrapApp(context, child, langProvider),
@@ -115,9 +112,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Pak Sale',
       debugShowCheckedModeBanner: false,
-      theme: theme,
+      theme: darkTheme,
       darkTheme: darkTheme,
-      themeMode: themeProvider.themeMode,
+      themeMode: ThemeMode.dark,
       themeAnimationDuration: const Duration(milliseconds: 100),
       builder: (context, child) => _wrapApp(context, child, langProvider),
       home: const SplashScreen(),

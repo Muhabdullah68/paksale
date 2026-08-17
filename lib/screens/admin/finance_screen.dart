@@ -53,7 +53,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildSummaryCards() {
-    return Row(
+    return const Row(
       children: [
         Expanded(
           child: _StatCard(
@@ -63,7 +63,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             color: Colors.green,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _StatCard(
             label: 'AdMob Earnings',

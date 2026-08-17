@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                         ],
                       ),
-                      child: Center(
+                      child: const Center(
                         child: AppLogoIcon(size: 80),
                       ),
                     ),

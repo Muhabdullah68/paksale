@@ -1,12 +1,34 @@
-// web/web_product_card.dart — website-style product card with hover lift,
-// used only on the web build.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/product_model.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
+
+String _webProductShareUrl(String productId) {
+  if (kIsWeb) {
+    final base = Uri.base;
+    return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$productId';
+  }
+  return 'https://paksale.app/listing/$productId';
+}
+
+Future<void> _copyProductLink(BuildContext context, String productId) async {
+  final url = _webProductShareUrl(productId);
+  await Clipboard.setData(ClipboardData(text: url));
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Link copied to clipboard!'),
+      backgroundColor: AppColors.gold,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ));
+  }
+}
 
 class WebProductCard extends StatefulWidget {
   final ProductModel product;
@@ -36,8 +58,10 @@ class _WebProductCardState extends State<WebProductCard> {
     final p = widget.product;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
+    final compareProvider = context.watch<CompareProvider?>();
     final t = context.watch<LanguageProvider>().t;
     final isFav = favoritesProvider?.isFavorite(p.id) ?? false;
+    final isInCompare = compareProvider?.isInCompare(p.id) ?? false;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -81,7 +105,6 @@ class _WebProductCardState extends State<WebProductCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Image (fills remaining height so the card never overflows) ─
               Expanded(
                 child: Stack(
                   fit: StackFit.expand,
@@ -147,39 +170,38 @@ class _WebProductCardState extends State<WebProductCard> {
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
-                          onTap: () {
-                            if (favoritesProvider != null) {
-                              favoritesProvider.toggleFavorite(p);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(t['sign_in_favorites'] ??
-                                      'Please sign in to save favorites'),
-                                  backgroundColor: AppColors.orange,
-                                ),
-                              );
-                            }
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: Colors.black38,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              size: 16,
-                              color: isFav ? Colors.redAccent : Colors.white,
-                            ),
+                        onTap: () {
+                          if (favoritesProvider != null) {
+                            favoritesProvider.toggleFavorite(p);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(t['sign_in_favorites'] ??
+                                    'Please sign in to save favorites'),
+                                backgroundColor: AppColors.orange,
+                              ),
+                            );
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.all(7),
+                          decoration: const BoxDecoration(
+                            color: Colors.black38,
+                            shape: BoxShape.circle,
                           ),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            size: 16,
+                            color: isFav ? Colors.redAccent : Colors.white,
+                          ),
+                        ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // ── Details ──────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -210,7 +232,18 @@ class _WebProductCardState extends State<WebProductCard> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time,
+                            size: 11, color: AppColors.textMuted),
+                        const SizedBox(width: 3),
+                        Text(p.postedTime,
+                            style: const TextStyle(
+                                color: AppColors.textMuted, fontSize: 11)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         const Icon(Icons.location_on,
@@ -229,7 +262,7 @@ class _WebProductCardState extends State<WebProductCard> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         const Icon(Icons.remove_red_eye_outlined,
@@ -238,31 +271,44 @@ class _WebProductCardState extends State<WebProductCard> {
                         Text('${p.views}',
                             style: const TextStyle(
                                 color: AppColors.textMuted, fontSize: 11)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            p.postedTime,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11),
+                        const Spacer(),
+                        if (widget.showShareButton) ...[
+                          _WebActionChip(
+                            icon: Icons.compare_arrows,
+                            label: t['compare'] ?? 'Compare',
+                            isActive: isInCompare,
+                            onTap: () {
+                              if (compareProvider != null) {
+                                final ok = compareProvider.toggleCompare(p);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok
+                                          ? (t['compare_added'] ?? '✓ Added')
+                                          : (t['compare_limit'] ??
+                                              'Limit (max 3)')),
+                                      backgroundColor: ok
+                                          ? AppColors.gold
+                                          : AppColors.orange,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                           ),
-                        ),
-                        if (widget.showShareButton)
-                          _ShareChip(
+                          const SizedBox(width: 6),
+                          _WebActionChip(
+                            icon: Icons.share_outlined,
+                            label: t['share'] ?? 'Share',
                             onTap: () {
                               if (widget.onShare != null) {
                                 widget.onShare!();
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Link shared!'),
-                                    backgroundColor: AppColors.gold,
-                                  ),
-                                );
+                                _copyProductLink(context, p.id);
                               }
                             },
                           ),
+                        ],
                       ],
                     ),
                   ],
@@ -346,12 +392,22 @@ class _WebProductCardState extends State<WebProductCard> {
   }
 }
 
-class _ShareChip extends StatelessWidget {
+class _WebActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
-  const _ShareChip({required this.onTap});
+  final bool isActive;
+
+  const _WebActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isActive = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -360,18 +416,22 @@ class _ShareChip extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: isActive
+                ? AppColors.gold.withValues(alpha: 0.15)
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+            border: Border.all(
+                color:
+                    AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.share_outlined, size: 11, color: AppColors.gold),
-              SizedBox(width: 3),
+            children: [
+              Icon(icon, size: 11, color: AppColors.gold),
+              const SizedBox(width: 3),
               Text(
-                'Share',
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                     color: AppColors.gold,
                     fontSize: 10,
                     fontWeight: FontWeight.w600),

@@ -199,7 +199,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
         title: Text(title, style: const TextStyle(fontSize: 14)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         value: _getBoolField(field),
-        activeColor: AppColors.gold,
+        activeThumbColor: AppColors.gold,
         contentPadding: const EdgeInsets.symmetric(horizontal: 4),
         onChanged: (v) => setState(() => _setBoolField(field, v)),
       ),

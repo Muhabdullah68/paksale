@@ -1,14 +1,37 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 
-// ─── Logo Icon ────────────────────────────────────────────────────────────────
+String _productShareUrl(String productId) {
+  if (kIsWeb) {
+    final base = Uri.base;
+    return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$productId';
+  }
+  return 'https://paksale.app/listing/$productId';
+}
+
+Future<void> _copyProductLink(BuildContext context, String productId) async {
+  final url = _productShareUrl(productId);
+  await Clipboard.setData(ClipboardData(text: url));
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Link copied to clipboard!'),
+      backgroundColor: AppColors.gold,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ));
+  }
+}
+
 class AppLogoIcon extends StatelessWidget {
   final double size;
   final Color? color;
@@ -25,7 +48,6 @@ class AppLogoIcon extends StatelessWidget {
   }
 }
 
-// ─── App Logo ──────────────────────────────────────────────────────────────────
 class AppLogo extends StatelessWidget {
   final double fontSize;
   const AppLogo({super.key, this.fontSize = 20});
@@ -36,11 +58,10 @@ class AppLogo extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
     final appName = t['appName'] ?? 'Pak Sale';
-    
-    // Split name for two-tone color if it contains 'Sale'
+
     String part1 = appName;
     String part2 = '';
-    
+
     if (appName.contains('Sale')) {
       part1 = appName.substring(0, appName.indexOf('Sale'));
       part2 = 'Sale';
@@ -75,7 +96,6 @@ class AppLogo extends StatelessWidget {
   }
 }
 
-// ─── Custom Search Bar ────────────────────────────────────────────────────────
 class CustomSearchBar extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onTap;
@@ -98,8 +118,7 @@ class CustomSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    // If on primary background (like our dark red AppBar), always use white-ish colors
+
     final textColor = (isDark || onPrimaryBackground) ? Colors.white : Colors.black87;
     final hintColor = (isDark || onPrimaryBackground) ? Colors.white60 : Colors.black45;
 
@@ -109,53 +128,52 @@ class CustomSearchBar extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 42, maxHeight: 52),
         decoration: BoxDecoration(
           color: (isDark || onPrimaryBackground)
-              ? Colors.white.withValues(alpha: 0.15) 
+              ? Colors.white.withValues(alpha: 0.15)
               : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
               color: (isDark || onPrimaryBackground)
-                  ? AppColors.gold.withValues(alpha: 0.3) 
+                  ? AppColors.gold.withValues(alpha: 0.3)
                   : AppColors.primary.withValues(alpha: 0.2)),
         ),
         child: readOnly
             ? Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Icon(Icons.search, color: hintColor, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hint,
-                  style: TextStyle(color: hintColor, fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: hintColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        hint,
+                        style: TextStyle(color: hintColor, fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : TextField(
+                controller: controller,
+                onChanged: onChanged,
+                autofocus: true,
+                style: TextStyle(color: textColor, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: hintColor, size: 18),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ],
-          ),
-        )
-            : TextField(
-          controller: controller,
-          onChanged: onChanged,
-          autofocus: true,
-          style: TextStyle(color: textColor, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: hintColor, fontSize: 14),
-            prefixIcon: Icon(Icons.search, color: hintColor, size: 18),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            filled: false,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-        ),
       ),
     );
   }
 }
 
-// ─── Bottom Navigation Bar ────────────────────────────────────────────────────
 class AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -166,10 +184,15 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final t = context.watch<LanguageProvider>().t;
-    
+
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.1), blurRadius: 16)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.3 : 0.1),
+              blurRadius: 16)
+        ],
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
@@ -182,18 +205,32 @@ class AppBottomNavBar extends StatelessWidget {
         unselectedFontSize: 10,
         iconSize: 22,
         items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.home_outlined), activeIcon: const Icon(Icons.home), label: t['nav_home'] ?? 'Home'),
-          BottomNavigationBarItem(icon: const Icon(Icons.grid_view_outlined), activeIcon: const Icon(Icons.grid_view), label: t['nav_categories'] ?? 'Categories'),
-          BottomNavigationBarItem(icon: const Icon(Icons.add_circle_outline, size: 28), activeIcon: const Icon(Icons.add_circle, size: 28), label: t['nav_post_ad'] ?? 'Post Ad'),
-          BottomNavigationBarItem(icon: const Icon(Icons.favorite_outline), activeIcon: const Icon(Icons.favorite), label: t['nav_saved'] ?? 'Saved'),
-          BottomNavigationBarItem(icon: const Icon(Icons.person_outline), activeIcon: const Icon(Icons.person), label: t['nav_account'] ?? 'Account'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home),
+              label: t['nav_home'] ?? 'Home'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.grid_view_outlined),
+              activeIcon: const Icon(Icons.grid_view),
+              label: t['nav_categories'] ?? 'Categories'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.add_circle_outline, size: 28),
+              activeIcon: const Icon(Icons.add_circle, size: 28),
+              label: t['nav_post_ad'] ?? 'Post Ad'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.favorite_outline),
+              activeIcon: const Icon(Icons.favorite),
+              label: t['nav_saved'] ?? 'Saved'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.person_outline),
+              activeIcon: const Icon(Icons.person),
+              label: t['nav_account'] ?? 'Account'),
         ],
       ),
     );
   }
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback? onTap;
@@ -221,8 +258,10 @@ class ProductCard extends StatelessWidget {
     final t = context.watch<LanguageProvider>().t;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
+    final compareProvider = context.watch<CompareProvider?>();
     final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
-    
+    final isInCompare = compareProvider?.isInCompare(product.id) ?? false;
+
     final p = product;
     return GestureDetector(
       onTap: onTap,
@@ -232,10 +271,17 @@ class ProductCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
-            boxShadow: isDark ? null : [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
-            ],
+            border: Border.all(
+                color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                    .withValues(alpha: 0.2)),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2))
+                  ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,18 +289,23 @@ class ProductCard extends StatelessWidget {
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                    borderRadius:
+                        const BorderRadius.horizontal(left: Radius.circular(12)),
                     child: _buildImage(context, 100, 100),
                   ),
                   if (p.isSold)
                     Positioned.fill(
                       child: ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                        borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(12)),
                         child: Container(
                           color: Colors.black54,
                           child: Center(
                             child: Text(t['sold'] ?? 'SOLD',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14)),
                           ),
                         ),
                       ),
@@ -264,8 +315,11 @@ class ProductCard extends StatelessWidget {
                       top: 6,
                       left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: AppColors.gold,
+                            borderRadius: BorderRadius.circular(4)),
                         child: const Text('⭐', style: TextStyle(fontSize: 9)),
                       ),
                     ),
@@ -278,33 +332,45 @@ class ProductCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      Text(p.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: theme.textTheme.bodyLarge?.color, 
-                              fontSize: 13, 
+                              color: theme.textTheme.bodyLarge?.color,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 6),
+                      Text(
+                        p.price == 0
+                            ? (t['contact'] ?? 'Contact')
+                            : currencyProvider.formatPrice(p.price),
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Flexible(
-                            child: Text(
-                              p.price == 0 ? (t['contact'] ?? 'Contact') : currencyProvider.formatPrice(p.price),
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: theme.textTheme.titleLarge?.color, 
-                                  fontSize: 17, 
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                          const Icon(Icons.access_time,
+                              size: 11, color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text(p.postedTime,
+                              style: const TextStyle(
+                                  color: AppColors.textMuted, fontSize: 10)),
                         ],
                       ),
                       const SizedBox(height: 5),
                       Row(
                         children: [
                           _ConditionBadge(condition: p.condition),
-                          const Spacer(),
-                          Icon(Icons.location_on, size: 11, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
+                          const SizedBox(width: 8),
+                          Icon(Icons.location_on,
+                              size: 11,
+                              color: theme.textTheme.bodySmall?.color
+                                      ?.withValues(alpha: 0.5) ??
+                                  AppColors.textMuted),
                           const SizedBox(width: 2),
                           Flexible(
                             child: Text(
@@ -322,48 +388,54 @@ class ProductCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.remove_red_eye_outlined, size: 11, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
+                          Icon(Icons.remove_red_eye_outlined,
+                              size: 11,
+                              color: theme.textTheme.bodySmall?.color
+                                      ?.withValues(alpha: 0.5) ??
+                                  AppColors.textMuted),
                           const SizedBox(width: 3),
-                          Text('${p.views}', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 10)),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 10)),
-                          ),
+                          Text('${p.views}',
+                              style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color
+                                          ?.withValues(alpha: 0.5) ??
+                                      AppColors.textMuted,
+                                  fontSize: 10)),
                           const Spacer(),
-                          if (showShareButton)
-                            MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (onShare != null) {
-                                    onShare!();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                      content: Text('Link shared!'),
-                                      backgroundColor: AppColors.gold,
-                                    ));
+                          if (showShareButton) ...[
+                            _ActionChip(
+                              icon: Icons.compare_arrows,
+                              label: t['compare'] ?? 'Compare',
+                              isActive: isInCompare,
+                              onTap: () {
+                                if (compareProvider != null) {
+                                  final ok = compareProvider.toggleCompare(p);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(ok
+                                            ? (t['compare_added'] ?? '✓ Added to compare')
+                                            : (t['compare_limit'] ?? 'Compare limit reached (max 3)')),
+                                        backgroundColor:
+                                            ok ? AppColors.gold : AppColors.orange,
+                                      ),
+                                    );
                                   }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.share_outlined, size: 10, color: AppColors.gold),
-                                      const SizedBox(width: 3),
-                                      Text(t['share'] ?? 'Share',
-                                          style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                                }
+                              },
                             ),
+                            const SizedBox(width: 6),
+                            _ActionChip(
+                              icon: Icons.share_outlined,
+                              label: t['share'] ?? 'Share',
+                              onTap: () {
+                                if (onShare != null) {
+                                  onShare!();
+                                } else {
+                                  _copyProductLink(context, p.id);
+                                }
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -378,13 +450,17 @@ class ProductCard extends StatelessWidget {
                       favoritesProvider.toggleFavorite(product);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(t['sign_in_favorites'] ?? 'Please sign in to save favorites'),
-                        backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                        content: Text(t['sign_in_favorites'] ??
+                            'Please sign in to save favorites'),
+                        backgroundColor:
+                            isDark ? AppColors.primaryDark : AppColors.primary,
                       ));
                     }
                   },
-                  child: Icon(isFav ? Icons.favorite : Icons.favorite_border,
-                      color: isFav ? Colors.redAccent : AppColors.textMuted, size: 20),
+                  child: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? Colors.redAccent : AppColors.textMuted,
+                      size: 20),
                 ),
               ),
             ],
@@ -400,8 +476,10 @@ class ProductCard extends StatelessWidget {
     final t = context.watch<LanguageProvider>().t;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
+    final compareProvider = context.watch<CompareProvider?>();
     final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
-    
+    final isInCompare = compareProvider?.isInCompare(product.id) ?? false;
+
     final p = product;
     return GestureDetector(
       onTap: onTap,
@@ -410,70 +488,103 @@ class ProductCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
-            boxShadow: isDark ? null : [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
-            ],
+            border: Border.all(
+                color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                    .withValues(alpha: 0.2)),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2))
+                  ],
           ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AspectRatio(
-                aspectRatio: 1.6,
+                aspectRatio: 1.45,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                      child: _buildImage(context, double.infinity, double.infinity, isGrid: true),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: _buildImage(context, double.infinity,
+                          double.infinity,
+                          isGrid: true),
                     ),
                     if (p.isSold)
                       Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                        ),
+                        color: Colors.black54,
                         child: Center(
                           child: Text(t['sold'] ?? 'SOLD',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16)),
                         ),
                       ),
                     if (p.isFeatured)
                       Positioned(
-                        top: 6, left: 6,
+                        top: 6,
+                        left: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
-                          child: Text(t['featured_label'] ?? 'Featured', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: AppColors.gold,
+                              borderRadius: BorderRadius.circular(4)),
+                          child: Text(t['featured_label'] ?? 'Featured',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ),
                     if (p.isBoosted)
                       Positioned(
-                        top: p.isFeatured ? 28 : 6, left: 6,
+                        top: p.isFeatured ? 28 : 6,
+                        left: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.orange, borderRadius: BorderRadius.circular(4)),
-                          child: const Text('🚀 Boosted', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: AppColors.orange,
+                              borderRadius: BorderRadius.circular(4)),
+                          child: const Text('🚀 Boosted',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ),
                     Positioned(
-                      top: 6, right: 6,
+                      top: 6,
+                      right: 6,
                       child: GestureDetector(
                         onTap: () {
                           if (favoritesProvider != null) {
                             favoritesProvider.toggleFavorite(product);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(t['sign_in_favorites'] ?? 'Please sign in to save favorites'),
-                              backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+                              content: Text(t['sign_in_favorites'] ??
+                                  'Please sign in to save favorites'),
+                              backgroundColor:
+                                  isDark ? AppColors.primaryDark : AppColors.primary,
                             ));
                           }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                          child: Icon(isFav ? Icons.favorite : Icons.favorite_border,
-                              size: 16, color: isFav ? Colors.redAccent : Colors.white),
+                          decoration: const BoxDecoration(
+                              color: Colors.black26, shape: BoxShape.circle),
+                          child: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              size: 15,
+                              color: isFav ? Colors.redAccent : Colors.white),
                         ),
                       ),
                     ),
@@ -486,24 +597,54 @@ class ProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 11)),
+                    Text(p.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500)),
                     const SizedBox(height: 4),
                     Text(
-                      p.price == 0 ? (t['contact'] ?? 'Contact') : currencyProvider.formatPrice(p.price),
+                      p.price == 0
+                          ? (t['contact'] ?? 'Contact')
+                          : currencyProvider.formatPrice(p.price),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 9, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted),
+                        const Icon(Icons.access_time,
+                            size: 9, color: AppColors.textMuted),
+                        const SizedBox(width: 2),
+                        Text(p.postedTime,
+                            style: const TextStyle(
+                                color: AppColors.textMuted, fontSize: 9)),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on,
+                            size: 9,
+                            color: theme.textTheme.bodySmall?.color
+                                    ?.withValues(alpha: 0.5) ??
+                                AppColors.textMuted),
                         const SizedBox(width: 2),
                         Flexible(
-                          child: Text('${p.location}${p.city.isNotEmpty ? ', ${p.city}' : ''}', 
+                          child: Text(
+                              '${p.location}${p.city.isNotEmpty ? ', ${p.city}' : ''}',
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 9)),
+                              style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color
+                                          ?.withValues(alpha: 0.5) ??
+                                      AppColors.textMuted,
+                                  fontSize: 9)),
                         ),
                       ],
                     ),
@@ -512,48 +653,66 @@ class ProductCard extends StatelessWidget {
                       children: [
                         _ConditionBadge(condition: p.condition, small: true),
                         const Spacer(),
-                        Flexible( 
-                          child: Text(p.postedTime, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 9)),
-                        ),
+                        Icon(Icons.remove_red_eye_outlined,
+                            size: 9,
+                            color: theme.textTheme.bodySmall?.color
+                                    ?.withValues(alpha: 0.5) ??
+                                AppColors.textMuted),
+                        const SizedBox(width: 2),
+                        Text('${p.views}',
+                            style: TextStyle(
+                                color: theme.textTheme.bodySmall?.color
+                                        ?.withValues(alpha: 0.5) ??
+                                    AppColors.textMuted,
+                                fontSize: 9)),
                       ],
                     ),
                     if (showShareButton) ...[
                       const SizedBox(height: 6),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (onShare != null) {
-                              onShare!();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                content: Text('Link shared!'),
-                                backgroundColor: AppColors.gold,
-                              ));
-                            }
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.share_outlined, size: 10, color: AppColors.gold),
-                                const SizedBox(width: 3),
-                                Text(t['share'] ?? 'Share',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
-                              ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionChip(
+                              icon: Icons.compare_arrows,
+                              label: t['compare'] ?? 'Compare',
+                              isActive: isInCompare,
+                              dense: true,
+                              onTap: () {
+                                if (compareProvider != null) {
+                                  final ok = compareProvider.toggleCompare(p);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(ok
+                                            ? (t['compare_added'] ?? '✓ Added')
+                                            : (t['compare_limit'] ??
+                                                'Limit reached (max 3)')),
+                                        backgroundColor: ok
+                                            ? AppColors.gold
+                                            : AppColors.orange,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: _ActionChip(
+                              icon: Icons.share_outlined,
+                              label: t['share'] ?? 'Share',
+                              dense: true,
+                              onTap: () {
+                                if (onShare != null) {
+                                  onShare!();
+                                } else {
+                                  _copyProductLink(context, p.id);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -566,7 +725,8 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImage(BuildContext context, double width, double height, {bool isGrid = false}) {
+  Widget _buildImage(BuildContext context, double width, double height,
+      {bool isGrid = false}) {
     if (product.imageUrls.isNotEmpty) {
       return Hero(
         tag: 'product_image_${product.id}',
@@ -574,9 +734,10 @@ class ProductCard extends StatelessWidget {
           product.imageUrls[0],
           width: width,
           height: height,
-          cacheWidth: 250, // Optimize memory by caching a smaller version
+          cacheWidth: 250,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(context, width, height),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildImagePlaceholder(context, width, height),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             final isDarkLoading = Theme.of(context).brightness == Brightness.dark;
@@ -588,7 +749,8 @@ class ProductCard extends StatelessWidget {
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.gold),
                 ),
               ),
             );
@@ -599,41 +761,143 @@ class ProductCard extends StatelessWidget {
     return _buildImagePlaceholder(context, width, height);
   }
 
-  Widget _buildImagePlaceholder(BuildContext context, double width, double height) {
+  Widget _buildImagePlaceholder(
+      BuildContext context, double width, double height) {
     IconData icon;
     Color color;
     switch (product.category) {
-      case 'Vehicles': icon = Icons.directions_car; color = const Color(0xFF1565C0); break;
-      case 'Properties': icon = Icons.home; color = const Color(0xFF2E7D32); break;
-      case 'Electronics': icon = Icons.devices; color = const Color(0xFF6A1B9A); break;
-      case 'Furniture & Décor': icon = Icons.chair; color = const Color(0xFF5D4037); break;
-      case 'WaterCrafts': icon = Icons.directions_boat; color = const Color(0xFF0288D1); break;
-      case 'Jewellery': icon = Icons.diamond; color = const Color(0xFFC62828); break;
-      case 'Lifestyle': icon = Icons.shopping_bag; color = const Color(0xFFD81B60); break;
-      case 'Market': icon = Icons.shopping_cart; color = const Color(0xFF388E3C); break;
-      case 'Outdoor & Leisure': icon = Icons.landscape; color = const Color(0xFFF57C00); break;
-      case 'Special Numbers': icon = Icons.looks_one; color = AppColors.gold; break;
-      case 'Heavy Equipments': icon = Icons.construction; color = const Color(0xFF455A64); break;
-      case 'Jobs Center': icon = Icons.work; color = const Color(0xFF00897B); break;
-      case 'Super Ads': icon = Icons.star; color = AppColors.orange; break;
-      default: icon = Icons.image; color = AppColors.textMuted;
+      case 'Vehicles':
+        icon = Icons.directions_car;
+        color = const Color(0xFF1565C0);
+        break;
+      case 'Properties':
+        icon = Icons.home;
+        color = const Color(0xFF2E7D32);
+        break;
+      case 'Electronics':
+        icon = Icons.devices;
+        color = const Color(0xFF6A1B9A);
+        break;
+      case 'Furniture & Décor':
+        icon = Icons.chair;
+        color = const Color(0xFF5D4037);
+        break;
+      case 'WaterCrafts':
+        icon = Icons.directions_boat;
+        color = const Color(0xFF0288D1);
+        break;
+      case 'Jewellery':
+        icon = Icons.diamond;
+        color = const Color(0xFFC62828);
+        break;
+      case 'Lifestyle':
+        icon = Icons.shopping_bag;
+        color = const Color(0xFFD81B60);
+        break;
+      case 'Market':
+        icon = Icons.shopping_cart;
+        color = const Color(0xFF388E3C);
+        break;
+      case 'Outdoor & Leisure':
+        icon = Icons.landscape;
+        color = const Color(0xFFF57C00);
+        break;
+      case 'Special Numbers':
+        icon = Icons.looks_one;
+        color = AppColors.gold;
+        break;
+      case 'Heavy Equipments':
+        icon = Icons.construction;
+        color = const Color(0xFF455A64);
+        break;
+      case 'Jobs Center':
+        icon = Icons.work;
+        color = const Color(0xFF00897B);
+        break;
+      case 'Super Ads':
+        icon = Icons.star;
+        color = AppColors.orange;
+        break;
+      default:
+        icon = Icons.image;
+        color = AppColors.textMuted;
     }
     return Container(
       width: width,
       height: height,
-      color: color.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.08),
+      color: color.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.08),
       child: Center(
         child: FractionallySizedBox(
           widthFactor: 0.38,
           heightFactor: 0.38,
-          child: FittedBox(child: Icon(icon, color: color.withValues(alpha: 0.4))),
+          child: FittedBox(
+              child: Icon(icon, color: color.withValues(alpha: 0.4))),
         ),
       ),
     );
   }
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isActive;
+  final bool dense;
+
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isActive = false,
+    this.dense = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final padding = dense
+        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 3)
+        : const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
+    final iconSize = dense ? 9.0 : 10.0;
+    final fontSize = dense ? 8.5 : 10.0;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: padding,
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.gold.withValues(alpha: 0.15) : theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+                color: AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: iconSize, color: AppColors.gold),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? actionText;
@@ -649,23 +913,29 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 4, height: 16,
-            decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(2)),
+            width: 4,
+            height: 16,
+            decoration: BoxDecoration(
+                color: AppColors.gold,
+                borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(title,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    color: theme.textTheme.titleLarge?.color, 
-                    fontSize: 16, 
+                    color: theme.textTheme.titleLarge?.color,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700)),
           ),
           if (actionText != null)
             GestureDetector(
               onTap: onAction,
               child: Text(actionText!,
-                  style: const TextStyle(color: AppColors.gold, fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: const TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500)),
             ),
         ],
       ),
@@ -673,22 +943,25 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Category Circle ──────────────────────────────────────────────────────────
 class CategoryCircle extends StatelessWidget {
   final String name;
   final String icon;
   final double size;
   final VoidCallback? onTap;
 
-  const CategoryCircle({super.key, required this.name, required this.icon, this.size = 65, this.onTap});
+  const CategoryCircle(
+      {super.key,
+      required this.name,
+      required this.icon,
+      this.size = 65,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Scale down size for smaller screens
+
     final adjustedSize = screenWidth < 360 ? size * 0.85 : size;
     final iconSize = adjustedSize * 0.42;
     final textSize = screenWidth < 360 ? 10.0 : 11.0;
@@ -700,14 +973,22 @@ class CategoryCircle extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: adjustedSize, height: adjustedSize,
+              width: adjustedSize,
+              height: adjustedSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: theme.cardTheme.color,
-                border: Border.all(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.2)),
-                boxShadow: isDark ? null : [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))
-                ],
+                border: Border.all(
+                    color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                        .withValues(alpha: 0.2)),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2))
+                      ],
               ),
               child: Center(child: Text(icon, style: TextStyle(fontSize: iconSize))),
             ),
@@ -719,8 +1000,8 @@ class CategoryCircle extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color, 
-                      fontSize: textSize, 
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: textSize,
                       height: 1.2)),
             ),
           ],
@@ -730,7 +1011,6 @@ class CategoryCircle extends StatelessWidget {
   }
 }
 
-// ─── Ad Banner Placeholder ────────────────────────────────────────────────────
 class AdBannerPlaceholder extends StatelessWidget {
   final String text;
 
@@ -753,9 +1033,14 @@ class AdBannerPlaceholder extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              right: -20, top: -20,
-              child: Container(width: 100, height: 100,
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle)),
+              right: -20,
+              top: -20,
+              child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      shape: BoxShape.circle)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -765,15 +1050,25 @@ class AdBannerPlaceholder extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(text,
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(16)),
-                    child: const Text('AD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: AppColors.gold,
+                        borderRadius: BorderRadius.circular(16)),
+                    child: const Text('AD',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -785,14 +1080,14 @@ class AdBannerPlaceholder extends StatelessWidget {
   }
 }
 
-// ─── Contact Action Buttons ───────────────────────────────────────────────────
 class ContactActionButtons extends StatelessWidget {
   final VoidCallback? onWhatsApp;
   final VoidCallback? onCall;
   final VoidCallback? onChat;
   final PrivacySettings? privacy;
 
-  const ContactActionButtons({super.key, this.onWhatsApp, this.onCall, this.onChat, this.privacy});
+  const ContactActionButtons(
+      {super.key, this.onWhatsApp, this.onCall, this.onChat, this.privacy});
 
   @override
   Widget build(BuildContext context) {
@@ -807,8 +1102,16 @@ class ContactActionButtons extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.primaryDark : AppColors.cardLightMode,
-        border: Border(top: BorderSide(color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5))),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05), blurRadius: 12, offset: const Offset(0, -3))],
+        border: Border(
+            top: BorderSide(
+                color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                    .withValues(alpha: 0.5))),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, -3))
+        ],
       ),
       child: Row(
         children: [
@@ -817,11 +1120,14 @@ class ContactActionButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onCall,
                 icon: const Icon(Icons.phone, size: 18, color: Colors.white),
-                label: Text(t['call_now'] ?? 'Call Now', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                label: Text(t['call_now'] ?? 'Call Now',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.orange,
                   padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -831,11 +1137,14 @@ class ContactActionButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onWhatsApp,
                 icon: const Icon(Icons.chat, size: 18, color: Colors.white),
-                label: Text(t['whatsapp'] ?? 'WhatsApp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                label: Text(t['whatsapp'] ?? 'WhatsApp',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.green,
                   padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -844,11 +1153,14 @@ class ContactActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onChat,
               icon: const Icon(Icons.message_outlined, size: 18, color: Colors.white),
-              label: Text(t['message'] ?? 'Message', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              label: Text(t['message'] ?? 'Message',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
                 padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -858,7 +1170,6 @@ class ContactActionButtons extends StatelessWidget {
   }
 }
 
-// ─── Loading Widget ───────────────────────────────────────────────────────────
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key});
 
@@ -871,23 +1182,32 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold), strokeWidth: 2.5),
+          const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+              strokeWidth: 2.5),
           const SizedBox(height: 12),
-          Text(t['loading'] ?? 'Loading...', style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
+          Text(t['loading'] ?? 'Loading...',
+              style: TextStyle(
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+                  fontSize: 13)),
         ],
       ),
     );
   }
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final Widget? action;
 
-  const EmptyState({super.key, required this.icon, required this.title, required this.subtitle, this.action});
+  const EmptyState(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.subtitle,
+      this.action});
 
   @override
   Widget build(BuildContext context) {
@@ -899,11 +1219,20 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
+            Icon(icon,
+                size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
             const SizedBox(height: 20),
-            Text(title, style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(title,
+                style: TextStyle(
+                    color: theme.textTheme.titleLarge?.color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text(subtitle, textAlign: TextAlign.center, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+                    fontSize: 13)),
             if (action != null) ...[const SizedBox(height: 24), action!],
           ],
         ),
@@ -912,7 +1241,6 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-// ─── Condition Badge ──────────────────────────────────────────────────────────
 class _ConditionBadge extends StatelessWidget {
   final String condition;
   final bool small;
@@ -921,78 +1249,45 @@ class _ConditionBadge extends StatelessWidget {
 
   Color get _color {
     switch (condition) {
-      case 'Rent': return AppColors.primary;
-      case 'Sale': return AppColors.orange;
-      case 'Exchange': return const Color(0xFF7B1FA2);
-      case 'Full Time': return AppColors.green;
-      default: return AppColors.textMuted;
+      case 'Rent':
+        return AppColors.primary;
+      case 'Sale':
+        return AppColors.orange;
+      case 'Exchange':
+        return const Color(0xFF7B1FA2);
+      case 'Full Time':
+        return AppColors.green;
+      default:
+        return AppColors.textMuted;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bg = _color.withValues(alpha: 0.12);
+    final pad = small
+        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 1)
+        : const EdgeInsets.symmetric(horizontal: 6, vertical: 2);
+    final radius = small ? 4.0 : 6.0;
+    final fontSize = small ? 8.5 : 10.0;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 5 : 7, vertical: small ? 2 : 3),
+      padding: pad,
       decoration: BoxDecoration(
-          color: _color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: _color.withValues(alpha: 0.5))),
-      child: Text(condition, style: TextStyle(color: _color, fontSize: small ? 9 : 10, fontWeight: FontWeight.w600)),
+        color: bg,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: _color.withValues(alpha: 0.3)),
+      ),
+      child: Text(condition,
+          style: TextStyle(
+              color: _color, fontSize: fontSize, fontWeight: FontWeight.w600)),
     );
   }
 }
 
-// ─── Social Media Section ─────────────────────────────────────────────────────
-class SocialMediaSection extends StatefulWidget {
-  const SocialMediaSection({super.key});
+class SocialMediaFooter extends StatelessWidget {
+  const SocialMediaFooter({super.key});
 
-  @override
-  State<SocialMediaSection> createState() => _SocialMediaSectionState();
-}
-
-class _SocialMediaSectionState extends State<SocialMediaSection> {
-  late List<SocialMediaItem> _shuffledItems;
-
-  @override
-  void initState() {
-    super.initState();
-    _shuffledItems = List.from(_socialMediaItems)..shuffle();
-  }
-
-  static const List<SocialMediaItem> _socialMediaItems = [
-    SocialMediaItem(
-      name: 'TikTok',
-      icon: FontAwesomeIcons.tiktok,
-      url: 'https://www.tiktok.com/',
-      color: Colors.black,
-    ),
-    SocialMediaItem(
-      name: 'Instagram',
-      icon: FontAwesomeIcons.instagram,
-      url: 'https://www.instagram.com/',
-      color: Color(0xFFE1306C),
-    ),
-    SocialMediaItem(
-      name: 'Snapchat',
-      icon: FontAwesomeIcons.snapchat,
-      url: 'https://www.snapchat.com/',
-      color: Color(0xFFFFFC00),
-    ),
-    SocialMediaItem(
-      name: 'YouTube',
-      icon: FontAwesomeIcons.youtube,
-      url: 'https://www.youtube.com/',
-      color: Color(0xFFFF0000),
-    ),
-    SocialMediaItem(
-      name: 'X',
-      icon: FontAwesomeIcons.xTwitter,
-      url: 'https://twitter.com/',
-      color: Colors.black,
-    ),
-  ];
-
-  Future<void> _launchSocialMedia(String url) async {
+  Future<void> _launch(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1001,85 +1296,44 @@ class _SocialMediaSectionState extends State<SocialMediaSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.primaryDark.withValues(alpha: 0.5) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Are you following us?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: theme.textTheme.titleLarge?.color,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: _shuffledItems.map((item) => MouseRegion(
+    const items = [
+      (FontAwesomeIcons.tiktok, 'TikTok', 'https://www.tiktok.com/'),
+      (FontAwesomeIcons.instagram, 'Instagram', 'https://www.instagram.com/'),
+      (FontAwesomeIcons.snapchat, 'Snapchat', 'https://www.snapchat.com/'),
+      (FontAwesomeIcons.youtube, 'YouTube', 'https://www.youtube.com/'),
+      (FontAwesomeIcons.xTwitter, 'X', 'https://twitter.com/'),
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (icon, name, url) in items)
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Tooltip(
-                message: item.name,
+                message: name,
                 child: GestureDetector(
-                  onTap: () => _launchSocialMedia(item.url),
+                  onTap: () => _launch(url),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.all(8),
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isDark 
-                          ? AppColors.gold.withValues(alpha: 0.5) 
-                          : AppColors.primary.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
+                          color: AppColors.gold.withValues(alpha: 0.5),
+                          width: 1.2),
                     ),
                     child: Center(
-                      child: FaIcon(
-                        item.icon,
-                        size: 24,
-                        color: isDark ? AppColors.gold : AppColors.primary,
-                      ),
+                      child: FaIcon(icon, size: 15, color: AppColors.gold),
                     ),
                   ),
                 ),
               ),
-            )).toList(),
+            ),
           ),
-        ],
-      ),
+      ],
     );
   }
-}
-
-class SocialMediaItem {
-  final String name;
-  final IconData icon;
-  final String url;
-  final Color color;
-
-  const SocialMediaItem({
-    required this.name,
-    required this.icon,
-    required this.url,
-    required this.color,
-  });
 }

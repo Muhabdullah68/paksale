@@ -63,7 +63,7 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.lightBackground,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: Colors.white,
         primaryContainer: AppColors.primaryLight,
@@ -72,7 +72,7 @@ class AppTheme {
         onSecondary: AppColors.lightTextPrimary,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
-        surfaceVariant: AppColors.lightCard,
+        surfaceContainerHighest: AppColors.lightCard,
         onSurfaceVariant: AppColors.lightTextSecondary,
         error: Colors.red,
         onError: Colors.white,
@@ -93,7 +93,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.lightTextMuted,
@@ -148,7 +148,7 @@ class AppTheme {
       brightness: Brightness.dark,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.darkBackground,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         onPrimary: Colors.white,
         primaryContainer: AppColors.primaryLight,
@@ -157,7 +157,7 @@ class AppTheme {
         onSecondary: AppColors.darkTextPrimary,
         surface: AppColors.darkSurface,
         onSurface: AppColors.darkTextPrimary,
-        surfaceVariant: AppColors.darkCard,
+        surfaceContainerHighest: AppColors.darkCard,
         onSurfaceVariant: AppColors.darkTextSecondary,
         error: Colors.red,
         onError: Colors.white,

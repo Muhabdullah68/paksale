@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/product_provider.dart';
 import '../providers/cms_provider.dart';
+import 'web_shell.dart';
 import 'web_product_card.dart';
 
 /// Responsive column count for product grids on wide screens.
@@ -105,9 +106,9 @@ class _WebHomeBodyState extends State<WebHomeBody> {
           ),
         ));
         if (showRight) {
-          children.add(SizedBox(
+          children.add(const SizedBox(
             width: _rightSidebarWidth,
-            child: const _RightSidebar(),
+            child: _RightSidebar(),
           ));
         }
 
@@ -128,7 +129,7 @@ class _WebHomeBodyState extends State<WebHomeBody> {
       children: [
         const _HeroCarousel(),
         const SizedBox(height: 28),
-        _SectionHeader(title: 'Browse by Category'),
+        const _SectionHeader(title: 'Browse by Category'),
         const SizedBox(height: 14),
         const _CategoryGrid(),
         const SizedBox(height: 32),
@@ -675,7 +676,7 @@ class _LeftSidebar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Filters heading ──────────────────────────────────────────
-          _SidebarSectionTitle(title: 'Filters', icon: Icons.tune),
+          const _SidebarSectionTitle(title: 'Filters', icon: Icons.tune),
           const SizedBox(height: 14),
 
           // ── Price range ─────────────────────────────────────────────
@@ -683,7 +684,7 @@ class _LeftSidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CardTitle('Price Range (Rs)'),
+                const _CardTitle('Price Range (Rs)'),
                 const SizedBox(height: 6),
                 RangeSlider(
                   values: priceRange,
@@ -739,7 +740,7 @@ class _LeftSidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CardTitle('Condition'),
+                const _CardTitle('Condition'),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
@@ -799,20 +800,20 @@ class _LeftSidebar extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ── Mini Category Tree ──────────────────────────────────────
-          _CardBox(
+          const _CardBox(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _CardTitle('Categories'),
-                const SizedBox(height: 6),
-                const _MiniCategoryTree(),
+                SizedBox(height: 6),
+                _MiniCategoryTree(),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
           // ── Quick Links ─────────────────────────────────────────────
-          _SidebarSectionTitle(title: 'Quick Links', icon: Icons.link),
+          const _SidebarSectionTitle(title: 'Quick Links', icon: Icons.link),
           const SizedBox(height: 14),
           _CardBox(
             child: Column(
@@ -820,14 +821,14 @@ class _LeftSidebar extends StatelessWidget {
                 _QuickLinkTile(
                   icon: Icons.local_offer_outlined,
                   label: 'Post Free Ad',
-                  onTap: () {},
+                  onTap: () => context.go(webTabPath(WebTab.postAd)),
                   highlight: true,
                 ),
                 const _Divider(),
                 _QuickLinkTile(
                   icon: Icons.list_alt_outlined,
                   label: 'My Ads',
-                  onTap: () {},
+                  onTap: () => context.go(webTabPath(WebTab.account)),
                 ),
                 const _Divider(),
                 _QuickLinkTile(
@@ -839,7 +840,7 @@ class _LeftSidebar extends StatelessWidget {
                 _QuickLinkTile(
                   icon: Icons.verified_user_outlined,
                   label: 'Verify Your Account',
-                  onTap: () {},
+                  onTap: () => context.go(webTabPath(WebTab.account)),
                 ),
               ],
             ),
@@ -1110,7 +1111,7 @@ class _TreeTileState extends State<_TreeTile> {
                           Expanded(
                             child: Text(
                               sub.$1,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textMuted,
                               ),
@@ -1138,11 +1139,11 @@ class _RightSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
+    return const Padding(
+      padding: EdgeInsets.only(top: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           // Super Ads
           _SidebarSectionTitle(title: 'Super Ads', icon: Icons.star_rounded),
           SizedBox(height: 14),
@@ -1154,13 +1155,6 @@ class _RightSidebar extends StatelessWidget {
               title: 'Trending Searches', icon: Icons.local_fire_department),
           SizedBox(height: 14),
           _TrendingSearchesCard(),
-          SizedBox(height: 22),
-
-          // Verified Sellers
-          _SidebarSectionTitle(
-              title: 'Top Rated Sellers', icon: Icons.workspace_premium),
-          SizedBox(height: 14),
-          _VerifiedSellersCard(),
           SizedBox(height: 22),
 
           // PS Updates
@@ -1370,142 +1364,6 @@ class _TrendTag extends StatelessWidget {
                   fontSize: 11,
                   color: theme.textTheme.bodyLarge?.color,
                   fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VerifiedSellersCard extends StatelessWidget {
-  const _VerifiedSellersCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final sellers = [
-      ('Ahmed Autos', 'Lahore', 4.9, 128),
-      ('Real Estate Pros', 'Sargodha', 4.8, 92),
-      ('Tech Hub PK', 'Karachi', 4.7, 214),
-      ('Furniture Gallery', 'Faisalabad', 4.9, 64),
-    ];
-    return _CardBox(
-      child: Column(
-        children: [
-          for (var i = 0; i < sellers.length; i++) ...[
-            _SellerTile(
-              name: sellers[i].$1,
-              city: sellers[i].$2,
-              rating: sellers[i].$3,
-              adsCount: sellers[i].$4,
-            ),
-            if (i != sellers.length - 1) const _Divider(),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SellerTile extends StatelessWidget {
-  final String name;
-  final String city;
-  final double rating;
-  final int adsCount;
-  const _SellerTile({
-    required this.name,
-    required this.city,
-    required this.rating,
-    required this.adsCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = [
-      AppColors.primary,
-      AppColors.gold,
-      AppColors.green,
-      AppColors.orange
-    ];
-    final bg = colors[name.hashCode % colors.length];
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: bg.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    name[0],
-                    style: TextStyle(
-                      color: bg,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: theme.textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.verified,
-                            size: 13, color: AppColors.bluePersonal),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on,
-                            size: 10, color: AppColors.textMuted),
-                        const SizedBox(width: 2),
-                        Text(city,
-                            style: const TextStyle(
-                                fontSize: 10, color: AppColors.textMuted)),
-                        const Spacer(),
-                        Icon(Icons.star,
-                            size: 11, color: AppColors.gold),
-                        const SizedBox(width: 2),
-                        Text('$rating',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: theme.textTheme.bodyLarge?.color,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 6),
-                        Text('$adsCount ads',
-                            style: const TextStyle(
-                                fontSize: 10, color: AppColors.textMuted)),
-                      ],
-                    ),
-                  ],
                 ),
               ),
             ],

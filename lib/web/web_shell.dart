@@ -13,14 +13,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/cms_provider.dart';
 import '../services/language_provider.dart';
-import '../services/theme_provider.dart';
 import '../widgets/common_widgets.dart';
 
 /// Home tab indices — mirrors HomeScreen's bottom nav order.
@@ -106,27 +103,32 @@ class WebPage extends StatelessWidget {
             controller: webPageScrollController,
             physics: const ClampingScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 0),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1240),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(height: headerH),
-                    if (breadcrumbs.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                        child: WebBreadcrumbs(crumbs: breadcrumbs),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      child: content,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1240),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: headerH),
+                        if (breadcrumbs.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                            child: WebBreadcrumbs(crumbs: breadcrumbs),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
+                          child: content,
+                        ),
+                      ],
                     ),
-                    if (showFooter) const WebFooter(),
-                  ],
+                  ),
                 ),
-              ),
+                if (showFooter) const WebFooter(),
+              ],
             ),
           ),
           const Positioned(
@@ -237,29 +239,6 @@ class _WebHeaderState extends State<WebHeader> {
     });
   }
 
-  void _closeMenuNow() {
-    _menuExitTimer?.cancel();
-    if (mounted && _menuOpen) setState(() => _menuOpen = false);
-  }
-
-  void _openNavDrawer() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _WebNavDrawer(
-        onSelect: (int tab) {
-          Navigator.pop(ctx);
-          _goTab(tab);
-        },
-        onBrowse: () {
-          Navigator.pop(ctx);
-          _goToListing();
-        },
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _menuExitTimer?.cancel();
@@ -328,7 +307,6 @@ class _WebHeaderState extends State<WebHeader> {
     final isDark = theme.brightness == Brightness.dark;
     final t = context.watch<LanguageProvider>().t;
     final lang = context.watch<LanguageProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
     final auth = context.watch<AuthProvider>();
     final unread = context.watch<NotificationProvider>().unreadCount;
 
@@ -405,30 +383,21 @@ class _WebHeaderState extends State<WebHeader> {
                           final w = c.maxWidth;
                           return Row(
                             children: [
-                              // Left: City selector
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: () {},
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.location_on_outlined,
-                                          color: AppColors.gold, size: 13),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Sargodha, Pakistan',
-                                        style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                      SizedBox(width: 2),
-                                      Icon(Icons.arrow_drop_down,
-                                          color: Colors.white54, size: 14),
-                                    ],
+                              // Left: City display
+                              const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.location_on_outlined,
+                                      color: AppColors.gold, size: 13),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Sargodha, Pakistan',
+                                    style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500),
                                   ),
-                                ),
+                                ],
                               ),
                               const Spacer(),
                               // Center: Quick links (only on wider screens)
@@ -574,16 +543,7 @@ class _WebHeaderState extends State<WebHeader> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              if (w >= 820) ...[
-                                // Theme toggle
-                                _HeaderIconButton(
-                                  icon: isDark
-                                      ? Icons.light_mode_outlined
-                                      : Icons.dark_mode_outlined,
-                                  tooltip: isDark ? 'Light mode' : 'Dark mode',
-                                  onTap: () =>
-                                      themeProvider.toggleTheme(!isDark),
-                                ),
+                              if (w >= 780)
                                 // Language toggle
                                 _HeaderIconButton(
                                   icon: Icons.language,
@@ -595,7 +555,6 @@ class _WebHeaderState extends State<WebHeader> {
                                     lang.setLanguage(next);
                                   },
                                 ),
-                              ],
                               if (w >= 700)
                                 _HeaderIconButton(
                                   icon: Icons.notifications_none,
@@ -679,22 +638,6 @@ class _WebHeaderState extends State<WebHeader> {
                             .toList();
                         return Row(
                           children: [
-                            if (w < 820)
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    _closeMenuNow();
-                                    _openNavDrawer();
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 10),
-                                    child: Icon(Icons.menu,
-                                        color: Colors.white, size: 20),
-                                  ),
-                                ),
-                              ),
                             const SizedBox(width: 8),
                             // Categories mega menu trigger
                             MouseRegion(
@@ -814,88 +757,6 @@ class _NavLink extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _WebNavDrawer extends StatelessWidget {
-  final ValueChanged<int> onSelect;
-  final VoidCallback onBrowse;
-  const _WebNavDrawer({required this.onSelect, required this.onBrowse});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final t = context.watch<LanguageProvider>().t;
-    final navItems = <(IconData, String, VoidCallback)>[
-      (Icons.home_outlined, t['nav_home'] ?? 'Home',
-          () => onSelect(WebTab.home)),
-      (Icons.grid_view_outlined, t['nav_categories'] ?? 'Categories',
-          () => onSelect(WebTab.categories)),
-      (Icons.storefront_outlined, t['all_categories'] ?? 'All Ads', onBrowse),
-      (Icons.add_circle_outline, t['nav_post_ad'] ?? 'Post an Ad',
-          () => onSelect(WebTab.postAd)),
-      (Icons.favorite_outline, t['nav_saved'] ?? 'Saved',
-          () => onSelect(WebTab.favorites)),
-      (Icons.chat_bubble_outline, t['nav_chat'] ?? 'Chat',
-          () => onSelect(WebTab.chat)),
-      (Icons.person_outline, t['nav_account'] ?? 'My Account',
-          () => onSelect(WebTab.account)),
-    ];
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.only(top: 12, bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.divider : AppColors.dividerLightMode,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Text(t['nav_menu'] ?? 'Menu',
-                style: TextStyle(
-                    color: theme.textTheme.titleLarge?.color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700)),
-          ),
-          const Divider(
-              height: 1,
-              color: AppColors.gold),
-          Expanded(
-            child: ListView.builder(
-              itemCount: navItems.length,
-              itemBuilder: (_, i) {
-                final item = navItems[i];
-                return ListTile(
-                  leading: Icon(item.$1, color: AppColors.gold),
-                  title: Text(item.$2,
-                      style: TextStyle(
-                          color: theme.textTheme.bodyLarge?.color,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500)),
-                  onTap: item.$3,
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1057,7 +918,7 @@ class _CategoryMegaMenu extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: isDark
                                       ? AppColors.darkCard
-                                      : theme.colorScheme.surfaceVariant,
+                                      : theme.colorScheme.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                       color: AppColors.gold
@@ -1120,125 +981,126 @@ class WebFooter extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
+      width: double.infinity,
       color: isDark ? AppColors.primaryDark : const Color(0xFF2A020E),
-      padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1240),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LayoutBuilder(
-                builder: (context, c) {
-                  final wide = c.maxWidth > 760;
-                  final brand = _FooterBlock(
-                    title: '',
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, c) {
+              final wide = c.maxWidth > 820;
+              final brand = _FooterBlock(
+                title: '',
+                children: [
+                  const Row(
                     children: [
-                      const Row(
-                        children: [
-                          AppLogoIcon(size: 40),
-                          SizedBox(width: 10),
-                          AppLogo(fontSize: 22),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Pak Sale is your local marketplace to buy and sell '
-                        'cars, properties, electronics, jobs and more.',
-                        style: TextStyle(
-                            color: isDark
-                                ? AppColors.textMuted
-                                : Colors.white70,
-                            fontSize: 13,
-                            height: 1.5),
-                      ),
-                      const SizedBox(height: 14),
-                      const SocialMediaFooter(),
+                      AppLogoIcon(size: 40),
+                      SizedBox(width: 10),
+                      AppLogo(fontSize: 22),
                     ],
-                  );
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Pak Sale is your local marketplace to buy and sell '
+                    'cars, properties, electronics, jobs and more.',
+                    style: TextStyle(
+                        color: isDark
+                            ? AppColors.textMuted
+                            : Colors.white70,
+                        fontSize: 13,
+                        height: 1.5),
+                  ),
+                  const SizedBox(height: 14),
+                  const SocialMediaFooter(),
+                ],
+              );
 
-                  final marketplace = _FooterBlock(
-                    title: 'Marketplace',
-                    children: [
-                      _FooterLink(
-                          'Home', () => _goTab(context, WebTab.home)),
-                      _FooterLink(
-                          'All Ads', () => context.push('/browse')),
-                      _FooterLink(
-                          'Categories', () => _goTab(context, WebTab.categories)),
-                      _FooterLink(
-                          'Post an Ad', () => _goTab(context, WebTab.postAd)),
-                    ],
-                  );
+              final marketplace = _FooterBlock(
+                title: 'Marketplace',
+                children: [
+                  _FooterLink(
+                      'Home', () => _goTab(context, WebTab.home)),
+                  _FooterLink(
+                      'All Ads', () => context.push('/browse')),
+                  _FooterLink(
+                      'Categories', () => _goTab(context, WebTab.categories)),
+                  _FooterLink(
+                      'Post an Ad', () => _goTab(context, WebTab.postAd)),
+                ],
+              );
 
-                  final myAccount = _FooterBlock(
-                    title: 'My Account',
-                    children: [
-                      _FooterLink(
-                          'My Ads', () => _goTab(context, WebTab.account)),
-                      _FooterLink(
-                          'Saved', () => _goTab(context, WebTab.favorites)),
-                      _FooterLink('Chat', () => _goTab(context, WebTab.chat)),
-                      _FooterLink(
-                          'Notifications', () => context.push('/notifications')),
-                    ],
-                  );
+              final myAccount = _FooterBlock(
+                title: 'My Account',
+                children: [
+                  _FooterLink(
+                      'My Ads', () => _goTab(context, WebTab.account)),
+                  _FooterLink(
+                      'Saved', () => _goTab(context, WebTab.favorites)),
+                  _FooterLink('Chat', () => _goTab(context, WebTab.chat)),
+                  _FooterLink(
+                      'Notifications', () => context.push('/notifications')),
+                ],
+              );
 
-                  final support = _FooterBlock(
-                    title: 'Support',
-                    children: [
-                      _FooterLink(
-                          'Help & Support', () => context.push('/help')),
-                      _FooterLink(
-                          'Safe Meeting', () => context.push('/safe-meeting')),
-                      _FooterLink(
-                          'Female Support', () => context.push('/female-support')),
-                      _FooterLink(
-                          'Admin Panel', () => context.push('/admin')),
-                    ],
-                  );
+              final support = _FooterBlock(
+                title: 'Support',
+                children: [
+                  _FooterLink(
+                      'Help & Support', () => context.push('/help')),
+                  _FooterLink(
+                      'Safe Meeting', () => context.push('/safe-meeting')),
+                  _FooterLink(
+                      'Female Support', () => context.push('/female-support')),
+                  _FooterLink(
+                      'Admin Panel', () => context.push('/admin')),
+                ],
+              );
 
-                  if (wide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 3, child: brand),
-                        const SizedBox(width: 40),
-                        Expanded(flex: 2, child: marketplace),
-                        Expanded(flex: 2, child: myAccount),
-                        Expanded(flex: 2, child: support),
-                      ],
-                    );
-                  }
-                  return Column(
+              if (wide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: brand),
+                    const SizedBox(width: 32),
+                    Expanded(flex: 2, child: marketplace),
+                    const SizedBox(width: 20),
+                    Expanded(flex: 2, child: myAccount),
+                    const SizedBox(width: 20),
+                    Expanded(flex: 2, child: support),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  brand,
+                  const SizedBox(height: 28),
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      brand,
-                      const SizedBox(height: 28),
-                      marketplace,
-                      const SizedBox(height: 24),
-                      myAccount,
-                      const SizedBox(height: 24),
-                      support,
+                      Expanded(child: marketplace),
+                      const SizedBox(width: 20),
+                      Expanded(child: myAccount),
+                      const SizedBox(width: 20),
+                      Expanded(child: support),
                     ],
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-              Divider(
-                  color: Colors.white.withValues(alpha: 0.15), height: 1),
-              const SizedBox(height: 16),
-              const Center(
-                child: Text(
-                  '© 2026 Pak Sale. All rights reserved.',
-                  style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12),
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
-        ),
+          const SizedBox(height: 32),
+          Divider(
+              color: Colors.white.withValues(alpha: 0.15), height: 1),
+          const SizedBox(height: 16),
+          const Text(
+            '© 2026 Pak Sale. All rights reserved.',
+            style: TextStyle(
+                color: Colors.white54,
+                fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -1289,56 +1151,4 @@ class _FooterLink extends StatelessWidget {
   }
 }
 
-class SocialMediaFooter extends StatelessWidget {
-  const SocialMediaFooter({super.key});
 
-  Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      (FontAwesomeIcons.tiktok, 'TikTok', 'https://www.tiktok.com/'),
-      (FontAwesomeIcons.instagram, 'Instagram', 'https://www.instagram.com/'),
-      (FontAwesomeIcons.snapchat, 'Snapchat', 'https://www.snapchat.com/'),
-      (FontAwesomeIcons.youtube, 'YouTube', 'https://www.youtube.com/'),
-      (FontAwesomeIcons.xTwitter, 'X', 'https://twitter.com/'),
-    ];
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (icon, name, url) in items)
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Tooltip(
-                message: name,
-                child: GestureDetector(
-                  onTap: () => _launch(url),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.5),
-                          width: 1.2),
-                    ),
-                    child: Center(
-                      child: FaIcon(icon, size: 15, color: AppColors.gold),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}

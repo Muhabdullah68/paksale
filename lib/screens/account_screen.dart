@@ -348,7 +348,6 @@ class _AccountScreenState extends State<AccountScreen>
             ),
           ], t),
 
-          const SocialMediaSection(),
           const SizedBox(height: 40),
         ],
     );
@@ -422,7 +421,6 @@ class _AccountScreenState extends State<AccountScreen>
             index: _tabController.index,
             children: tabs,
           ),
-          const SocialMediaSection(),
           const SizedBox(height: 40),
         ],
       );

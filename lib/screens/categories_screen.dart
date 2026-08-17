@@ -121,7 +121,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ],
             ),
           ),
-          const SocialMediaSection(),
         ],
     );
 
