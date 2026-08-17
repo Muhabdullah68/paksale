@@ -471,13 +471,13 @@ class _HomeBodyState extends State<_HomeBody> {
               ...SampleData.products.take(5).map((p) => ProductCard(
                 product: p,
                 onTap: () => widget.onProductTap(p),
-                onCompare: () {},
+                onShare: () {},
               ))
             else
               ...products.take(5).map((p) => ProductCard(
                 product: p,
                 onTap: () => widget.onProductTap(p),
-                onCompare: () {},
+                onShare: () {},
               )),
             const SocialMediaSection(),
             const SizedBox(height: 80),

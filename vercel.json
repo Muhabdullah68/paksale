@@ -1,5 +1,5 @@
 {
-  "installCommand": "chmod +x install-flutter.sh build-flutter-web.sh && bash install-flutter.sh",
+  "installCommand": "git config --global --add safe.directory '*' ; git config --global --add safe.directory /vercel/flutter ; chmod +x install-flutter.sh build-flutter-web.sh ; bash install-flutter.sh",
   "buildCommand": "bash build-flutter-web.sh",
   "outputDirectory": "build/web",
   "framework": null,

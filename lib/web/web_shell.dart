@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
@@ -96,39 +97,43 @@ class WebPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final headerH = _WebHeaderState.headerTotalHeight;
     return Material(
       color: theme.scaffoldBackgroundColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          const WebHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: webPageScrollController,
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1240),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (breadcrumbs.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                          child: WebBreadcrumbs(crumbs: breadcrumbs),
-                        ),
+          SingleChildScrollView(
+            controller: webPageScrollController,
+            physics: const ClampingScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1240),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: headerH),
+                    if (breadcrumbs.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                        child: content,
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        child: WebBreadcrumbs(crumbs: breadcrumbs),
                       ),
-                      if (showFooter) const WebFooter(),
-                    ],
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      child: content,
+                    ),
+                    if (showFooter) const WebFooter(),
+                  ],
                 ),
               ),
             ),
+          ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: WebHeader(),
           ),
         ],
       ),
@@ -220,9 +225,10 @@ class _WebHeaderState extends State<WebHeader> {
   bool _menuOpen = false;
   Timer? _menuExitTimer;
 
-  static const double _row0Height = 30;
-  static const double _row1Height = 64;
-  static const double _row2Height = 44;
+  static const double row0Height = 30;
+  static const double row1Height = 64;
+  static const double row2Height = 44;
+  static double get headerTotalHeight => row0Height + row1Height + row2Height;
 
   void _scheduleMenuClose() {
     _menuExitTimer?.cancel();
@@ -387,7 +393,7 @@ class _WebHeaderState extends State<WebHeader> {
             children: [
               // ── Row 0: utility bar (city + quick links) ────────────────
               Container(
-                height: _row0Height,
+                height: row0Height,
                 color: isDark ? AppColors.primaryDark : const Color(0xFF4A0A1E),
                 child: Center(
                   child: ConstrainedBox(
@@ -460,7 +466,7 @@ class _WebHeaderState extends State<WebHeader> {
               ),
               // ── Row 1: brand + search + actions ─────────────────────────
               SizedBox(
-                height: _row1Height,
+                height: row1Height,
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1240),
@@ -498,7 +504,7 @@ class _WebHeaderState extends State<WebHeader> {
                                         color: Colors.white, fontSize: 14),
                                     decoration: InputDecoration(
                                       hintText:
-                                          '${t['search_hint'] ?? 'Search in Pak Sale...'}',
+                                          t['search_hint'] ?? 'Search in Pak Sale...',
                                       hintStyle: const TextStyle(
                                           color: Colors.white60, fontSize: 14),
                                       prefixIcon: const Icon(Icons.search,
@@ -651,7 +657,7 @@ class _WebHeaderState extends State<WebHeader> {
               // ── Row 2: nav links + category mega menu trigger ───────────
               Container(
                 color: isDark ? AppColors.primaryDark : const Color(0xFF5A0A22),
-                height: _row2Height,
+                height: row2Height,
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1240),
@@ -751,7 +757,7 @@ class _WebHeaderState extends State<WebHeader> {
         // ── Mega menu dropdown (overlays content) ──────────────────────────
         if (_menuOpen)
           Positioned(
-            top: _row0Height + _row1Height + _row2Height - 2,
+            top: row0Height + row1Height + row2Height - 2,
             left: 0,
             right: 0,
             child: _CategoryMegaMenu(
@@ -1286,35 +1292,48 @@ class _FooterLink extends StatelessWidget {
 class SocialMediaFooter extends StatelessWidget {
   const SocialMediaFooter({super.key});
 
+  Future<void> _launch(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const items = [
-      (FontAwesomeIcons.tiktok, 'TikTok'),
-      (FontAwesomeIcons.instagram, 'Instagram'),
-      (FontAwesomeIcons.snapchat, 'Snapchat'),
-      (FontAwesomeIcons.youtube, 'YouTube'),
-      (FontAwesomeIcons.xTwitter, 'X'),
+      (FontAwesomeIcons.tiktok, 'TikTok', 'https://www.tiktok.com/'),
+      (FontAwesomeIcons.instagram, 'Instagram', 'https://www.instagram.com/'),
+      (FontAwesomeIcons.snapchat, 'Snapchat', 'https://www.snapchat.com/'),
+      (FontAwesomeIcons.youtube, 'YouTube', 'https://www.youtube.com/'),
+      (FontAwesomeIcons.xTwitter, 'X', 'https://twitter.com/'),
     ];
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final (icon, _) in items)
+        for (final (icon, name, url) in items)
           Padding(
             padding: const EdgeInsets.only(right: 10),
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () {},
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.5),
-                        width: 1.2),
+              child: Tooltip(
+                message: name,
+                child: GestureDetector(
+                  onTap: () => _launch(url),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.5),
+                          width: 1.2),
+                    ),
+                    child: Center(
+                      child: FaIcon(icon, size: 15, color: AppColors.gold),
+                    ),
                   ),
-                  child: FaIcon(icon, size: 15, color: AppColors.gold),
                 ),
               ),
             ),

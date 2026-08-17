@@ -5,22 +5,21 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/product_model.dart';
 import '../providers/favorites_provider.dart';
-import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 
 class WebProductCard extends StatefulWidget {
   final ProductModel product;
   final VoidCallback? onTap;
-  final VoidCallback? onCompare;
-  final bool showCompareButton;
+  final VoidCallback? onShare;
+  final bool showShareButton;
 
   const WebProductCard({
     super.key,
     required this.product,
     this.onTap,
-    this.onCompare,
-    this.showCompareButton = true,
+    this.onShare,
+    this.showShareButton = true,
   });
 
   @override
@@ -37,10 +36,8 @@ class _WebProductCardState extends State<WebProductCard> {
     final p = widget.product;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
-    final compareProvider = context.watch<CompareProvider>();
     final t = context.watch<LanguageProvider>().t;
     final isFav = favoritesProvider?.isFavorite(p.id) ?? false;
-    final inCompare = compareProvider.isInCompare(p.id);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -251,23 +248,18 @@ class _WebProductCardState extends State<WebProductCard> {
                                 color: AppColors.textMuted, fontSize: 11),
                           ),
                         ),
-                        if (widget.showCompareButton)
-                          _CompareChip(
-                            active: inCompare,
+                        if (widget.showShareButton)
+                          _ShareChip(
                             onTap: () {
-                              if (widget.onCompare != null) {
-                                widget.onCompare!();
+                              if (widget.onShare != null) {
+                                widget.onShare!();
                               } else {
-                                final ok = compareProvider.toggleCompare(p);
-                                if (!ok && !inCompare) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(t['compare_limit'] ??
-                                          'Compare limit reached (max 3)'),
-                                      backgroundColor: AppColors.orange,
-                                    ),
-                                  );
-                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Link shared!'),
+                                    backgroundColor: AppColors.gold,
+                                  ),
+                                );
                               }
                             },
                           ),
@@ -354,10 +346,9 @@ class _WebProductCardState extends State<WebProductCard> {
   }
 }
 
-class _CompareChip extends StatelessWidget {
-  final bool active;
+class _ShareChip extends StatelessWidget {
   final VoidCallback onTap;
-  const _CompareChip({required this.active, required this.onTap});
+  const _ShareChip({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -369,18 +360,23 @@ class _CompareChip extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: active
-                ? AppColors.gold.withValues(alpha: 0.2)
-                : Theme.of(context).colorScheme.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
           ),
-          child: Text(
-            active ? '✓ Added' : '+ Compare',
-            style: const TextStyle(
-                color: AppColors.gold,
-                fontSize: 10,
-                fontWeight: FontWeight.w600),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.share_outlined, size: 11, color: AppColors.gold),
+              SizedBox(width: 3),
+              Text(
+                'Share',
+                style: TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
         ),
       ),

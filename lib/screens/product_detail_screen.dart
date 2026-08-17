@@ -408,8 +408,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   /// The main scrollable content column (gallery + details + seller + similar).
   Widget _buildBodyContent(
       BuildContext context, ThemeData theme, bool isDark, ProductModel p) {
-    final compareProvider = context.watch<CompareProvider>();
-    final inCompare = compareProvider.isInCompare(p.id);
     final currencyProvider = context.watch<CurrencyProvider>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,59 +521,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(height: 12),
 
                       GestureDetector(
-                        onTap: () {
-                          final ok = compareProvider.toggleCompare(p);
-                          if (!ok && !inCompare) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                    Text('Max 3 items for comparison'),
-                                    backgroundColor: AppColors.orange));
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(inCompare
-                                    ? 'Removed from compare'
-                                    : 'Added to compare list'),
-                                backgroundColor: AppColors.gold,
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          }
-                        },
+                        onTap: () => ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(
+                            content: Text('Link shared!'),
+                            backgroundColor: AppColors.gold)),
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: inCompare
-                                ? AppColors.gold.withValues(alpha: 0.15)
-                                : theme.colorScheme.surface,
+                            color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color: inCompare
-                                    ? AppColors.gold
-                                    : (isDark ? AppColors.divider : AppColors.dividerLightMode)),
+                                color: isDark ? AppColors.divider : AppColors.dividerLightMode),
                           ),
                           child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
+                              children: const [
                                 Icon(
-                                    inCompare
-                                        ? Icons.check_circle
-                                        : Icons.compare_arrows,
+                                    Icons.share_outlined,
                                     size: 16,
-                                    color: inCompare
-                                        ? AppColors.gold
-                                        : AppColors.textMuted),
-                                const SizedBox(width: 6),
+                                    color: AppColors.gold),
+                                SizedBox(width: 6),
                                 Text(
-                                    inCompare
-                                        ? 'In Comparison'
-                                        : 'Add to Compare',
+                                    'Share',
                                     style: TextStyle(
-                                        color: inCompare
-                                            ? AppColors.gold
-                                            : theme.textTheme.bodyMedium?.color,
+                                        color: AppColors.gold,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500)),
                               ]),
@@ -647,41 +617,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Column(children: [
-                    GestureDetector(
-                      onTap: () => _showReportDialog(context),
-                      child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.warning_amber,
-                                color: AppColors.orange, size: 16),
-                            SizedBox(width: 6),
-                            Text('Report This Item',
-                                style: TextStyle(
-                                    color: AppColors.orange, fontSize: 13)),
-                          ]),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () => ScaffoldMessenger.of(context)
-                          .showSnackBar(const SnackBar(
-                          content: Text('Link shared!'),
-                          backgroundColor: AppColors.gold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.share, color: Colors.white),
-                      label: const Text('Share',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ]),
+                  child: GestureDetector(
+                    onTap: () => _showReportDialog(context),
+                    child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.warning_amber,
+                              color: AppColors.orange, size: 16),
+                          SizedBox(width: 6),
+                          Text('Report This Item',
+                              style: TextStyle(
+                                  color: AppColors.orange, fontSize: 13)),
+                        ]),
+                  ),
                 ),
+
+                ContactActionButtons(
+                  onCall: _launchCaller,
+                  onWhatsApp: _launchWhatsApp,
+                  onChat: () => _startChat(context, p),
+                  privacy: _sellerPrivacy,
+                ),
+                const SizedBox(height: 8),
 
                 SectionHeader(
                     title: 'Similar Products',
@@ -726,7 +683,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         ProductDetailScreen(product: prod)));
                           }
                         },
-                        onCompare: () {},
+                        onShare: () {},
                       )).toList(),
                     );
                   },
@@ -808,12 +765,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
                   ),
-                ContactActionButtons(
-                  onCall: _launchCaller,
-                  onWhatsApp: _launchWhatsApp,
-                  onChat: () => _startChat(context, p),
-                  privacy: _sellerPrivacy,
-                ),
       ],
     );
   }

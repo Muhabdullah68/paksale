@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/favorites_provider.dart';
-import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 
@@ -199,16 +198,16 @@ class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback? onTap;
   final bool isGridView;
-  final VoidCallback? onCompare;
-  final bool showCompareButton;
+  final VoidCallback? onShare;
+  final bool showShareButton;
 
   const ProductCard({
     super.key,
     required this.product,
     this.onTap,
     this.isGridView = false,
-    this.onCompare,
-    this.showCompareButton = true,
+    this.onShare,
+    this.showShareButton = true,
   });
 
   @override
@@ -222,9 +221,7 @@ class ProductCard extends StatelessWidget {
     final t = context.watch<LanguageProvider>().t;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
-    final compareProvider = context.watch<CompareProvider>();
     final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
-    final inCompare = compareProvider.isInCompare(product.id);
     
     final p = product;
     return GestureDetector(
@@ -334,27 +331,37 @@ class ProductCard extends StatelessWidget {
                                 style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? AppColors.textMuted, fontSize: 10)),
                           ),
                           const Spacer(),
-                          if (showCompareButton)
-                            GestureDetector(
-                              onTap: () {
-                                if (compareProvider.toggleCompare(p)) {
-                                  // Added
-                                } else if (!inCompare) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(t['compare_limit'] ?? 'Compare limit reached (max 3)'),
-                                    backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
-                                  ));
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: inCompare ? AppColors.gold.withValues(alpha: 0.2) : theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                          if (showShareButton)
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (onShare != null) {
+                                    onShare!();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                      content: Text('Link shared!'),
+                                      backgroundColor: AppColors.gold,
+                                    ));
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.share_outlined, size: 10, color: AppColors.gold),
+                                      const SizedBox(width: 3),
+                                      Text(t['share'] ?? 'Share',
+                                          style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
                                 ),
-                                child: Text(inCompare ? (t['compare'] ?? '✓ Compare') : (t['compare'] ?? '+ Compare'),
-                                    style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
                               ),
                             ),
                         ],
@@ -393,9 +400,7 @@ class ProductCard extends StatelessWidget {
     final t = context.watch<LanguageProvider>().t;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
-    final compareProvider = context.watch<CompareProvider>();
     final isFav = favoritesProvider?.isFavorite(product.id) ?? false;
-    final inCompare = compareProvider.isInCompare(product.id);
     
     final p = product;
     return GestureDetector(
@@ -513,30 +518,41 @@ class ProductCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (showCompareButton) ...[
+                    if (showShareButton) ...[
                       const SizedBox(height: 6),
-                      GestureDetector(
-                        onTap: () {
-                          if (compareProvider.toggleCompare(p)) {
-                            // Added
-                          } else if (!compareProvider.isInCompare(p.id)) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(t['compare_limit'] ?? 'Compare limit reached (max 3)'),
-                              backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
-                            ));
-                          }
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: inCompare ? AppColors.gold.withValues(alpha: 0.15) : theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (onShare != null) {
+                              onShare!();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                content: Text('Link shared!'),
+                                backgroundColor: AppColors.gold,
+                              ));
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.share_outlined, size: 10, color: AppColors.gold),
+                                const SizedBox(width: 3),
+                                Text(t['share'] ?? 'Share',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
-                          child: Text(inCompare ? (t['compare_added'] ?? '✓ Added') : (t['compare'] ?? '+ Compare'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],
@@ -1018,23 +1034,32 @@ class _SocialMediaSectionState extends State<SocialMediaSection> {
             spacing: 12,
             runSpacing: 12,
             alignment: WrapAlignment.center,
-            children: _shuffledItems.map((item) => GestureDetector(
-              onTap: () => _launchSocialMedia(item.url),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isDark 
-                      ? AppColors.gold.withValues(alpha: 0.5) 
-                      : AppColors.primary.withValues(alpha: 0.4),
-                    width: 1.5,
+            children: _shuffledItems.map((item) => MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Tooltip(
+                message: item.name,
+                child: GestureDetector(
+                  onTap: () => _launchSocialMedia(item.url),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark 
+                          ? AppColors.gold.withValues(alpha: 0.5) 
+                          : AppColors.primary.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: FaIcon(
+                        item.icon,
+                        size: 24,
+                        color: isDark ? AppColors.gold : AppColors.primary,
+                      ),
+                    ),
                   ),
-                ),
-                child: FaIcon(
-                  item.icon,
-                  size: 24,
-                  color: isDark ? AppColors.gold : AppColors.primary,
                 ),
               ),
             )).toList(),

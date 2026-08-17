@@ -254,7 +254,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           ...displayListings.map((p) => ProductCard(
             product: p,
-            showCompareButton: false,
+            showShareButton: false,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(

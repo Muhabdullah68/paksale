@@ -431,12 +431,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
         : Column(
             children: [
               _buildStepIndicator(steps),
-              if (widget.webEmbedded)
-                _buildCurrentStep()
-              else
-                Expanded(
-                  child: _buildCurrentStep(),
-                ),
+              Expanded(
+                child: _buildCurrentStep(),
+              ),
               _buildNavButtons(t),
             ],
           );
@@ -602,65 +599,96 @@ class _PostAdScreenState extends State<PostAdScreen> {
             {'n': 'Jobs Center', 'i': '💼'},
             {'n': 'Super Ads', 'i': '⭐'},
           ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: Text(t['select_category'] ?? 'Select Category',
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t['select_category'] ?? 'Select Category',
               style: TextStyle(
                   color: theme.textTheme.bodyLarge?.color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600)),
-        ),
-        GridView.count(
-          crossAxisCount: 3,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.0,
-          shrinkWrap: widget.webEmbedded,
-          physics: widget.webEmbedded
-              ? const NeverScrollableScrollPhysics()
-              : null,
-          children: cats.map((c) {
-              final sel = _selectedCategory == c['n'];
-              final label = t[c['n']!.toLowerCase().replaceAll(' ', '_')] ?? c['n']!;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedCategory = c['n']),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: BoxDecoration(
-                    color: sel ? AppColors.primary : theme.cardTheme.color,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: sel
-                          ? AppColors.gold
-                          : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5),
-                      width: sel ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(c['i']!, style: const TextStyle(fontSize: 28)),
-                      const SizedBox(height: 6),
-                      Text(label,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: sel ? Colors.white : theme.textTheme.bodyLarge?.color,
-                              fontSize: 12,
-                              fontWeight:
-                              sel ? FontWeight.bold : FontWeight.normal)),
-                    ],
-                  ),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text('Choose the category that best fits your item',
+              style: TextStyle(
+                  color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
+                  fontSize: 13)),
+          const SizedBox(height: 22),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final cols = widget.webEmbedded
+                  ? (w >= 700 ? 4 : (w >= 500 ? 3 : (w >= 340 ? 2 : 2)))
+                  : (w >= 900 ? 5 : (w >= 700 ? 4 : (w >= 480 ? 3 : 2)));
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 1.0,
                 ),
+                itemCount: cats.length,
+                itemBuilder: (_, i) {
+                  final c = cats[i];
+                  final sel = _selectedCategory == c['n'];
+                  final label = t[c['n']!.toLowerCase().replaceAll(' ', '_')] ?? c['n']!;
+                  return MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedCategory = c['n']),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        decoration: BoxDecoration(
+                          color: sel ? AppColors.primary : theme.cardTheme.color,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: sel
+                                ? AppColors.gold
+                                : (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5),
+                            width: sel ? 2 : 1,
+                          ),
+                          boxShadow: sel
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(alpha: 0.2),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(c['i']!, style: const TextStyle(fontSize: 36)),
+                            const SizedBox(height: 10),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(label,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: sel ? Colors.white : theme.textTheme.bodyLarge?.color,
+                                      fontSize: 13,
+                                      fontWeight:
+                                      sel ? FontWeight.bold : FontWeight.w500)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               );
-            }).toList(),
-        ),
-      ],
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -873,102 +901,225 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Upload Photos',
-              style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Text('Add up to 10 photos of your product',
-              style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13)),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 300,
-            child: GridView.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              children: [
-                if (_selectedImages.length < 10)
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.gold, width: 1.5),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Upload Photos',
+                        style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Text('Add up to 10 photos of your product',
+                        style: TextStyle(
+                            color: isDark
+                                ? AppColors.textMuted
+                                : AppColors.textSecondaryLightMode,
+                            fontSize: 13)),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.photo_library,
+                        color: AppColors.gold, size: 16),
+                    const SizedBox(width: 6),
+                    Text('${_selectedImages.length} / 10',
+                        style: const TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final cols = widget.webEmbedded
+                  ? (w >= 700 ? 5 : (w >= 500 ? 4 : (w >= 340 ? 3 : 2)))
+                  : (w >= 900 ? 5 : (w >= 700 ? 4 : (w >= 480 ? 3 : 2)));
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: (_selectedImages.length < 10 ? 1 : 0) +
+                    _selectedImages.length,
+                itemBuilder: (_, i) {
+                  if (_selectedImages.length < 10 && i == 0) {
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.5),
+                                width: 2),
+                          ),
+                          child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.add_photo_alternate_outlined,
+                                    color: AppColors.gold, size: 42),
+                                const SizedBox(height: 10),
+                                const Text('Add Photo',
+                                    style: TextStyle(
+                                        color: AppColors.gold,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text('Click to upload',
+                                    style: TextStyle(
+                                        color: isDark
+                                            ? AppColors.textMuted
+                                            : AppColors
+                                                .textSecondaryLightMode,
+                                        fontSize: 11)),
+                              ]),
+                        ),
                       ),
-                      child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined,
-                                color: AppColors.gold, size: 32),
-                            SizedBox(height: 6),
-                            Text('Add Photo',
-                                style: TextStyle(
-                                    color: AppColors.gold, fontSize: 11)),
-                          ]),
-                    ),
-                  ),
-                ..._selectedImages.asMap().entries.map(
-                      (entry) => Stack(
+                    );
+                  }
+                  final imgIndex = _selectedImages.length < 10 ? i - 1 : i;
+                  final entry = _selectedImages[imgIndex];
+                  return Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.surface : AppColors.backgroundLightMode,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: (isDark ? AppColors.divider : AppColors.dividerLightMode).withValues(alpha: 0.5)),
+                          color: isDark
+                              ? AppColors.surface
+                              : AppColors.backgroundLightMode,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                           image: DecorationImage(
-                            image: MemoryImage(_imageCache[entry.value.path] ?? Uint8List(0)),
+                            image: MemoryImage(
+                                _imageCache[entry.path] ?? Uint8List(0)),
                             fit: BoxFit.cover,
                           ),
                         ),
                       ),
                       Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedImages.removeAt(entry.key)),
-                          child: Container(
-                            width: 22,
-                            height: 22,
-                            decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle),
-                            child: const Icon(Icons.close,
-                                size: 13, color: Colors.white),
+                        top: 6,
+                        right: 6,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => setState(
+                                () => _selectedImages.removeAt(imgIndex)),
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 4,
+                                    ),
+                                  ]),
+                              child: const Icon(Icons.close,
+                                  size: 16, color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('Photo ${imgIndex + 1}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-              ],
-            ),
+                  );
+                },
+              );
+            },
           ),
+          const SizedBox(height: 24),
           Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
                 color: theme.cardTheme.color,
-                borderRadius: BorderRadius.circular(10)),
-            child: Row(children: [
-              const Icon(Icons.lightbulb_outline,
-                  color: AppColors.gold, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Tip: Well-lit photos from multiple angles help your ad get up to 3× more views.',
-                  style: TextStyle(
-                      color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 12),
-                ),
-              ),
-            ]),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.15))),
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline,
+                      color: AppColors.gold, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Photo Tips',
+                            style: TextStyle(
+                                color: theme.textTheme.bodyLarge?.color,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        Text(
+                          '• Well-lit photos from multiple angles help your ad get up to 3× more views.\n'
+                          '• Use a clean background to make your product stand out.\n'
+                          '• Include close-up shots of any details or flaws.',
+                          style: TextStyle(
+                              color: isDark
+                                  ? AppColors.textSecondary
+                                  : AppColors.textSecondaryLightMode,
+                              fontSize: 12.5,
+                              height: 1.6),
+                        ),
+                      ],
+                    ),
+                  ),
+                ]),
           ),
         ],
       ),
