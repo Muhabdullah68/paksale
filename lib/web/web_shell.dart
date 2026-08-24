@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/cms_provider.dart';
+import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../widgets/common_widgets.dart';
 
@@ -309,6 +310,7 @@ class _WebHeaderState extends State<WebHeader> {
     final lang = context.watch<LanguageProvider>();
     final auth = context.watch<AuthProvider>();
     final unread = context.watch<NotificationProvider>().unreadCount;
+    final cmpCount = context.watch<CompareProvider>().compareList.length;
 
     final isAdmin = auth.userModel?.isAdmin ?? false;
     final isLoggedIn = auth.isAuthenticated;
@@ -381,50 +383,63 @@ class _WebHeaderState extends State<WebHeader> {
                       child: LayoutBuilder(
                         builder: (context, c) {
                           final w = c.maxWidth;
+                          // Utility links scroll horizontally on phones
+                          // instead of disappearing.
                           return Row(
                             children: [
-                              // Left: City display
-                              const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.location_on_outlined,
-                                      color: AppColors.gold, size: 13),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Sargodha, Pakistan',
-                                    style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const ClampingScrollPhysics(),
+                                  child: Row(
+                                    children: [
+                                      // Left: City display
+                                      const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.location_on_outlined,
+                                              color: AppColors.gold, size: 13),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Sargodha, Pakistan',
+                                            style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 11,
+                                                fontWeight:
+                                                    FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 24),
+                                      _UtilityLink(
+                                          label: t['help_support'] ??
+                                              'Help & Support',
+                                          onTap: () => context.push('/help')),
+                                      const SizedBox(width: 18),
+                                      _UtilityLink(
+                                          label: t['safe_meeting'] ??
+                                              'Safe Meeting',
+                                          onTap: () =>
+                                              context.push('/safe-meeting')),
+                                      const SizedBox(width: 18),
+                                      _UtilityLink(
+                                          label: t['female_support'] ??
+                                              'Female Support',
+                                          onTap: () => context
+                                              .push('/female-support')),
+                                      if (w >= 560) ...[
+                                        const SizedBox(width: 18),
+                                        _UtilityLink(
+                                            label:
+                                                '⭐ Become a Verified Seller',
+                                            onTap: () =>
+                                                _goTab(WebTab.postAd),
+                                            color: AppColors.gold),
+                                      ],
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
-                              const Spacer(),
-                              // Center: Quick links (only on wider screens)
-                              if (w >= 720) ...[
-                                _UtilityLink(
-                                    label: t['help_support'] ?? 'Help & Support',
-                                    onTap: () => context.push('/help')),
-                                const SizedBox(width: 18),
-                                _UtilityLink(
-                                    label:
-                                        t['safe_meeting'] ?? 'Safe Meeting',
-                                    onTap: () =>
-                                        context.push('/safe-meeting')),
-                                const SizedBox(width: 18),
-                                _UtilityLink(
-                                    label: t['female_support'] ??
-                                        'Female Support',
-                                    onTap: () =>
-                                        context.push('/female-support')),
-                                const Spacer(),
-                              ],
-                              // Right: Become seller / trust badge
-                              if (w >= 620)
-                                _UtilityLink(
-                                    label: '⭐ Become a Verified Seller',
-                                    onTap: () => _goTab(WebTab.postAd),
-                                    color: AppColors.gold),
                             ],
                           );
                         },
@@ -542,8 +557,16 @@ class _WebHeaderState extends State<WebHeader> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              // Compare tray — live count, opens /compare
+                              _HeaderIconButton(
+                                icon: Icons.compare_arrows,
+                                badge: cmpCount,
+                                tooltip: 'Compare',
+                                onTap: () => context.go('/compare'),
+                              ),
                               const SizedBox(width: 10),
-                              if (w >= 780)
+                              if (w >= 520)
                                 // Language toggle
                                 _HeaderIconButton(
                                   icon: Icons.language,
@@ -555,7 +578,7 @@ class _WebHeaderState extends State<WebHeader> {
                                     lang.setLanguage(next);
                                   },
                                 ),
-                              if (w >= 700)
+                              if (w >= 460)
                                 _HeaderIconButton(
                                   icon: Icons.notifications_none,
                                   badge: unread,
@@ -582,7 +605,7 @@ class _WebHeaderState extends State<WebHeader> {
                                       children: [
                                         const Icon(Icons.person_outline,
                                             color: Colors.white, size: 18),
-                                        if (w >= 640) ...[
+                                        if (w >= 560) ...[
                                           const SizedBox(width: 6),
                                           ConstrainedBox(
                                             constraints: const BoxConstraints(
@@ -623,19 +646,12 @@ class _WebHeaderState extends State<WebHeader> {
                     child: LayoutBuilder(
                       builder: (context, c) {
                         final w = c.maxWidth;
-                        // Hide less-important links on narrow windows so the
-                        // row never overflows horizontally.
-                        final visibleKeys = <String>{
-                          'home',
-                          if (w >= 640) 'ads',
-                          if (w >= 800) 'saved',
-                          if (w >= 800) 'chat',
-                          if (w >= 800) 'admin',
-                        };
+                        // Every link stays reachable at every width: the row
+                        // scrolls horizontally instead of hiding items.
                         final links = navItems
                             .where((n) => n.key != 'categories')
-                            .where((n) => visibleKeys.contains(n.key))
                             .toList();
+                        final compact = w < 560;
                         return Row(
                           children: [
                             const SizedBox(width: 8),
@@ -651,8 +667,9 @@ class _WebHeaderState extends State<WebHeader> {
                                 onTap: () =>
                                     setState(() => _menuOpen = !_menuOpen),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 10),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: compact ? 10 : 14,
+                                      vertical: 10),
                                   decoration: BoxDecoration(
                                     color: _menuOpen
                                         ? AppColors.primary
@@ -664,13 +681,17 @@ class _WebHeaderState extends State<WebHeader> {
                                     children: [
                                       const Icon(Icons.grid_view,
                                           color: AppColors.gold, size: 16),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                          t['nav_categories'] ?? 'Categories',
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600)),
+                                      if (!compact) ...[
+                                        const SizedBox(width: 6),
+                                        Text(
+                                            t['nav_categories'] ??
+                                                'Categories',
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13,
+                                                fontWeight:
+                                                    FontWeight.w600)),
+                                      ],
                                       const SizedBox(width: 4),
                                       const Icon(Icons.arrow_drop_down,
                                           color: Colors.white70, size: 16),
@@ -679,13 +700,24 @@ class _WebHeaderState extends State<WebHeader> {
                                 ),
                               ),
                             ),
-                            // Other nav links
-                            ...links.map((n) => _NavLink(
-                                  item: n,
-                                  onTap: n.onTap,
-                                )),
-                            const Spacer(),
-                            const SizedBox(width: 8),
+                            // Scrollable strip with ALL nav links
+                            Expanded(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const ClampingScrollPhysics(),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ...links.map((n) => _NavLink(
+                                          item: n,
+                                          onTap: n.onTap,
+                                          compact: compact,
+                                        )),
+                                    const SizedBox(width: 8),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         );
                       },
@@ -734,11 +766,14 @@ class _NavItem {
 class _NavLink extends StatelessWidget {
   final _NavItem item;
   final VoidCallback onTap;
-  const _NavLink({required this.item, required this.onTap});
+
+  /// Icon-only mode for narrow screens; the label becomes a tooltip.
+  final bool compact;
+  const _NavLink({required this.item, required this.onTap, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
+    final icon = MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
@@ -748,17 +783,21 @@ class _NavLink extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(item.icon, color: Colors.white, size: 16),
-              const SizedBox(width: 5),
-              Text(item.label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500)),
+              if (!compact) ...[
+                const SizedBox(width: 5),
+                Text(item.label,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+              ],
             ],
           ),
         ),
       ),
     );
+    if (!compact) return icon;
+    return Tooltip(message: item.label, child: icon);
   }
 }
 
@@ -1068,6 +1107,21 @@ class WebFooter extends StatelessWidget {
                     Expanded(flex: 2, child: myAccount),
                     const SizedBox(width: 20),
                     Expanded(flex: 2, child: support),
+                  ],
+                );
+              }
+              // Phones: stack everything vertically so nothing is squeezed.
+              if (c.maxWidth <= 480) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    brand,
+                    const SizedBox(height: 28),
+                    marketplace,
+                    const SizedBox(height: 28),
+                    myAccount,
+                    const SizedBox(height: 28),
+                    support,
                   ],
                 );
               }

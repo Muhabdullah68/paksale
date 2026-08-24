@@ -1,34 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import '../models/product_model.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
-
-String _webProductShareUrl(String productId) {
-  if (kIsWeb) {
-    final base = Uri.base;
-    return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$productId';
-  }
-  return 'https://paksale.app/listing/$productId';
-}
-
-Future<void> _copyProductLink(BuildContext context, String productId) async {
-  final url = _webProductShareUrl(productId);
-  await Clipboard.setData(ClipboardData(text: url));
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Link copied to clipboard!'),
-      backgroundColor: AppColors.gold,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    ));
-  }
-}
+import '../services/share_service.dart';
+import '../widgets/common_widgets.dart' show toggleCompareWithFeedback;
 
 class WebProductCard extends StatefulWidget {
   final ProductModel product;
@@ -49,12 +29,9 @@ class WebProductCard extends StatefulWidget {
 }
 
 class _WebProductCardState extends State<WebProductCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final p = widget.product;
     final currencyProvider = context.watch<CurrencyProvider>();
     final favoritesProvider = context.watch<FavoritesProvider?>();
@@ -63,49 +40,14 @@ class _WebProductCardState extends State<WebProductCard> {
     final isFav = favoritesProvider?.isFavorite(p.id) ?? false;
     final isInCompare = compareProvider?.isInCompare(p.id) ?? false;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: AnimatedScale(
-        scale: _hovered ? 1.02 : 1.0,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            color: theme.cardTheme.color,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _hovered
-                  ? AppColors.gold.withValues(alpha: 0.6)
-                  : (isDark
-                          ? AppColors.divider
-                          : AppColors.dividerLightMode)
-                      .withValues(alpha: 0.25),
-            ),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.25),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
+    // Hover/elevation lives in [_HoverShell] so mouse enter/exit only
+    // rebuilds the shell — not the image, badges or text below.
+    return _HoverShell(
+      onTap: widget.onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -277,24 +219,8 @@ class _WebProductCardState extends State<WebProductCard> {
                             icon: Icons.compare_arrows,
                             label: t['compare'] ?? 'Compare',
                             isActive: isInCompare,
-                            onTap: () {
-                              if (compareProvider != null) {
-                                final ok = compareProvider.toggleCompare(p);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(ok
-                                          ? (t['compare_added'] ?? '✓ Added')
-                                          : (t['compare_limit'] ??
-                                              'Limit (max 3)')),
-                                      backgroundColor: ok
-                                          ? AppColors.gold
-                                          : AppColors.orange,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
+                            onTap: () => toggleCompareWithFeedback(
+                                context, p, compareProvider),
                           ),
                           const SizedBox(width: 6),
                           _WebActionChip(
@@ -304,7 +230,8 @@ class _WebProductCardState extends State<WebProductCard> {
                               if (widget.onShare != null) {
                                 widget.onShare!();
                               } else {
-                                _copyProductLink(context, p.id);
+                                ShareService.shareProduct(
+                                    context, widget.product);
                               }
                             },
                           ),
@@ -316,8 +243,6 @@ class _WebProductCardState extends State<WebProductCard> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -325,26 +250,24 @@ class _WebProductCardState extends State<WebProductCard> {
     if (widget.product.imageUrls.isEmpty) {
       return _placeholder();
     }
-    return Image.network(
-      widget.product.imageUrls.first,
+    return CachedNetworkImage(
+      imageUrl: widget.product.imageUrls.first,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _placeholder(),
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.surface
-              : AppColors.cardLightMode,
-          child: const Center(
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.gold),
-            ),
+      memCacheWidth: 500,
+      errorWidget: (context, url, error) => _placeholder(),
+      placeholder: (context, url) => Container(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surface
+            : AppColors.cardLightMode,
+        child: const Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.gold),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -437,6 +360,75 @@ class _WebActionChip extends StatelessWidget {
                     fontWeight: FontWeight.w600),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Owns the hover state + card chrome (scale, border, shadow) so mouse
+/// enter/exit never rebuilds the card contents passed as [child].
+class _HoverShell extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _HoverShell({required this.child, this.onTap});
+
+  @override
+  State<_HoverShell> createState() => _HoverShellState();
+}
+
+class _HoverShellState extends State<_HoverShell> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _hovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              color: theme.cardTheme.color,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _hovered
+                    ? AppColors.gold.withValues(alpha: 0.6)
+                    : (isDark
+                            ? AppColors.divider
+                            : AppColors.dividerLightMode)
+                        .withValues(alpha: 0.25),
+              ),
+              boxShadow: _hovered
+                  ? [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: widget.child,
           ),
         ),
       ),

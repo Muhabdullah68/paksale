@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,26 +9,33 @@ import '../providers/favorites_provider.dart';
 import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
+import '../services/share_service.dart';
 
-String _productShareUrl(String productId) {
-  if (kIsWeb) {
-    final base = Uri.base;
-    return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$productId';
-  }
-  return 'https://paksale.app/listing/$productId';
-}
-
-Future<void> _copyProductLink(BuildContext context, String productId) async {
-  final url = _productShareUrl(productId);
-  await Clipboard.setData(ClipboardData(text: url));
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Link copied to clipboard!'),
-      backgroundColor: AppColors.gold,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    ));
-  }
+/// Toggles [product] in the compare list with user feedback.
+void toggleCompareWithFeedback(
+    BuildContext context, ProductModel product, CompareProvider? provider) {
+  if (provider == null) return;
+  final t = context.read<LanguageProvider>().t;
+  final result = provider.toggleCompare(product);
+  if (!context.mounted) return;
+  final (message, color) = switch (result) {
+    CompareToggleResult.added => (
+        t['compare_added'] ?? '✓ Added to compare',
+        AppColors.gold,
+      ),
+    CompareToggleResult.removed => (
+        t['compare_removed'] ?? 'Removed from compare',
+        AppColors.textMuted,
+      ),
+    CompareToggleResult.limitReached => (
+        t['compare_limit'] ?? 'Compare limit reached (max 3)',
+        AppColors.orange,
+      ),
+  };
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(message),
+    backgroundColor: color,
+  ));
 }
 
 class AppLogoIcon extends StatelessWidget {
@@ -237,6 +243,7 @@ class ProductCard extends StatelessWidget {
   final bool isGridView;
   final VoidCallback? onShare;
   final bool showShareButton;
+  final bool showCompareButton;
 
   const ProductCard({
     super.key,
@@ -245,6 +252,7 @@ class ProductCard extends StatelessWidget {
     this.isGridView = false,
     this.onShare,
     this.showShareButton = true,
+    this.showCompareButton = true,
   });
 
   @override
@@ -401,29 +409,17 @@ class ProductCard extends StatelessWidget {
                                       AppColors.textMuted,
                                   fontSize: 10)),
                           const Spacer(),
-                          if (showShareButton) ...[
+                          if (showCompareButton)
                             _ActionChip(
                               icon: Icons.compare_arrows,
                               label: t['compare'] ?? 'Compare',
                               isActive: isInCompare,
-                              onTap: () {
-                                if (compareProvider != null) {
-                                  final ok = compareProvider.toggleCompare(p);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(ok
-                                            ? (t['compare_added'] ?? '✓ Added to compare')
-                                            : (t['compare_limit'] ?? 'Compare limit reached (max 3)')),
-                                        backgroundColor:
-                                            ok ? AppColors.gold : AppColors.orange,
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
+                              onTap: () => toggleCompareWithFeedback(
+                                  context, p, compareProvider),
                             ),
+                          if (showCompareButton && showShareButton)
                             const SizedBox(width: 6),
+                          if (showShareButton)
                             _ActionChip(
                               icon: Icons.share_outlined,
                               label: t['share'] ?? 'Share',
@@ -431,11 +427,10 @@ class ProductCard extends StatelessWidget {
                                 if (onShare != null) {
                                   onShare!();
                                 } else {
-                                  _copyProductLink(context, p.id);
+                                  ShareService.shareProduct(context, product);
                                 }
                               },
                             ),
-                          ],
                         ],
                       ),
                     ],
@@ -667,51 +662,39 @@ class ProductCard extends StatelessWidget {
                                 fontSize: 9)),
                       ],
                     ),
-                    if (showShareButton) ...[
+                    if (showCompareButton || showShareButton) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Expanded(
-                            child: _ActionChip(
-                              icon: Icons.compare_arrows,
-                              label: t['compare'] ?? 'Compare',
-                              isActive: isInCompare,
-                              dense: true,
-                              onTap: () {
-                                if (compareProvider != null) {
-                                  final ok = compareProvider.toggleCompare(p);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(ok
-                                            ? (t['compare_added'] ?? '✓ Added')
-                                            : (t['compare_limit'] ??
-                                                'Limit reached (max 3)')),
-                                        backgroundColor: ok
-                                            ? AppColors.gold
-                                            : AppColors.orange,
-                                      ),
-                                    );
+                          if (showCompareButton)
+                            Expanded(
+                              child: _ActionChip(
+                                icon: Icons.compare_arrows,
+                                label: t['compare'] ?? 'Compare',
+                                isActive: isInCompare,
+                                dense: true,
+                                onTap: () => toggleCompareWithFeedback(
+                                    context, p, compareProvider),
+                              ),
+                            ),
+                          if (showCompareButton && showShareButton)
+                            const SizedBox(width: 4),
+                          if (showShareButton)
+                            Expanded(
+                              child: _ActionChip(
+                                icon: Icons.share_outlined,
+                                label: t['share'] ?? 'Share',
+                                dense: true,
+                                onTap: () {
+                                  if (onShare != null) {
+                                    onShare!();
+                                  } else {
+                                    ShareService.shareProduct(
+                                        context, product);
                                   }
-                                }
-                              },
+                                },
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: _ActionChip(
-                              icon: Icons.share_outlined,
-                              label: t['share'] ?? 'Share',
-                              dense: true,
-                              onTap: () {
-                                if (onShare != null) {
-                                  onShare!();
-                                } else {
-                                  _copyProductLink(context, p.id);
-                                }
-                              },
-                            ),
-                          ),
                         ],
                       ),
                     ],

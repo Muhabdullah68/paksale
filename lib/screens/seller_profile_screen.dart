@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/report_provider.dart';
 import '../repositories/user_repository.dart';
+import '../services/share_service.dart';
 import '../widgets/common_widgets.dart';
 import 'product_detail_screen.dart';
 
@@ -76,10 +77,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Profile link copied!'),
-                  backgroundColor: AppColors.gold),
+            onPressed: () => ShareService.shareText(
+              context,
+              '${widget.sellerName} on Pak Sale\n${ShareService.profileUrl(widget.sellerId)}',
+              title: widget.sellerName,
             ),
           ),
         ],
@@ -254,7 +255,6 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           ...displayListings.map((p) => ProductCard(
             product: p,
-            showShareButton: false,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(

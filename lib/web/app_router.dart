@@ -22,11 +22,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/models.dart';
+import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../screens/account_screen.dart';
 import '../screens/admin/admin_dashboard.dart';
 import '../screens/categories_screen.dart';
 import '../screens/chat_screen.dart';
+import '../screens/compare_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/female_support_screen.dart';
 import '../screens/help_screen.dart';
@@ -201,6 +203,13 @@ final GoRouter appRouter = GoRouter(
       path: '/listing/:id',
       builder: (context, state) =>
           ProductDetailResolver(id: state.pathParameters['id'] ?? ''),
+    ),
+    GoRoute(
+      path: '/compare',
+      builder: (context, state) => CompareScreen(
+        selectedProducts:
+            context.read<CompareProvider>().compareList.toList(),
+      ),
     ),
     GoRoute(
       path: '/notifications',

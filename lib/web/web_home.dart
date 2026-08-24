@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/product_provider.dart';
@@ -218,6 +219,13 @@ class _HeroCarouselState extends State<_HeroCarousel> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Timer management belongs here, not inside build().
+    _sync();
+  }
+
   void _sync() {
     final cms = context.read<CMSProvider>();
     final count = cms.banners.isNotEmpty ? cms.banners.length : 3;
@@ -250,7 +258,6 @@ class _HeroCarouselState extends State<_HeroCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    _sync();
     final cms = context.watch<CMSProvider>();
     final banners = cms.banners;
     final slides = banners.isNotEmpty
@@ -294,15 +301,13 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                   fit: StackFit.expand,
                   children: [
                     if (image.isNotEmpty)
-                      Image.network(
-                        image,
+                      CachedNetworkImage(
+                        imageUrl: image,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        memCacheWidth: 1200,
+                        errorWidget: (context, url, error) =>
                             _bannerFallback(),
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return _bannerFallback();
-                        },
+                        placeholder: (context, url) => _bannerFallback(),
                       )
                     else
                       _bannerFallback(),
@@ -1214,7 +1219,11 @@ class _SuperAdTile extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: product.imageUrls.isNotEmpty
-                    ? Image.network(product.imageUrls[0], fit: BoxFit.cover)
+                    ? CachedNetworkImage(
+                        imageUrl: product.imageUrls[0],
+                        fit: BoxFit.cover,
+                        memCacheWidth: 100,
+                      )
                     : Container(
                         color: AppColors.gold.withValues(alpha: 0.1),
                         child: const Icon(Icons.star, color: AppColors.gold)),
