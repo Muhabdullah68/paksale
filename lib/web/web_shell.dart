@@ -27,7 +27,6 @@ class WebTab {
   static const int categories = 1;
   static const int postAd = 2;
   static const int favorites = 3;
-  static const int chat = 4;
   static const int account = 5;
 }
 
@@ -41,8 +40,6 @@ String webTabPath(int tab) {
       return '/post-ad';
     case WebTab.favorites:
       return '/favorites';
-    case WebTab.chat:
-      return '/chat';
     case WebTab.account:
       return '/account';
     default:
@@ -343,13 +340,6 @@ class _WebHeaderState extends State<WebHeader> {
         activeIcon: Icons.favorite,
         label: t['nav_saved'] ?? 'Saved',
         onTap: () => _goTab(WebTab.favorites),
-      ),
-      _NavItem(
-        key: 'chat',
-        icon: Icons.chat_bubble_outline,
-        activeIcon: Icons.chat_bubble,
-        label: t['nav_chat'] ?? 'Chat',
-        onTap: () => _goTab(WebTab.chat),
       ),
       if (isAdmin)
         _NavItem(
@@ -1076,7 +1066,6 @@ class WebFooter extends StatelessWidget {
                       'My Ads', () => _goTab(context, WebTab.account)),
                   _FooterLink(
                       'Saved', () => _goTab(context, WebTab.favorites)),
-                  _FooterLink('Chat', () => _goTab(context, WebTab.chat)),
                   _FooterLink(
                       'Notifications', () => context.push('/notifications')),
                 ],
@@ -1091,8 +1080,6 @@ class WebFooter extends StatelessWidget {
                       'Safe Meeting', () => context.push('/safe-meeting')),
                   _FooterLink(
                       'Female Support', () => context.push('/female-support')),
-                  _FooterLink(
-                      'Admin Panel', () => context.push('/admin')),
                 ],
               );
 

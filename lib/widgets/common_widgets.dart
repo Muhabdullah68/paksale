@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -1131,22 +1130,24 @@ class ContactActionButtons extends StatelessWidget {
                 ),
               ),
             ),
-          if (showWhatsApp && onWhatsApp != null) const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onChat,
-              icon: const Icon(Icons.message_outlined, size: 18, color: Colors.white),
-              label: Text(t['message'] ?? 'Message',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+          if (showWhatsApp && onWhatsApp != null && onChat != null)
+            const SizedBox(width: 10),
+          if (onChat != null)
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onChat,
+                icon: const Icon(Icons.message_outlined, size: 18, color: Colors.white),
+                label: Text(t['message'] ?? 'Message',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

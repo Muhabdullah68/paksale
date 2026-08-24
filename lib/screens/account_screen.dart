@@ -293,12 +293,6 @@ class _AccountScreenState extends State<AccountScreen>
                       builder: (_) => const ListingScreen(
                           categoryTitle: 'Jobs Center'))),
             ),
-            _MenuRow(
-              icon: Icons.description_outlined,
-              label: t['upload_cv'] ?? 'Upload CV',
-              badge: 'New',
-              onTap: () => _showCvUploadSheet(),
-            ),
           ], t),
 
           // INFORMATION section
@@ -709,18 +703,6 @@ class _AccountScreenState extends State<AccountScreen>
 
   void _showHelpSheet() {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
-  }
-
-  void _showCvUploadSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.primaryDark : Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _CvUploadSheet(t: _t),
-    );
   }
 }
 
@@ -1261,7 +1243,6 @@ class _SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<_SettingsTab> {
-  bool _pushNotifications = true;
   bool _priceAlerts = true;
   bool _messageAlerts = true;
   bool _emailNotifications = false;
@@ -1275,7 +1256,6 @@ class _SettingsTabState extends State<_SettingsTab> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _pushNotifications = prefs.getBool('push_notifications') ?? true;
       _priceAlerts = prefs.getBool('price_alerts') ?? true;
       _messageAlerts = prefs.getBool('message_alerts') ?? true;
       _emailNotifications = prefs.getBool('email_notifications') ?? false;
@@ -1352,15 +1332,6 @@ class _SettingsTabState extends State<_SettingsTab> {
         _SettingsSection(
             title: t['notifications_section'] ?? 'NOTIFICATIONS',
             items: [
-              _SettingsToggle(
-                icon: Icons.notifications_outlined,
-                label: t['push_notifications'] ?? 'Push Notifications',
-                value: _pushNotifications,
-                onChanged: (v) {
-                  setState(() => _pushNotifications = v);
-                  _saveSetting('push_notifications', v);
-                },
-              ),
               _SettingsToggle(
                 icon: Icons.trending_down,
                 label: t['price_alerts'] ?? 'Price Drop Alerts',
@@ -2130,128 +2101,6 @@ class _HelpSheet extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  CV UPLOAD SHEET
-// ══════════════════════════════════════════════════════════════════════════════
-class _CvUploadSheet extends StatefulWidget {
-  final Map<String, String> t;
-  const _CvUploadSheet({required this.t});
-
-  @override
-  State<_CvUploadSheet> createState() => _CvUploadSheetState();
-}
-
-class _CvUploadSheetState extends State<_CvUploadSheet> {
-  bool _uploaded = false;
-  bool _uploading = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: isDark ? AppColors.divider : AppColors.dividerLightMode,
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(widget.t['cv_title'] ?? 'Upload Your CV',
-              style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.textPrimaryLightMode,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Text(widget.t['cv_body'] ?? '',
-              style: TextStyle(
-                  color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode,
-                  fontSize: 13,
-                  height: 1.5)),
-          const SizedBox(height: 24),
-          if (_uploaded)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.green.withValues(alpha: 0.4)),
-              ),
-              child: const Row(children: [
-                Icon(Icons.check_circle, color: AppColors.green),
-                SizedBox(width: 12),
-                Text('CV uploaded successfully!',
-                    style: TextStyle(
-                        color: AppColors.green,
-                        fontWeight: FontWeight.w600)),
-              ]),
-            )
-          else
-            GestureDetector(
-              onTap: () async {
-                setState(() => _uploading = true);
-                await Future.delayed(const Duration(milliseconds: 1200));
-                setState(() {
-                  _uploading = false;
-                  _uploaded = true;
-                });
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.cardTheme.color,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.5),
-                      style: BorderStyle.solid),
-                ),
-                child: _uploading
-                    ? const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.gold))
-                    : Column(children: [
-                  const Icon(Icons.upload_file,
-                      color: AppColors.gold, size: 40),
-                  const SizedBox(height: 10),
-                  const Text('Tap to select your CV',
-                      style: TextStyle(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text('PDF or DOCX, max 5 MB',
-                      style: TextStyle(
-                          color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode,
-                          fontSize: 12)),
-                ]),
-              ),
-            ),
-          const SizedBox(height: 16),
-          if (_uploaded)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold),
-                child: const Text('Done',
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ),
         ],
       ),
     );

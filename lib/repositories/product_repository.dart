@@ -1,9 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/product_model.dart';
 import '../core/constants/firestore_paths.dart';
 
 class ProductRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Platforms whose listings are visible on this surface.
+  /// Web sees 'web'+'both'; mobile app sees 'app'+'both'.
+  /// Applied client-side to keep paginated queries free of extra
+  /// composite-index requirements. Legacy docs default to 'both'.
+  static bool matchesPlatform(String platform) =>
+      platform == 'both' || platform == (kIsWeb ? 'web' : 'app');
 
   CollectionReference get _productsRef =>
       _firestore.collection(FirestorePaths.products);
@@ -44,7 +52,10 @@ class ProductRepository {
     query = query.limit(limit);
 
     final snapshot = await query.get();
-    return snapshot.docs.map((doc) => ProductModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => ProductModel.fromFirestore(doc))
+        .where((p) => matchesPlatform(p.platform))
+        .toList();
   }
 
   Future<QuerySnapshot> getProductsSnapshot({

@@ -55,12 +55,13 @@ class ProductProvider extends ChangeNotifier {
         location: location,
       );
 
-      final newProducts = snapshot.docs.map((doc) => ProductModel.fromFirestore(doc)).toList();
-      
+      final newProducts = snapshot.docs
+          .map((doc) => ProductModel.fromFirestore(doc))
+          .where((p) => ProductRepository.matchesPlatform(p.platform))
+          .toList();
+
       if (refresh) {
         _products = newProducts;
-        
-
       } else {
         _products.addAll(newProducts);
       }
@@ -82,6 +83,7 @@ class ProductProvider extends ChangeNotifier {
   Future<void> fetchFeaturedProducts() async {
     _setLoading(true);
     try {
+      // getProducts() already applies the platform audience filter.
       _featuredProducts = await _productRepo.getProducts(featuredOnly: true);
       _error = null;
     } catch (e) {

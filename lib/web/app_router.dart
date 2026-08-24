@@ -7,12 +7,12 @@
 //   /categories       categories tab  (shell)
 //   /post-ad          post ad tab     (shell)
 //   /favorites        favorites tab   (shell)
-//   /chat             chat tab        (shell)
 //   /account          account tab     (shell)
 //   /browse           listing page    (pushed, query: category/subCategory/q)
 //   /listing/:id      product detail  (pushed, deep-linkable)
+//   /compare          compare tray    (pushed)
 //   /notifications    notifications   (pushed)
-//   /admin            admin panel     (pushed)
+//   /admin            admin panel     (pushed, admins only — guarded)
 //   /help             help & support  (pushed)
 //   /safe-meeting     safe meeting    (pushed)
 //   /female-support   female support  (pushed)
@@ -22,12 +22,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/models.dart';
+import '../providers/auth_provider.dart';
 import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../screens/account_screen.dart';
 import '../screens/admin/admin_dashboard.dart';
 import '../screens/categories_screen.dart';
-import '../screens/chat_screen.dart';
 import '../screens/compare_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/female_support_screen.dart';
@@ -173,14 +173,6 @@ final GoRouter appRouter = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/chat',
-              builder: (_, __) => const ChatScreen(webEmbedded: true),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
               path: '/account',
               builder: (_, __) => const AccountScreen(webEmbedded: true),
             ),
@@ -217,6 +209,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/admin',
+      redirect: (context, state) {
+        final auth = context.read<AuthProvider>();
+        return (auth.userModel?.isAdmin ?? false) ? null : '/home';
+      },
       builder: (_, __) => const AdminDashboard(),
     ),
     GoRoute(

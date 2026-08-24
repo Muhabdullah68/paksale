@@ -1,5 +1,6 @@
 // screens/compare_screen.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
@@ -31,10 +32,16 @@ class _CompareScreenState extends State<CompareScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  // Safe pop: only pops if this route is still on the stack.
+  // Safe pop: pops if this route is still on the stack, otherwise navigates
+  // home. On web, /compare is reached via context.go() which leaves the
+  // Navigator stack empty — Navigator.canPop is false and a plain pop would
+  // do nothing.
   void _safePop() {
-    if (mounted && Navigator.canPop(context)) {
+    if (!mounted) return;
+    if (Navigator.canPop(context)) {
       Navigator.pop(context);
+    } else {
+      GoRouter.of(context).go('/');
     }
   }
 

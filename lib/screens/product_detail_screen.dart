@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -98,6 +97,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _showPrivacyChatRedirect(String message) {
+    // Chat is not part of the website — on web the dialog is informational
+    // only and offers no "Send Message" action.
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -105,14 +106,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         content: Text(message),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _startChat(context, context.read<ProductProvider>().products.firstWhere((p) => p.id == widget.product.id));
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text('Send Message', style: TextStyle(color: Colors.white)),
-          ),
+          if (!kIsWeb)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _startChat(context, context.read<ProductProvider>().products.firstWhere((p) => p.id == widget.product.id));
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              child: const Text('Send Message', style: TextStyle(color: Colors.white)),
+            ),
         ],
       ),
     );
@@ -633,7 +635,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ContactActionButtons(
                   onCall: _launchCaller,
                   onWhatsApp: _launchWhatsApp,
-                  onChat: () => _startChat(context, p),
+                  onChat:
+                      kIsWeb ? null : () => _startChat(context, p),
                   privacy: _sellerPrivacy,
                 ),
                 const SizedBox(height: 8),

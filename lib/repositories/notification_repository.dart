@@ -1,5 +1,6 @@
 // repositories/notification_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/notification_model.dart';
 
 /// Manages the `notifications` top-level collection.
@@ -30,13 +31,24 @@ class NotificationRepository {
   }
 
   // ── Broadcast stream ──────────────────────────────────────────────────────
+  /// Only shows broadcasts targeted at this surface ('web' on web, 'app' on
+  /// mobile). Docs without a `platform` field count as 'both'.
   Stream<List<NotificationModel>> streamBroadcasts() {
+    const origin = kIsWeb ? 'web' : 'app';
     return _broadcastRef
         .orderBy('createdAt', descending: true)
         .limit(20)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => NotificationModel.fromFirestore(d)).toList());
+        .map((snap) => snap.docs
+            .where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              final platform = data['platform'];
+              return platform == null ||
+                  platform == 'both' ||
+                  platform == origin;
+            })
+            .map((d) => NotificationModel.fromFirestore(d))
+            .toList());
   }
 
   // ── Unread count stream ──────────────────────────────────────────────────

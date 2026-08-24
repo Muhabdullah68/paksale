@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,14 @@ import '../core/constants/firestore_paths.dart';
 
 class CMSProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// Platforms whose admin-published content (banners, broadcasts) is visible
+  /// on this surface. Web sees 'web'+'both'; mobile app sees 'app'+'both'.
+  /// Docs without a `platform` field default to 'both'.
+  static bool matchesPlatform(dynamic platform) =>
+      platform == null ||
+      platform == 'both' ||
+      platform == (kIsWeb ? 'web' : 'app');
   
   // Policies
   DateTime? _lastPolicyUpdate;
@@ -124,7 +133,10 @@ class CMSProvider extends ChangeNotifier {
 
   void _listenToDynamicContent() {
     _bannersSub = _db.collection('banners').where('isActive', isEqualTo: true).snapshots().listen((snap) {
-      _banners = snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+      _banners = snap.docs
+          .map((doc) => {'id': doc.id, ...doc.data()})
+          .where((b) => matchesPlatform(b['platform']))
+          .toList();
       notifyListeners();
     });
 
@@ -132,10 +144,13 @@ class CMSProvider extends ChangeNotifier {
       _categories = snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
       notifyListeners();
     });
-    
+
     // Listen to broadcast notifications
     _notificationsSub = _db.collection('broadcast_notifications').orderBy('createdAt', descending: true).snapshots().listen((snap) {
-      _broadcastNotifications = snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+      _broadcastNotifications = snap.docs
+          .map((doc) => {'id': doc.id, ...doc.data()})
+          .where((n) => matchesPlatform(n['platform']))
+          .toList();
       notifyListeners();
     });
   }

@@ -57,6 +57,11 @@ class ProductModel {
   // ── Lifecycle State ──────────────────────────────────────────────────────
   final String status; // 'pending' | 'approved' | 'rejected' | 'sold'
 
+  // ── Audience ─────────────────────────────────────────────────────────────
+  // Which platform(s) show this listing: 'web' | 'app' | 'both'.
+  // Legacy docs without the field default to 'both'.
+  final String platform;
+
   const ProductModel({
     required this.id,
     required this.title,
@@ -109,6 +114,7 @@ class ProductModel {
     this.applicationIds = const [],
     // Status
     this.status = 'approved',
+    this.platform = 'both',
   });
 
   // ── Helper Getters ───────────────────────────────────────────────────────
@@ -176,6 +182,7 @@ class ProductModel {
       applicationIds: List<String>.from(d['applicationIds'] as List? ?? []),
       // Status
       status: d['status'] as String? ?? 'approved',
+      platform: d['platform'] as String? ?? 'both',
     );
   }
 
@@ -232,6 +239,7 @@ class ProductModel {
     'applicationIds': applicationIds,
     // Status
     'status': status,
+    'platform': platform,
   };
 
 
@@ -264,6 +272,7 @@ class ProductModel {
     bool? acceptsCOD, String? codDeliveryLocation, String? codContactNumber,
     bool? isJob, String? companyName,
     String? jobType, String? salaryRange, List<String>? applicationIds, String? status,
+    String? platform,
   }) => ProductModel(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -312,5 +321,6 @@ class ProductModel {
     salaryRange: salaryRange ?? this.salaryRange,
     applicationIds: applicationIds ?? this.applicationIds,
     status: status ?? this.status,
+    platform: platform ?? this.platform,
   );
 }
