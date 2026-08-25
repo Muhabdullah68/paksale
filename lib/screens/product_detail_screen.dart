@@ -361,15 +361,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           IconButton(
             icon: Icon(isFav ? Icons.favorite : Icons.favorite_border,
                 color: isFav ? Colors.red : Colors.white),
-            onPressed: () {
+            onPressed: () async {
               if (favoritesProvider != null) {
-                favoritesProvider.toggleFavorite(p);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(!isFav
-                      ? (t['added_to_favorites'] ?? 'Added to favorites ❤️')
-                      : (t['removed_from_favorites'] ?? 'Removed from favorites')),
-                  backgroundColor:
-                  !isFav ? AppColors.gold : (isDark ? AppColors.primaryDark : AppColors.primary),
+                final messenger = ScaffoldMessenger.of(context);
+                final ok = await favoritesProvider.toggleFavorite(p);
+                messenger.showSnackBar(SnackBar(
+                  content: Text(!ok
+                      ? (t['favorite_failed'] ?? "Couldn't update favorite")
+                      : !isFav
+                          ? (t['added_to_favorites'] ?? 'Added to favorites ❤️')
+                          : (t['removed_from_favorites'] ?? 'Removed from favorites')),
+                  backgroundColor: !ok
+                      ? Colors.redAccent
+                      : !isFav
+                          ? AppColors.gold
+                          : (isDark ? AppColors.primaryDark : AppColors.primary),
                   duration: const Duration(seconds: 1),
                 ));
               } else {

@@ -439,15 +439,23 @@ class ProductCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 10, top: 10),
                 child: GestureDetector(
-                  onTap: () {
-                    if (favoritesProvider != null) {
-                      favoritesProvider.toggleFavorite(product);
-                    } else {
+                  onTap: () async {
+                    if (favoritesProvider == null) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(t['sign_in_favorites'] ??
                             'Please sign in to save favorites'),
                         backgroundColor:
                             isDark ? AppColors.primaryDark : AppColors.primary,
+                      ));
+                      return;
+                    }
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await favoritesProvider.toggleFavorite(product);
+                    if (!ok) {
+                      messenger.showSnackBar(SnackBar(
+                        content: Text(t['favorite_failed'] ??
+                            "Couldn't update favorite"),
+                        backgroundColor: Colors.redAccent,
                       ));
                     }
                   },
@@ -559,15 +567,23 @@ class ProductCard extends StatelessWidget {
                       top: 6,
                       right: 6,
                       child: GestureDetector(
-                        onTap: () {
-                          if (favoritesProvider != null) {
-                            favoritesProvider.toggleFavorite(product);
-                          } else {
+                        onTap: () async {
+                          if (favoritesProvider == null) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text(t['sign_in_favorites'] ??
                                   'Please sign in to save favorites'),
                               backgroundColor:
                                   isDark ? AppColors.primaryDark : AppColors.primary,
+                            ));
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          final ok = await favoritesProvider.toggleFavorite(product);
+                          if (!ok) {
+                            messenger.showSnackBar(SnackBar(
+                              content: Text(t['favorite_failed'] ??
+                                  "Couldn't update favorite"),
+                              backgroundColor: Colors.redAccent,
                             ));
                           }
                         },

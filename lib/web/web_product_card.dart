@@ -112,15 +112,25 @@ class _WebProductCardState extends State<WebProductCard> {
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
-                        onTap: () {
-                          if (favoritesProvider != null) {
-                            favoritesProvider.toggleFavorite(p);
-                          } else {
+                        onTap: () async {
+                          if (favoritesProvider == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(t['sign_in_favorites'] ??
                                     'Please sign in to save favorites'),
                                 backgroundColor: AppColors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          final ok = await favoritesProvider.toggleFavorite(p);
+                          if (!ok) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(t['favorite_failed'] ??
+                                    "Couldn't update favorite"),
+                                backgroundColor: Colors.redAccent,
                               ),
                             );
                           }

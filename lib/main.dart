@@ -51,12 +51,15 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => CMSProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
-        // FavoritesProvider needs uid, so we use ProxyProvider
         ChangeNotifierProxyProvider<AuthProvider, FavoritesProvider?>(
           create: (_) => null,
           update: (_, auth, previous) {
             if (auth.isAuthenticated && auth.firebaseUser != null) {
-              return FavoritesProvider(uid: auth.firebaseUser!.uid);
+              final newUid = auth.firebaseUser!.uid;
+              if (previous != null && previous.uid == newUid) {
+                return previous;
+              }
+              return FavoritesProvider(uid: newUid);
             }
             return null;
           },
@@ -88,7 +91,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
     final langProvider = context.watch<LanguageProvider>();
 
     final darkTheme = AppTheme.darkTheme.copyWith(

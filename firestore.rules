@@ -1,18 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Products: Everyone can read, only logged-in users can create
+
+    // Products: Everyone can read, only logged-in users can create.
+    // Updates by owner; favoritesCount-only changes allowed for any signed-in
+    // user (heart/unheart on someone else's listing).
     match /products/{productId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.sellerId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        resource.data.sellerId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['favoritesCount'])
+      );
     }
-    
+
     // Users: Public profiles, but only the owner can edit
     match /users/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Favorites: strictly private to the owning user
+    match /favorites/{userId}/items/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Notifications: Users can only see and manage their own notifications
