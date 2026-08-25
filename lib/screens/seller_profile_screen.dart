@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -370,6 +371,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   reason: selectedReason,
                   description: descCtrl.text.trim(),
                   timestamp: DateTime.now(),
+                  platform: kIsWeb ? 'web' : 'app',
                 );
                 await context.read<ReportProvider>().submitReport(report);
                 if (!context.mounted) return;

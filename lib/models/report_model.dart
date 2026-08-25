@@ -20,6 +20,8 @@ class ReportModel {
   final String description;
   final DateTime timestamp;
   final String status; // 'pending', 'resolved', 'dismissed'
+  // Reporting surface: 'web' | 'app'. Legacy reports (no field) read as 'both'.
+  final String platform;
   final String? resolvedBy;
   final DateTime? resolvedAt;
 
@@ -32,6 +34,7 @@ class ReportModel {
     required this.description,
     required this.timestamp,
     this.status = 'pending',
+    this.platform = 'both',
     this.resolvedBy,
     this.resolvedAt,
   });
@@ -45,6 +48,7 @@ class ReportModel {
       'description': description,
       'timestamp': FieldValue.serverTimestamp(),
       'status': status,
+      'platform': platform,
       'resolvedBy': resolvedBy,
       'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
     };
@@ -64,6 +68,7 @@ class ReportModel {
       description: data['description'] ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'pending',
+      platform: data['platform'] ?? 'both',
       resolvedBy: data['resolvedBy'],
       resolvedAt: (data['resolvedAt'] as Timestamp?)?.toDate(),
     );

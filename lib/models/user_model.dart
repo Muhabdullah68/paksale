@@ -91,6 +91,8 @@ class UserModel {
   final bool isSuspended;
   final bool isAdmin;
   final PrivacySettings privacy;
+  // Signup origin: 'web' | 'app'. Legacy accounts (no field) read as 'both'.
+  final String platform;
   final DateTime createdAt;
 
   UserModel({
@@ -115,6 +117,7 @@ class UserModel {
     this.isSuspended = false,
     this.isAdmin = false,
     this.privacy = const PrivacySettings(),
+    this.platform = 'both',
     required this.createdAt,
   });
 
@@ -142,6 +145,7 @@ class UserModel {
       isSuspended: data['isSuspended'] ?? false,
       isAdmin: data['isAdmin'] ?? false,
       privacy: PrivacySettings.fromMap(data['privacy']),
+      platform: data['platform'] ?? 'both',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -168,6 +172,7 @@ class UserModel {
       'isSuspended': isSuspended,
       'isAdmin': isAdmin,
       'privacy': privacy.toMap(),
+      'platform': platform,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

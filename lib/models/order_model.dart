@@ -17,6 +17,8 @@ class OrderModel {
   final String deliveryLocation;
   final String? contactNumber;
   final String status; // pending | confirmed | shipped | delivered | cancelled
+  // Ordering surface: 'web' | 'app'. Legacy orders (no field) read as 'both'.
+  final String platform;
   final DateTime createdAt;
   final DateTime? deliveredAt;
 
@@ -37,6 +39,7 @@ class OrderModel {
     this.deliveryLocation = '',
     this.contactNumber,
     this.status = 'pending',
+    this.platform = 'both',
     required this.createdAt,
     this.deliveredAt,
   });
@@ -60,6 +63,7 @@ class OrderModel {
       deliveryLocation: d['deliveryLocation'] ?? '',
       contactNumber: d['contactNumber'],
       status: d['status'] ?? 'pending',
+      platform: d['platform'] ?? 'both',
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       deliveredAt: (d['deliveredAt'] as Timestamp?)?.toDate(),
     );
@@ -81,6 +85,7 @@ class OrderModel {
     'deliveryLocation': deliveryLocation,
     'contactNumber': contactNumber,
     'status': status,
+    'platform': platform,
     'createdAt': Timestamp.fromDate(createdAt),
     'deliveredAt': deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,
   };
@@ -90,7 +95,7 @@ class OrderModel {
     double? price, String? currency, String? sellerId, String? sellerName,
     String? sellerPhone, String? buyerId, String? buyerName, String? buyerPhone,
     String? buyerAddress, String? deliveryLocation, String? contactNumber,
-    String? status, DateTime? createdAt, DateTime? deliveredAt,
+    String? status, DateTime? createdAt, DateTime? deliveredAt, String? platform,
   }) => OrderModel(
     id: id ?? this.id,
     productId: productId ?? this.productId,
@@ -108,6 +113,7 @@ class OrderModel {
     deliveryLocation: deliveryLocation ?? this.deliveryLocation,
     contactNumber: contactNumber ?? this.contactNumber,
     status: status ?? this.status,
+    platform: platform ?? this.platform,
     createdAt: createdAt ?? this.createdAt,
     deliveredAt: deliveredAt ?? this.deliveredAt,
   );

@@ -1183,6 +1183,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       deliveryLocation: p.codDeliveryLocation ?? '',
       contactNumber: p.codContactNumber,
       status: 'pending',
+      platform: kIsWeb ? 'web' : 'app',
       createdAt: DateTime.now(),
     );
 
@@ -1254,6 +1255,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   reason: selectedReason,
                   description: descCtrl.text.trim(),
                   timestamp: DateTime.now(),
+                  platform: kIsWeb ? 'web' : 'app',
                 );
                 await context.read<ReportProvider>().submitReport(report);
                 if (!context.mounted) return;

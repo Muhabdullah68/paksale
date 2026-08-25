@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../repositories/auth_repository.dart';
@@ -8,6 +9,10 @@ import '../core/errors/app_exception.dart';
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepo = AuthRepository();
   final UserRepository _userRepo = UserRepository();
+
+  /// Origin of the current session — stored on newly created user docs so
+  /// the admin panel can separate web vs app members.
+  static String get signupPlatform => kIsWeb ? 'web' : 'app';
 
   User? _firebaseUser;
   UserModel? _userModel;
@@ -43,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
             phone: user.phoneNumber ?? '',
             photoUrl: user.photoURL ?? '',
             isAdminApproved: true,
+            platform: signupPlatform,
             createdAt: DateTime.now(),
           );
           // Try to save it, but don't block the UI if it fails
@@ -130,6 +136,7 @@ class AuthProvider extends ChangeNotifier {
             email: '',
             phone: credential.user!.phoneNumber ?? '',
             isAdminApproved: true,
+            platform: signupPlatform,
             createdAt: DateTime.now(),
           );
           await _userRepo.createUser(newUser);
@@ -155,6 +162,7 @@ class AuthProvider extends ChangeNotifier {
           email: email,
           phone: phone,
           isAdminApproved: true,
+          platform: signupPlatform,
           createdAt: DateTime.now(),
         );
         await _userRepo.createUser(newUser);
