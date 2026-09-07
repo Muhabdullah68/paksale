@@ -1,331 +1,121 @@
-1. Terms & Conditions / Terms of Use
-
-This is the main legal agreement between  app and users.
-
-The app is a marketplace platform, not the seller or buyer.
-
-The platform provides technology that allows users to publish listings, communicate, and arrange transactions. Unless specifically stated otherwise, the platform is not the owner, seller, buyer, agent, broker, guarantor, or manufacturer of listed products or services.
-Users must:
-Provide accurate information.
-Use their own mobile number.
-Not create fake accounts.
-Not impersonate another person.
-Not upload stolen images or copyrighted material.
-Not mislead other users.
-Not manipulate ratings or reviews.
-Not use the platform for fraud or illegal activity.
-2. Pakistan-Specific User Verification Policy
-
-Level 1 — Basic Account
-
-Required:
-
-Pakistani mobile number
-SMS OTP verification
-Name
-City/area
-
-Can:
-
-Browse listings
-Save listings
-Contact users with limitations
-Level 2 — Verified User
-
-Required:
-
-Verified mobile number
-Email address
-Additional identity verification where necessary
-
-Can:
-
-Publish more listings
-Chat freely
-Receive a verified badge
-Level 3 — Trusted Seller / Business
-
-Required:
-
-Business information
-CNIC or other legally appropriate verification through a secure process
-Business registration information where applicable
-Bank/payment information where relevant
-
-Can:
-
-Operate as a business seller
-Publish higher-volume listings
-Access seller tools
-Important
-
-Do not publicly display a user's complete CNIC number, full identity document, or unnecessary personal information. Collect only the information needed for a specific purpose. This is consistent with the data-minimization approach reflected in Pakistan's developing data-governance framework.
-
-3. Your Best Trust System for Pakistan
-
-I recommend this structure:
-
-🟢 Mobile Verified
-
-The phone number has been verified by OTP.
-
-🔵 Identity Verified
-
-The platform has completed an appropriate identity-verification process.
-
-🟡 Business Verified
-
-Business information has been checked.
-
-⭐ Trusted Seller
-
-The seller has:
-
-Completed multiple transactions
-Received positive feedback
-Avoided serious complaints
-Maintained a good account history
-⚠️ New Seller
-
-A new account should clearly display:
-
-New Seller — Trade Carefully
-
-This is much better than pretending that every user is equally trustworthy.
-
-4. Prohibited Items & Activities Policy
-
-Your app should have a clear Prohibited and Restricted Listings Policy.
-
-Listings should be removed if they involve:
-
-Illegal goods
-Stolen property
-Counterfeit products
-Fraudulent documents
-Fake identity documents
-Financial scams
-Pyramid or Ponzi schemes
-Misleading investment offers
-Illegal services
-Harassment or blackmail
-Sexually exploitative content
-Content involving exploitation of minors
-Any product or service prohibited by Pakistani law
-
-You should also include a rule that the platform may remove any listing that creates a legal, safety, or serious fraud risk.
-
-5. Fraud & Scam Policy
-
-This is one of the most important policies for your Pakistan app.
-
-Prohibited behaviour:
-Fake payment screenshots
-Fake bank-transfer confirmations
-Advance-payment scams
-Fake courier claims
-Fake employment offers
-Fake rental properties
-Selling an item that does not exist
-Using another person's identity
-Taking payment and disappearing
-Advertising a different product from the one delivered
-Your app should have:
-
-Report Listing
-
-Report User
-
-Report Scam
-
-Block User
-
-Dispute Case
-
-Emergency legal/safety report pathway where appropriate
-
-6. Transaction Policy
-
-Your policy should make clear:
-
-The platform does not automatically guarantee the quality, ownership, authenticity, condition, legality, or delivery of every item listed by a user.
-
-However, if you later introduce escrow, protected payments, delivery, or a managed marketplace, you should create separate rules for those services.
-
-For a high-value item, your app can display:
-
-For your protection, inspect the item before completing payment.
-
-Your system should discourage users from sending money merely because a seller sends a screenshot or makes an urgent demand.
-
-7. Privacy Policy
-
-Your Privacy Policy should explain:
-
-What you collect
-Mobile number
-Name
-Email, if provided
-City/location information
-Listing information
-Messages and reports (stored only to facilitate communication between buyers and sellers, and for dispute resolution purposes)
-Device and technical information
-App usage data
-Why you collect it
-Account creation
-OTP verification
-Fraud prevention
-Customer support
-Platform security
-Improving the app
-Legal compliance
-
-Important note about chat messages:
-- Chat messages are stored only to enable communication between users and for dispute resolution
-- Chat messages are not shared with third parties except as required by law or for platform safety
-- Users can report or delete conversations as needed
-Data sharing
-
-You should clearly explain when information may be shared with:
-
-Service providers
-Payment providers
-Hosting providers
-Fraud-prevention providers
-Law-enforcement authorities where legally required
-
-Pakistan's official draft personal-data framework emphasizes lawful collection, processing, storage, and disclosure of personal data, and the government has continued developing a broader data-governance framework.
-
-8. Location Privacy Policy
-
-For Pakistan, I strongly recommend:
-
-Do not show exact home addresses publicly.
-
-Instead show:
-
-Sargodha, Punjab
-
-or:
-
-3 km from Sargodha City Centre
-
-Users can share the exact meeting location privately if they choose.
-
-This protects users from:
-
-Theft
-Harassment
-Stalking
-Privacy risks
-9. Chat & Messaging Policy
-
-Your chat system should state that users must not use chat to:
-
-Threaten others
-Harass others
-Blackmail others
-Send abusive messages
-Send fraudulent payment proof
-Share illegal content
-Attempt to move users into a scam
-
-You should also give users:
-
-Block
-
-Report
-
-Delete chat
-
-Report scam
-
-10. Reviews & Ratings Policy
-
-To prevent fake reviews:
-
-Only allow a review when:
-A transaction or meaningful interaction has occurred, or
-The platform has a reasonable basis to allow the review.
-Prohibit:
-Paying for fake reviews
-Threatening someone to change a review
-Creating multiple accounts to manipulate ratings
-Reviewing your own listing
-
-Your system should preserve both:
-
-Seller Rating
-
-and
-
-Buyer Rating
-
-This is especially useful for Pakistani marketplaces.
-
-11. Account Suspension & Termination Policy
-
-Your app should have the right to:
-
-Remove listings
-Restrict accounts
-Suspend accounts
-Permanently ban accounts
-Remove fraudulent content
-Preserve relevant records for investigations
-
-But you should also provide a basic appeal process:
-
-A user may appeal an account action through customer support. The platform may request additional information before reviewing the appeal.
-
-12. Children & Age Policy
-
-I recommend:
-
-Users must be at least 18 years old to independently create listings or conduct marketplace transactions, unless the service is specifically designed for younger users with appropriate legal safeguards.
-
-This is especially important because buying and selling, identity verification, payments, and private communications can create additional risks for minors.
-
-13. Pakistan-Specific Business Policies You Should Have
-
-For your app, I recommend creating these separate documents:
-
-Mandatory Core Policies
-Terms & Conditions
 Privacy Policy
-Community Guidelines
-Prohibited Items Policy
-Fraud & Scam Prevention Policy
-User Verification Policy
-Reviews & Ratings Policy
-Account Suspension Policy
-Intellectual Property / Copyright Policy
-Complaint & Dispute Policy
-If you add additional services
-Payment Policy
-Refund Policy
-Delivery Policy
-Seller Agreement
-Business/Vendor Agreement
-Job Posting Policy
-Real Estate Listing Policy
-Vehicle Listing Policy
-Advertising Policy
 
+PakSale
 
-------------------------------------------------------------------
+Effective Date: September 2026
 
-“We do not promise that every user is honest. We create a system that makes dishonesty more difficult, identifies risk, preserves evidence, and gives users tools to protect themselves.”
+Thank you for using PakSale. This Privacy Policy explains what personal information we collect when you use our mobile application, why we collect it, how it is used, shared, and protected, and the choices you have regarding your information. By creating an account or using PakSale, you agree to the practices described in this policy.
 
-Your app should display a Trust Profile for every user:
+PakSale is operated from Pakistan as a local marketplace platform. Our practices reflect Pakistan's developing data governance framework and the principle of data minimization: we collect only what we need and we protect it with reasonable care.
 
-Trust Information	Example
-Mobile	✅ Verified
-Email	✅ Verified
-Identity	🔵 Verified
-Account age	2 years
-Successful interactions	47
-Complaints	Low
-Response rate	92%
-Seller rating	4.8/5
-Business	Verified
+1. Who We Are
+
+PakSale is a peer-to-peer marketplace platform that allows individual and business users across Pakistan to list, discover, discuss, and complete transactions for second-hand and new goods, vehicles, property, services, and community postings. We are not the seller, buyer, owner, agent, broker, or guarantor of any item listed through the app. We provide the technology, hosting, and trust tools that make these connections possible.
+
+2. Information We Collect
+
+We collect the following categories of information depending on how you use PakSale.
+
+Account and profile information. When you sign up we ask for your Pakistani mobile number, your display name, and your city or local area. You may optionally add an email address, a profile photograph, and a short bio. For sellers who choose a verified or business tier we may collect additional details including business name, business contact information, and in appropriate cases an identification reference number sufficient to complete a secure verification process. We do not publish complete identity numbers or full document scans on any public profile.
+
+Listing and marketplace content. When you publish a listing we store the title, description, price, photographs or video, category, condition, location tag, and any custom attributes you provide. We also store records of listings you save or mark as a favorite.
+
+Messages and communications. Chat messages between buyers and sellers are stored on our servers so that conversations remain available across devices and so that either party or our support team can refer back to them in the event of a dispute, scam report, or safety investigation. Messages are not sold or used for advertising purposes.
+
+Device and technical information. Our app automatically collects limited technical information including your device model, operating system version, app version, approximate connection type, Internet protocol address, and error logs. This information helps us diagnose crashes, maintain compatibility, and detect suspicious activity that may indicate abuse of the platform.
+
+Camera and media files. If you grant the camera permission we access your camera only when you choose to take a photograph for a listing or to send a photograph in chat. We do not access your camera in the background. Photographs you take within the app are uploaded only when you press submit. You may also upload existing images from your media library; we access those files only for the purpose of attaching them to your listing or message.
+
+Location. PakSale uses city and area-level location information to help buyers find sellers nearby. We do not ask for continuous background location and we do not publish any user's exact residential address. Public listings show a locality tag such as the name of a neighborhood, town, or city. Users who meet in person can share a precise meeting point through private chat if both parties agree.
+
+Usage and analytics. We collect basic usage data such as the screens you visit, the searches you perform, listing views, and the general time of day you use the app. This helps us understand which categories are popular and where we should focus product improvements. Analytics are summarized where possible and individual behavior records are not sold to external marketers.
+
+3. Why We Collect Information
+
+We use your information only for specific, practical purposes.
+
+To create and maintain your account. Your mobile number is the primary account key and is verified through a one-time SMS code so that we can reduce fake accounts and impersonation.
+
+To operate the marketplace. Listing details, profile details, and city-level location are required so that buyers and sellers can find each other, communicate, and safely complete trades.
+
+To verify accounts and build trust signals. PakSale offers graduated verification levels: basic mobile-verified accounts, optionally identity-verified accounts, and business-verified accounts. Each level produces a visible trust badge that helps other users trade with greater confidence.
+
+To prevent fraud, scams, and prohibited activity. We scan patterns of behavior including rapid account creation, unusual messaging patterns, reports from users, and content matches against our prohibited items list. These checks help us identify and remove fake payment confirmations, advance-fee scams, impersonation accounts, counterfeit listings, and other harmful content before it reaches other users.
+
+To provide customer support and resolve disputes. When a user contacts our support team or opens a dispute we review the account history, relevant listings, and related chat history so that we can understand both sides and reach a fair outcome.
+
+To improve the app. Aggregated and de-identified usage data informs our decisions about new features, performance optimizations, and interface adjustments.
+
+To comply with legal obligations. We may retain and share records when we are lawfully required to do so by a Pakistani court order, a competent regulator, or a recognized law enforcement authority operating with proper procedure.
+
+4. How We Share Information
+
+We treat your information as confidential and we do not sell it. The following circumstances describe the limited cases in which information may be shared.
+
+With other marketplace users. Any information you place on a public listing, including your public display name, profile photograph, listing images, city-level location, and listing description is visible to other users of the app who browse that category or run a related search. Your mobile number is never published publicly on a listing page; contact between users takes place through our in-app chat, and users may choose to share further contact details only by their own decision inside a private conversation.
+
+With service providers that run parts of the platform. We use established cloud infrastructure and service providers for hosting, database operation, file storage, push notifications, SMS delivery, image processing, and mobile analytics. These providers process data only on our written instructions and under reasonable security obligations.
+
+With fraud and safety partners. Where we judge it necessary to protect users from financial loss or physical harm we may share limited account details with recognized fraud-prevention services or with authorities investigating criminal activity.
+
+With law enforcement and regulators. We respond to requests for account records, chat records, or listing records when the request is in writing, identifies a lawful basis for disclosure, and references the specific account or matter under investigation. We do not volunteer blanket access to our user database.
+
+In connection with a business transfer. If PakSale or substantially all of its assets are acquired by another company, or if a restructuring takes place, account records would be among the transferred assets and would continue to be handled under a privacy policy with equivalent protections.
+
+5. Data Retention
+
+We keep your information only as long as there is a practical or legal reason to keep it. Active account information is retained for as long as your account remains open. Listing history and closed chat threads are retained for a reasonable period after a listing closes so that users can refer back to past transactions and so that our team can review historical reports.
+
+If you delete your account we remove your profile, listings, and personal contact details from public view within a short period, and we delete the underlying personal records from our active databases as soon as practical, subject to our need to retain limited accounting, dispute, and law-enforcement records for the additional periods required by applicable Pakistani law and prudent record-keeping practice.
+
+6. Security Measures
+
+No mobile app or online service can guarantee absolute security, but we apply reasonable safeguards. Personal information is stored on access-controlled servers with encrypted storage volumes, connections between our app and our servers use encrypted transport, sensitive administrative actions require internal approval, and access to user records by our own staff is granted only on a need-to-know basis for support, safety, or engineering reasons. Camera and location permissions are requested only at the point the feature is used and may be revoked at any time through your device settings.
+
+7. Your Choices and Rights
+
+Update or correct your profile. You may change your display name, email address, profile photograph, bio, and city directly from the in-app profile screen at any time.
+
+Remove listings or saved items. Any listing you published can be marked as sold, archived, or deleted through the listing menu, and items you saved to favorites can be removed individually.
+
+Manage permissions. You can withdraw the camera permission through your mobile device settings. Withdrawing permission will prevent you from taking new photographs within the app but will not affect existing listings or other app features. You can also disable notifications through system settings.
+
+Opt out of analytics where available. You may request that we stop collecting non-essential usage analytics on your account by writing to our support address. Essential records required for account security, fraud detection, and legal compliance cannot be opted out of.
+
+Request deletion of your account. You may request full account deletion through the account settings screen or by writing to our support team. We process deletion requests promptly and we send you a confirmation when the main account record is closed. As noted above, a small set of records may be retained in our restricted archives for legal or dispute-related reasons before permanent deletion.
+
+Access the information we hold about you. You may request a written summary of the personal information we hold in relation to your account by writing to our support address. We aim to respond to access, correction, and deletion requests within a reasonable period appropriate to the size and nature of the request.
+
+8. Children and Young Users
+
+PakSale is a marketplace for adults to trade personal property and arrange in-person meetings. For this reason users must be at least 18 years old to create a seller account, publish listings, or conduct marketplace transactions independently. We do not knowingly collect the personal information of children under the age of 13. If you become aware that a minor has provided information directly to us please notify our support team and we will take prompt steps to remove the account and its related personal data.
+
+9. Camera, Internet, and Other Sensitive Permissions
+
+PakSale requests the following permissions only when the related feature is used. Internet access is required throughout the session so that listings, messages, and profile information can load from our servers. The camera permission is requested only when you tap the camera icon inside a listing draft or inside a chat conversation that is about to attach a photograph. Additional sensitive permissions such as fine location or access to contacts are not requested automatically; should such a permission become necessary in a future release it will be explained clearly at the time of the request and tied to a specific user-initiated action.
+
+10. Third-Party Services Used in the App
+
+PakSale uses the following standard platform services to operate. Each provider handles information according to its own public privacy policy in addition to the instructions we give as the controller of your data.
+
+Cloud, database, file storage, push messaging, and analytics infrastructure is provided by Firebase from Google. Firebase helps us run the app, deliver one-time SMS codes, send push notifications for new messages, and collect basic stability and usage analytics. The Firebase services we use are configured to collect only the information necessary for those purposes.
+
+Image loading and caching libraries make local, temporary copies of listing photographs on your device so that repeated browsing is faster and uses less mobile data. These cached files remain on your device until the app's local cache is cleared or the app is uninstalled.
+
+SMS delivery providers send the short one-time verification codes that confirm ownership of your mobile number. We share only the destination number and the short code content that is required for delivery.
+
+In the normal course of use we do not share personal data with advertising networks or marketing brokers, and we do not run behavioral retargeting campaigns across third-party websites.
+
+11. Changes to This Policy
+
+From time to time we may update this Privacy Policy to reflect new features, a change in the law, or a clarification of our current practice. When we make material changes we will post a short notice inside the app or send you an in-app announcement so that you can review the updated text before it takes effect. Continuing to use PakSale after the updated policy takes effect means you accept the revised text. Non-material clarifications may be published without a separate notice and we encourage you to review this page from time to time.
+
+12. Contact Us
+
+If you have questions about this Privacy Policy, if you would like to exercise any of the rights described above, or if you need to report a privacy or safety concern, please write to us at:
+
+support.paksale@gmail.com
+
+We aim to respond to privacy and safety inquiries within a short working period. Written complaints about data handling are treated seriously, logged, and reviewed by a member of our operations team before a response is given.
+
+PakSale is built for traders across Pakistan. Your privacy and safety matter to us. We built the verification system, the graduated trust badges, the reporting tools, and the dispute pathways because we want a marketplace where people can trade openly, honestly, and with confidence. Thank you for trusting us with your information.

@@ -8,9 +8,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:671530950257:android:7e6eb6257537330ded45d0",
+        "mobilesdk_app_id": "1:671530950257:android:e8200109244cab7aed45d0",
         "android_client_info": {
-          "package_name": "com.example.marketplace_app"
+          "package_name": "com.paksale.app"
         }
       },
       "oauth_client": [],
