@@ -1,0 +1,65 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build unsigned iOS IPA
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.6
+
+      - name: Verify Flutter
+        run: flutter --version
+
+      - name: Fetch dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        continue-on-error: true
+        run: flutter analyze
+
+      - name: Test
+        continue-on-error: true
+        run: flutter test
+
+      - name: Build iOS (release, no code signing)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          APP="build/ios/iphoneos/Runner.app"
+          ls -la build/ios/iphoneos
+          rm -rf Payload PakSale-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -r -y PakSale-unsigned.ipa Payload
+          ls -la PakSale-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PakSale-unsigned-ipa
+          path: PakSale-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-logs
+          path: |
+            build/ios
+            build/**/*.log
+          if-no-files-found: ignore
