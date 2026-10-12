@@ -470,14 +470,19 @@ class _PostAdScreenState extends State<PostAdScreen> {
       t['step_preview'] ?? 'Preview'
     ];
 
+    final embedded = kIsWeb && widget.webEmbedded;
     final body = _isSubmitting
-        ? _buildSubmittingState(t)
+        ? _buildSubmittingState(t, embedded: embedded)
         : Column(
+            mainAxisSize: embedded ? MainAxisSize.min : MainAxisSize.max,
             children: [
               _buildStepIndicator(steps),
-              Expanded(
-                child: _buildCurrentStep(),
-              ),
+              if (embedded)
+                _buildCurrentStep()
+              else
+                Expanded(
+                  child: _buildCurrentStep(),
+                ),
               _buildNavButtons(t),
             ],
           );
@@ -536,18 +541,40 @@ class _PostAdScreenState extends State<PostAdScreen> {
     );
   }
 
-  Widget _buildSubmittingState(Map<String, String> t) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: AppColors.gold),
-          const SizedBox(height: 24),
-          Text(t['submitting_ad'] ?? 'Submitting your ad...',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-        ],
-      ),
+  /// Wraps a step's content. On the website the PostAd page is embedded inside
+  /// WebPage's document scroll, so a step must NOT create its own vertical
+  /// scroll view — that nests viewports and throws an unbounded-height error.
+  /// On mobile the step keeps its own scrollable with the given padding.
+  Widget _stepScroll(
+    Widget child, {
+    EdgeInsets padding = const EdgeInsets.fromLTRB(20, 24, 20, 20),
+  }) {
+    if (kIsWeb && widget.webEmbedded) return child;
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      padding: padding,
+      child: child,
     );
+  }
+
+  Widget _buildSubmittingState(Map<String, String> t, {bool embedded = false}) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const CircularProgressIndicator(color: AppColors.gold),
+        const SizedBox(height: 24),
+        Text(t['submitting_ad'] ?? 'Submitting your ad...',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      ],
+    );
+    if (embedded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 64),
+        child: content,
+      );
+    }
+    return Center(child: content);
   }
 
   // ── Step indicator ────────────────────────────────────────────────────────
@@ -643,10 +670,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
             {'n': 'Jobs Center', 'i': '💼'},
             {'n': 'Super Ads', 'i': '⭐'},
           ];
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      child: Column(
+    return _stepScroll(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t['select_category'] ?? 'Select Category',
@@ -743,9 +768,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final isJob = _selectedCategory == 'Jobs Center';
     final isAuctionable = _selectedCategory == 'Vehicles' || _selectedCategory == 'Properties';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return _stepScroll(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t['ad_details'] ?? 'Ad Details',
@@ -874,6 +898,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 20),
         ],
       ),
+      padding: const EdgeInsets.all(16),
     );
   }
 
@@ -976,10 +1001,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
   Widget _buildPhotosStep() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      child: Column(
+    return _stepScroll(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -1207,9 +1230,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currencyProvider = context.watch<CurrencyProvider>();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return _stepScroll(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Preview Your Ad',
@@ -1333,6 +1355,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 20),
         ],
       ),
+      padding: const EdgeInsets.all(16),
     );
   }
 
