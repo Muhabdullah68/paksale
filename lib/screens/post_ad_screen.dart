@@ -347,7 +347,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         jobType: isJob ? _jobType : null,
         salaryRange: isJob ? _salaryCtrl.text.trim() : null,
         // Initial status
-        status: p?.status ?? 'approved', // Ads show immediately without admin review
+        status: p?.status ?? 'pending', // New ads require admin approval; edits keep existing status
         // Audience: keep the original assignment on edit, otherwise tag by
         // posting origin so each platform sees its own listings until an
         // admin widens the audience.
