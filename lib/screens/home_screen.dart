@@ -346,7 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(width: spaceAfterLogo),
           Expanded(
             child: TextField(
+              maxLength: 80,
               decoration: InputDecoration(
+                counterText: '',
                 hintText: t['search_hint'] ?? 'Search in PakistanSale...',
                 hintStyle: TextStyle(color: Colors.white70, fontSize: hintFontSize),
                 prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),

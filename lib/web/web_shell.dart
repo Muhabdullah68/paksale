@@ -502,9 +502,11 @@ class _WebHeaderState extends State<WebHeader> {
                                   child: TextField(
                                     controller: _searchCtrl,
                                     onSubmitted: (_) => _submitSearch(),
+                                    maxLength: 80,
                                     style: const TextStyle(
                                         color: Colors.white, fontSize: 14),
                                     decoration: InputDecoration(
+                                      counterText: '',
                                       hintText:
                                           t['search_hint'] ?? 'Search in Pak Sale...',
                                       hintStyle: const TextStyle(

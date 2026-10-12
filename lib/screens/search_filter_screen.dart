@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/utils/input_rules.dart';
 import '../theme/app_theme.dart';
 import '../services/language_provider.dart';
 
@@ -41,6 +42,16 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   }
 
   void _applyFilters() {
+    final minText = _minController.text.trim();
+    final maxText = _maxController.text.trim();
+    final minPrice = minText.isEmpty ? null : double.tryParse(minText);
+    final maxPrice = maxText.isEmpty ? null : double.tryParse(maxText);
+    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Minimum price cannot be greater than maximum price'),
+          backgroundColor: AppColors.orange));
+      return;
+    }
     final result = <String, dynamic>{
       'query': _keywordsController.text.trim().isEmpty ? null : _keywordsController.text.trim(),
       'condition': _conditions[_selectedCondition] == 'All'
@@ -51,12 +62,8 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           : _sellerTypes[_selectedSeller],
       'category': _selectedCategory == 'All' ? null : _selectedCategory,
       'location': _selectedLocation == 'All' ? null : _selectedLocation,
-      'minPrice': _minController.text.isNotEmpty
-          ? double.tryParse(_minController.text)
-          : null,
-      'maxPrice': _maxController.text.isNotEmpty
-          ? double.tryParse(_maxController.text)
-          : null,
+      'minPrice': minPrice,
+      'maxPrice': maxPrice,
     };
     Navigator.pop(context, result);
   }
@@ -132,8 +139,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _keywordsController,
+                      maxLength: 80,
+                      inputFormatters: InputRules.text(max: 80),
                       style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                       decoration: InputDecoration(
+                        counterText: '',
                         hintText: t['keywords_hint'] ?? 'Keywords...',
                         prefixIcon: Icon(Icons.search, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                         hintStyle: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
@@ -167,9 +177,12 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                         child: TextField(
                           controller: _minController,
                           keyboardType: TextInputType.number,
+                          maxLength: 10,
+                          inputFormatters: InputRules.digits(10),
                           style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                           textAlign: TextAlign.center,
                           decoration: InputDecoration(
+                            counterText: '',
                             hintText: t['min_price'] ?? 'Min Rs.',
                             hintStyle: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                             filled: true,
@@ -185,9 +198,12 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                         child: TextField(
                           controller: _maxController,
                           keyboardType: TextInputType.number,
+                          maxLength: 10,
+                          inputFormatters: InputRules.digits(10),
                           style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                           textAlign: TextAlign.center,
                           decoration: InputDecoration(
+                            counterText: '',
                             hintText: t['max_price'] ?? 'Max Rs.',
                             hintStyle: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
                             filled: true,

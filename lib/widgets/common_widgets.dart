@@ -162,8 +162,10 @@ class CustomSearchBar extends StatelessWidget {
                 controller: controller,
                 onChanged: onChanged,
                 autofocus: true,
+                maxLength: 80,
                 style: TextStyle(color: textColor, fontSize: 14),
                 decoration: InputDecoration(
+                  counterText: '',
                   hintText: hint,
                   hintStyle: TextStyle(color: hintColor, fontSize: 14),
                   prefixIcon: Icon(Icons.search, color: hintColor, size: 18),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../core/utils/input_rules.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
@@ -1502,6 +1504,7 @@ class _SettingsTabState extends State<_SettingsTab> {
               hint: context.read<LanguageProvider>().isArabic
                   ? 'كلمة المرور الحالية'
                   : 'Current password',
+              maxLength: 64,
               obscure: true),
           const SizedBox(height: 10),
           _SimpleField(
@@ -1509,6 +1512,8 @@ class _SettingsTabState extends State<_SettingsTab> {
               hint: context.read<LanguageProvider>().isArabic
                   ? 'كلمة المرور الجديدة'
                   : 'New password',
+              maxLength: 64,
+              validator: (v) => InputRules.validatePassword(v),
               obscure: true),
           const SizedBox(height: 10),
           _SimpleField(
@@ -1516,6 +1521,7 @@ class _SettingsTabState extends State<_SettingsTab> {
               hint: context.read<LanguageProvider>().isArabic
                   ? 'تأكيد كلمة المرور'
                   : 'Confirm new password',
+              maxLength: 64,
               obscure: true),
         ])),
         actions: [
@@ -1526,6 +1532,13 @@ class _SettingsTabState extends State<_SettingsTab> {
                   TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode))),
           ElevatedButton(
             onPressed: () {
+              final passErr = InputRules.validatePassword(newCtrl.text);
+              if (passErr != null) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(passErr),
+                    backgroundColor: AppColors.orange));
+                return;
+              }
               if (newCtrl.text != confCtrl.text) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(context.read<LanguageProvider>().isArabic
@@ -1576,6 +1589,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 6,
+            inputFormatters: InputRules.digits(6),
             style: TextStyle(
                 color: theme.textTheme.bodyLarge?.color, fontSize: 20, letterSpacing: 8),
             decoration: InputDecoration(
@@ -2121,6 +2135,7 @@ class _AuthSheet extends StatefulWidget {
 
 class _AuthSheetState extends State<_AuthSheet> {
   late bool _isRegister;
+  final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
@@ -2145,22 +2160,18 @@ class _AuthSheetState extends State<_AuthSheet> {
   void _submit() async {
     final auth = context.read<AuthProvider>();
     final lang = context.read<LanguageProvider>();
-    
-    if (_emailCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) {
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(lang.isArabic ? 'يرجى ملء جميع الحقول' : 'Please fill in all fields'),
+          content: Text(lang.isArabic
+              ? 'يرجى تصحيح الحقول المميزة'
+              : 'Please fix the highlighted fields'),
           backgroundColor: AppColors.orange));
       return;
     }
 
     try {
       if (_isRegister) {
-        if (_nameCtrl.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(lang.isArabic ? 'يرجى إدخال الاسم' : 'Please enter your name'),
-              backgroundColor: AppColors.orange));
-          return;
-        }
         await auth.signUp(
           _emailCtrl.text.trim(),
           _passwordCtrl.text.trim(),
@@ -2206,7 +2217,9 @@ class _AuthSheetState extends State<_AuthSheet> {
         const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
-        child: Column(
+        child: Form(
+          key: _formKey,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2240,7 +2253,11 @@ class _AuthSheetState extends State<_AuthSheet> {
                   label: 'Full Name',
                   hint: 'Enter your full name',
                   controller: _nameCtrl,
-                  icon: Icons.person_outline),
+                  icon: Icons.person_outline,
+                  formatters: InputRules.name(max: 60),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Name is required'
+                      : null),
               const SizedBox(height: 12),
             ],
             _AuthField(
@@ -2248,7 +2265,13 @@ class _AuthSheetState extends State<_AuthSheet> {
                 hint: 'Enter your email',
                 controller: _emailCtrl,
                 icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress),
+                keyboardType: TextInputType.emailAddress,
+                formatters: InputRules.email(max: 100),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                  if (!InputRules.isValidEmail(v)) return 'Enter a valid email';
+                  return null;
+                }),
             const SizedBox(height: 12),
             if (_isRegister) ...[
               _AuthField(
@@ -2256,7 +2279,9 @@ class _AuthSheetState extends State<_AuthSheet> {
                   hint: '+92 XXX XXXXXXX',
                   controller: _phoneCtrl,
                   icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone),
+                  keyboardType: TextInputType.phone,
+                  formatters: InputRules.phone(max: 15),
+                  validator: (v) => InputRules.validatePhone(v)),
               const SizedBox(height: 12),
             ],
             _AuthField(
@@ -2265,6 +2290,8 @@ class _AuthSheetState extends State<_AuthSheet> {
               controller: _passwordCtrl,
               icon: Icons.lock_outline,
               obscureText: _obscurePassword,
+              maxLength: 64,
+              validator: (v) => InputRules.validatePassword(v),
               suffixIcon: GestureDetector(
                 onTap: () => setState(
                         () => _obscurePassword = !_obscurePassword),
@@ -2345,6 +2372,7 @@ class _AuthSheetState extends State<_AuthSheet> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2464,24 +2492,62 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 label: 'Full Name',
                 hint: 'Your name',
                 controller: _nameCtrl,
-                icon: Icons.person_outline),
+                icon: Icons.person_outline,
+                formatters: InputRules.name(max: 60),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Name is required'
+                    : null),
             const SizedBox(height: 12),
             _AuthField(
                 label: 'Email',
                 hint: 'your@email.com',
                 controller: _emailCtrl,
-                icon: Icons.email_outlined),
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                formatters: InputRules.email(max: 100),
+                validator: (v) => (v == null ||
+                        v.trim().isEmpty ||
+                        InputRules.isValidEmail(v))
+                    ? null
+                    : 'Enter a valid email'),
             const SizedBox(height: 12),
             _AuthField(
                 label: 'Phone',
                 hint: '+92 XXX XXXXXXX',
                 controller: _phoneCtrl,
-                icon: Icons.phone_outlined),
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                formatters: InputRules.phone(max: 15),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? null
+                    : InputRules.validatePhone(v)),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
+                  final emailText = _emailCtrl.text.trim();
+                  final phoneText = _phoneCtrl.text.trim();
+                  if (_nameCtrl.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Name is required'),
+                        backgroundColor: AppColors.orange));
+                    return;
+                  }
+                  if (emailText.isNotEmpty &&
+                      !InputRules.isValidEmail(emailText)) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Enter a valid email'),
+                        backgroundColor: AppColors.orange));
+                    return;
+                  }
+                  if (phoneText.isNotEmpty &&
+                      InputRules.validatePhone(phoneText) != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Phone number must be 10–11 digits'),
+                        backgroundColor: AppColors.orange));
+                    return;
+                  }
                   final updated = widget.user.copyWith(
                     name: _nameCtrl.text.trim().isNotEmpty
                         ? _nameCtrl.text.trim()
@@ -2930,6 +2996,9 @@ class _AuthField extends StatelessWidget {
   final bool obscureText;
   final Widget? suffixIcon;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? formatters;
+  final int? maxLength;
+  final String? Function(String?)? validator;
 
   const _AuthField({
     required this.label,
@@ -2939,6 +3008,9 @@ class _AuthField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.keyboardType = TextInputType.text,
+    this.formatters,
+    this.maxLength,
+    this.validator,
   });
 
   @override
@@ -2952,12 +3024,17 @@ class _AuthField extends StatelessWidget {
             style: TextStyle(
                 color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 13)),
         const SizedBox(height: 6),
-        TextField(
+        TextFormField(
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          inputFormatters: formatters,
+          maxLength: maxLength,
+          validator: validator,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode, fontSize: 14),
           decoration: InputDecoration(
+            counterText: '',
             hintText: hint,
             hintStyle: TextStyle(
                 color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
@@ -2973,6 +3050,13 @@ class _AuthField extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                     color: AppColors.gold, width: 1.5)),
+            errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.redAccent)),
+            focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.redAccent, width: 1.5)),
+            errorStyle: const TextStyle(fontSize: 11),
             contentPadding:
             const EdgeInsets.symmetric(vertical: 14),
           ),
@@ -2987,18 +3071,28 @@ class _SimpleField extends StatelessWidget {
   final TextEditingController ctrl;
   final String hint;
   final bool obscure;
+  final int? maxLength;
+  final String? Function(String?)? validator;
   const _SimpleField(
-      {required this.ctrl, required this.hint, this.obscure = false});
+      {required this.ctrl,
+      required this.hint,
+      this.obscure = false,
+      this.maxLength,
+      this.validator});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return TextField(
+    return TextFormField(
       controller: ctrl,
       obscureText: obscure,
+      maxLength: maxLength,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       style: TextStyle(color: theme.textTheme.bodyLarge?.color),
       decoration: InputDecoration(
+        counterText: '',
         hintText: hint,
         hintStyle:
         TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode),
@@ -3007,6 +3101,7 @@ class _SimpleField extends StatelessWidget {
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none),
+        errorStyle: const TextStyle(fontSize: 11),
       ),
     );
   }

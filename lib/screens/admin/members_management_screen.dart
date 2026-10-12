@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/input_rules.dart';
 import '../../models/user_model.dart';
 import '../../providers/admin_provider.dart';
 import '../../theme/app_theme.dart';
@@ -66,25 +67,40 @@ class _MembersManagementScreenState extends State<MembersManagementScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
+                TextField(controller: nameCtrl, maxLength: 60, inputFormatters: InputRules.name(max: 60), decoration: const InputDecoration(counterText: '', labelText: 'Full Name')),
                 TextField(
                   controller: amountCtrl, 
-                  decoration: const InputDecoration(labelText: 'Initial Payment Amount (Rs)'),
+                  decoration: const InputDecoration(counterText: '', labelText: 'Initial Payment Amount (Rs)'),
                   keyboardType: TextInputType.number,
+                  maxLength: 10,
+                  inputFormatters: InputRules.digits(10),
                   onChanged: (val) => setState(() {}),
                 ),
                 TextField(
                   controller: emailCtrl, 
+                  keyboardType: TextInputType.emailAddress,
+                  maxLength: 100,
+                  inputFormatters: InputRules.email(max: 100),
                   decoration: InputDecoration(
+                    counterText: '',
                     labelText: 'Email',
                     hintText: double.tryParse(amountCtrl.text) != null && double.parse(amountCtrl.text) > 20000 
                         ? 'Required for > 20k' : 'Optional',
                   ),
                 ),
-                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 15,
+                  inputFormatters: InputRules.phone(max: 15, maxDigits: 11),
+                  decoration: const InputDecoration(counterText: '', labelText: 'Phone')),
                 TextField(
                   controller: nicCtrl, 
+                  keyboardType: TextInputType.number,
+                  maxLength: 13,
+                  inputFormatters: InputRules.digits(13),
                   decoration: InputDecoration(
+                    counterText: '',
                     labelText: 'NIC Number',
                     hintText: double.tryParse(amountCtrl.text) != null && double.parse(amountCtrl.text) > 20000 
                         ? 'Required for > 20k' : 'Optional',
@@ -97,11 +113,37 @@ class _MembersManagementScreenState extends State<MembersManagementScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Name is required')),
+                  );
+                  return;
+                }
+                if (phoneCtrl.text.trim().isNotEmpty &&
+                    InputRules.validatePhone(phoneCtrl.text) != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Phone number must be 10–11 digits')),
+                  );
+                  return;
+                }
+                if (emailCtrl.text.trim().isNotEmpty &&
+                    !InputRules.isValidEmail(emailCtrl.text)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Enter a valid email')),
+                  );
+                  return;
+                }
                 final amount = double.tryParse(amountCtrl.text) ?? 0;
                 if (amount > 20000) {
                   if (emailCtrl.text.isEmpty || nicCtrl.text.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Email and NIC are mandatory for payments > 20,000 Rs')),
+                    );
+                    return;
+                  }
+                  if (nicCtrl.text.length != 13) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('NIC must be 13 digits')),
                     );
                     return;
                   }

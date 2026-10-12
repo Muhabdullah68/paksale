@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/utils/input_rules.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
@@ -224,7 +225,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             TextField(
               controller: locationCtrl,
+              maxLength: 80,
+              inputFormatters: InputRules.text(max: 80),
               decoration: const InputDecoration(
+                counterText: '',
                 labelText: 'Sold Location',
                 hintText: 'Enter where the product was sold',
               ),
@@ -232,7 +236,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (isNicRequired)
               TextField(
                 controller: nicCtrl,
+                keyboardType: TextInputType.number,
+                maxLength: 13,
+                inputFormatters: InputRules.digits(13),
                 decoration: const InputDecoration(
+                  counterText: '',
                   labelText: 'Buyer\'s NIC Number',
                   hintText: 'Mandatory for products > 20,000 Rs',
                 ),
@@ -247,8 +255,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter sold location')));
                 return;
               }
-              if (isNicRequired && nicCtrl.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buyer\'s NIC is mandatory for items over 20,000 Rs')));
+              if (isNicRequired && nicCtrl.text.length != 13) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Buyer\'s NIC must be 13 digits'),
+                    backgroundColor: AppColors.orange));
                 return;
               }
 
@@ -989,8 +999,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               controller: ctrl,
               keyboardType: TextInputType.number,
               autofocus: true,
+              maxLength: 10,
+              inputFormatters: InputRules.digits(10),
               style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLightMode),
               decoration: InputDecoration(
+                counterText: '',
                 hintText: 'Enter amount > ${currentBid.toStringAsFixed(0)}',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
                 filled: true,
@@ -1117,20 +1130,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Your Name', hintText: 'Enter your full name', prefixIcon: Icon(Icons.person_outline)),
+                maxLength: 60,
+                inputFormatters: InputRules.name(max: 60),
+                decoration: const InputDecoration(counterText: '', labelText: 'Your Name', hintText: 'Enter your full name', prefixIcon: Icon(Icons.person_outline)),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Contact Number', hintText: '+92 XXX XXXXXXX', prefixIcon: Icon(Icons.phone_outlined)),
+                maxLength: 15,
+                inputFormatters: InputRules.phone(max: 15, maxDigits: 11),
+                decoration: const InputDecoration(counterText: '', labelText: 'Contact Number', hintText: '+92 XXX XXXXXXX', prefixIcon: Icon(Icons.phone_outlined)),
                 keyboardType: TextInputType.phone,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone number is required' : null,
+                validator: (v) => InputRules.validatePhone(v),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: addressCtrl,
-                decoration: const InputDecoration(labelText: 'Delivery Address', hintText: 'Enter your full address', prefixIcon: Icon(Icons.location_on_outlined)),
+                maxLength: 200,
+                inputFormatters: InputRules.text(max: 200),
+                decoration: const InputDecoration(counterText: '', labelText: 'Delivery Address', hintText: 'Enter your full address', prefixIcon: Icon(Icons.location_on_outlined)),
                 maxLines: 2,
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Delivery address is required' : null,
               ),

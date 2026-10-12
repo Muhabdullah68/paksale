@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/utils/input_rules.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
@@ -216,15 +217,16 @@ class _PostAdScreenState extends State<PostAdScreen> {
           _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
           return;
         }
-        final price = double.tryParse(priceText);
-        if (price == null || price < 0) {
-          _snack('Please enter a valid price', AppColors.orange);
+        final priceErr = InputRules.validateAmount(priceText,
+            min: 0, max: 1000000000, required: true, label: 'Price');
+        if (priceErr != null) {
+          _snack(priceErr, AppColors.orange);
           return;
         }
       }
-      final phoneDigits = _phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
-      if (phoneDigits.length < 10) {
-        _snack('Please enter a valid phone number (at least 10 digits)', AppColors.orange);
+      final phoneErr = InputRules.validatePhone(_phoneCtrl.text);
+      if (phoneErr != null) {
+        _snack(phoneErr, AppColors.orange);
         return;
       }
       if (_location == 'Pakistan' && _cityCtrl.text.trim().isEmpty) {
@@ -292,14 +294,15 @@ class _PostAdScreenState extends State<PostAdScreen> {
       _snack(t['enter_title_error'] ?? 'Please enter a title', AppColors.orange);
       return;
     }
-    if (_phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '').length < 10) {
-      _snack('Please enter a valid phone number (at least 10 digits)', AppColors.orange);
+    if (InputRules.validatePhone(_phoneCtrl.text) != null) {
+      _snack('Please enter a valid phone number (10–11 digits)', AppColors.orange);
       return;
     }
     if (_selectedCategory != 'Jobs Center') {
-      final priceGuard = double.tryParse(_priceCtrl.text.trim());
-      if (priceGuard == null || priceGuard < 0) {
-        _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
+      final priceErr = InputRules.validateAmount(_priceCtrl.text.trim(),
+          min: 0, max: 1000000000, required: true, label: 'Price');
+      if (priceErr != null) {
+        _snack(priceErr, AppColors.orange);
         return;
       }
     }
@@ -799,7 +802,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           
           if (!isJob) ...[
             _field('${t['price'] ?? "Price"} (Rs.)', 'e.g. 50000 (enter 0 if free)', _priceCtrl,
-                isNumber: true, maxLength: 12),
+                isNumber: true, maxLength: 10),
             const SizedBox(height: 12),
           ],
 
@@ -848,7 +851,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   enforceSpacing: true, maxLength: 80),
               const SizedBox(height: 12),
               _field('Contact Number', '+92 XXX XXXXXXX', _codContactCtrl,
-                  isPhone: true, maxLength: 20),
+                  isPhone: true, maxLength: 15),
               const SizedBox(height: 12),
             ],
           ],
@@ -891,10 +894,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
             const SizedBox(height: 12),
           ],
           _field('${t['phone_number'] ?? "Phone Number"} *', '+92 XXX XXXXXXX', _phoneCtrl,
-              isPhone: true, maxLength: 20),
+              isPhone: true, maxLength: 15),
           const SizedBox(height: 12),
           _field('WhatsApp Number', '+92 XXX XXXXXXX (optional)', _whatsAppCtrl,
-              isPhone: true, maxLength: 20),
+              isPhone: true, maxLength: 15),
           const SizedBox(height: 20),
         ],
       ),
@@ -917,21 +920,19 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     // Input rules:
-    //  • phone  : digits + + - ( ) and single spaces, capped length
+    //  • phone  : digits + + - ( ) and single spaces, max 11 digits
     //  • number : digits only (price etc.)
     //  • text   : no leading / doubled spaces so names, titles and locations
     //             cannot be padded with arbitrary whitespace
     final formatters = <TextInputFormatter>[
-      if (isPhone) ...[
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-() ]')),
-        FilteringTextInputFormatter.deny(RegExp(r'\s{2,}')),
-      ] else if (isNumber) ...[
-        FilteringTextInputFormatter.digitsOnly,
-      ] else if (enforceSpacing && maxLines == 1) ...[
-        FilteringTextInputFormatter.deny(RegExp(r'^\s')),
-        FilteringTextInputFormatter.deny(RegExp(r'\s{2,}')),
-      ],
-      if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      if (isPhone)
+        ...InputRules.phone(max: 15, maxDigits: 11)
+      else if (isNumber)
+        ...InputRules.digits(maxLength ?? 9)
+      else if (enforceSpacing && maxLines == 1)
+        ...InputRules.text(max: maxLength ?? 100)
+      else if (maxLength != null)
+        LengthLimitingTextInputFormatter(maxLength),
     ];
 
     return Column(
