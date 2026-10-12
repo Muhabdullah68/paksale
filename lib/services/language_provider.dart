@@ -276,6 +276,21 @@ class LanguageProvider extends ChangeNotifier {
     'whatsapp': 'واٹس ایپ',
     'loading': 'لوڈ ہو رہا ہے...',
     'language_changed': 'زبان تبدیل کر دی گئی ہے',
+
+    // Web chrome
+    'sell': 'بیچیں',
+    'browse_categories': 'اقسام دیکھیں',
+    'safe_meeting': 'محفوظ ملاقات',
+    'female_support': 'خواتین سپورٹ',
+    'become_verified': '⭐ تصدیق شدہ بیچنے والے بنیں',
+    'marketplace': 'مارکیٹ',
+    'my_account': 'میرا اکاؤنٹ',
+    'support': 'سپورٹ',
+    'home': 'ہوم',
+    'all_ads': 'تمام اشتہارات',
+    'post_an_ad': 'اشتہار لگائیں',
+    'footer_tagline':
+    'پاک سیل آپ کی مقامی مارکیٹ ہے جہاں گاڑیاں، جائیدادیں، الیکٹرونکس، نوکریاں اور مزید خریدیں اور بیچیں۔',
   };
 
   // ── English strings ────────────────────────────────────────────────────────
@@ -533,6 +548,21 @@ class LanguageProvider extends ChangeNotifier {
     'whatsapp': 'WhatsApp',
     'loading': 'Loading...',
     'language_changed': 'Language changed to',
+
+    // Web chrome
+    'sell': 'Sell',
+    'browse_categories': 'Browse Categories',
+    'safe_meeting': 'Safe Meeting',
+    'female_support': 'Female Support',
+    'become_verified': '⭐ Become a Verified Seller',
+    'marketplace': 'Marketplace',
+    'my_account': 'My Account',
+    'support': 'Support',
+    'home': 'Home',
+    'all_ads': 'All Ads',
+    'post_an_ad': 'Post an Ad',
+    'footer_tagline':
+    'Pak Sale is your local marketplace to buy and sell cars, properties, electronics, jobs and more.',
   };
 
   // ── Arabic strings ─────────────────────────────────────────────────────────
@@ -783,5 +813,20 @@ class LanguageProvider extends ChangeNotifier {
     'whatsapp': 'واتساب',
     'loading': 'جاري التحميل...',
     'language_changed': 'تم تغيير اللغة إلى',
+
+    // Web chrome
+    'sell': 'بيع',
+    'browse_categories': 'تصفح الفئات',
+    'safe_meeting': 'لقاء آمن',
+    'female_support': 'دعم النساء',
+    'become_verified': '⭐ كن بائعاً موثّقاً',
+    'marketplace': 'السوق',
+    'my_account': 'حسابي',
+    'support': 'الدعم',
+    'home': 'الرئيسية',
+    'all_ads': 'جميع الإعلانات',
+    'post_an_ad': 'نشر إعلان',
+    'footer_tagline':
+    'باك سيل هو سوقك المحلي لبيع وشراء السيارات والعقارات والإلكترونيات والوظائف والمزيد.',
   };
 }

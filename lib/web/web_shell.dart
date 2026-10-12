@@ -10,6 +10,7 @@
 // WebNav   : tiny singleton that lets the header switch Home tabs on the root
 //            screen (the 6-tab IndexedStack in HomeScreen).
 import 'dart:async';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -93,51 +94,71 @@ class WebPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final headerH = _WebHeaderState.headerTotalHeight;
-    return Material(
-      color: theme.scaffoldBackgroundColor,
-      child: Stack(
-        children: [
-          SingleChildScrollView(
-            controller: webPageScrollController,
-            physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1240),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(height: headerH),
-                        if (breadcrumbs.isNotEmpty)
+    return Listener(
+      // Web fallback: lets the mouse wheel / trackpad scroll the page even when
+      // the pointer sits over the sticky header or over a nested non-scrollable
+      // grid. When the page's own scroll view handles the event it registers
+      // first and wins, so this never double-scrolls.
+      onPointerSignal: _handlePointerScroll,
+      child: Material(
+        color: theme.scaffoldBackgroundColor,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              controller: webPageScrollController,
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: headerH),
+                          if (breadcrumbs.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                              child: WebBreadcrumbs(crumbs: breadcrumbs),
+                            ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                            child: WebBreadcrumbs(crumbs: breadcrumbs),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 16),
+                            child: content,
                           ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 16),
-                          child: content,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (showFooter) const WebFooter(),
-              ],
+                  if (showFooter) const WebFooter(),
+                ],
+              ),
             ),
-          ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: WebHeader(),
-          ),
-        ],
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: WebHeader(),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  void _handlePointerScroll(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (event.scrollDelta.dy == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (e) {
+      if (e is! PointerScrollEvent) return;
+      if (!webPageScrollController.hasClients) return;
+      final pos = webPageScrollController.position;
+      final target = (pos.pixels + e.scrollDelta.dy)
+          .clamp(pos.minScrollExtent, pos.maxScrollExtent);
+      if (target != pos.pixels) webPageScrollController.jumpTo(target.toDouble());
+    });
   }
 }
 
@@ -235,6 +256,13 @@ class _WebHeaderState extends State<WebHeader> {
     _menuExitTimer = Timer(const Duration(milliseconds: 220), () {
       if (mounted && _menuOpen) setState(() => _menuOpen = false);
     });
+  }
+
+  /// Cancels a pending close so the menu stays open while the pointer travels
+  /// from the trigger down into the dropdown panel.
+  void _keepMenuOpen() {
+    _menuExitTimer?.cancel();
+    if (!_menuOpen) setState(() => _menuOpen = true);
   }
 
   @override
@@ -420,7 +448,7 @@ class _WebHeaderState extends State<WebHeader> {
                                       if (w >= 560) ...[
                                         const SizedBox(width: 18),
                                         _UtilityLink(
-                                            label:
+                                            label: t['become_verified'] ??
                                                 '⭐ Become a Verified Seller',
                                             onTap: () =>
                                                 _goTab(WebTab.postAd),
@@ -532,14 +560,14 @@ class _WebHeaderState extends State<WebHeader> {
                                             blurRadius: 6),
                                       ],
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.add_circle_outline,
+                                        const Icon(Icons.add_circle_outline,
                                             color: Colors.white, size: 18),
-                                        SizedBox(width: 6),
-                                        Text('Sell',
-                                            style: TextStyle(
+                                        const SizedBox(width: 6),
+                                        Text(t['sell'] ?? 'Sell',
+                                            style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.w700)),
                                       ],
@@ -557,16 +585,10 @@ class _WebHeaderState extends State<WebHeader> {
                               ),
                               const SizedBox(width: 10),
                               if (w >= 520)
-                                // Language toggle
-                                _HeaderIconButton(
-                                  icon: Icons.language,
-                                  tooltip: 'Language',
-                                  onTap: () {
-                                    final next = lang.languageCode == 'en'
-                                        ? 'ur'
-                                        : 'en';
-                                    lang.setLanguage(next);
-                                  },
+                                // Language selector (English / اردو / العربية)
+                                _LanguageMenu(
+                                  current: lang.languageCode,
+                                  onChanged: lang.setLanguage,
                                 ),
                               if (w >= 460)
                                 _HeaderIconButton(
@@ -727,6 +749,7 @@ class _WebHeaderState extends State<WebHeader> {
             right: 0,
             child: _CategoryMegaMenu(
               onClose: _scheduleMenuClose,
+              onOpen: _keepMenuOpen,
               onSelect: (name) {
                 _menuExitTimer?.cancel();
                 _goToListing(category: name);
@@ -841,6 +864,66 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
+class _LanguageMenu extends StatelessWidget {
+  final String current;
+  final ValueChanged<String> onChanged;
+  const _LanguageMenu({required this.current, required this.onChanged});
+
+  static const Map<String, String> _labels = {
+    'en': 'English',
+    'ur': 'اردو',
+    'ar': 'العربية',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PopupMenuButton<String>(
+      tooltip: 'Language',
+      position: PopupMenuPosition.under,
+      onSelected: onChanged,
+      color: theme.cardTheme.color,
+      itemBuilder: (context) => _labels.entries.map((e) {
+        final selected = e.key == current;
+        return PopupMenuItem<String>(
+          value: e.key,
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.check_circle : Icons.circle_outlined,
+                size: 18,
+                color: selected ? AppColors.gold : AppColors.textMuted,
+              ),
+              const SizedBox(width: 10),
+              Text(e.value,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.w500)),
+            ],
+          ),
+        );
+      }).toList(),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.language, color: Colors.white, size: 22),
+            const SizedBox(width: 4),
+            Text(_labels[current] ?? 'English',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+            const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _UtilityLink extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
@@ -875,14 +958,20 @@ class _UtilityLink extends StatelessWidget {
 
 class _CategoryMegaMenu extends StatelessWidget {
   final VoidCallback onClose;
+  final VoidCallback onOpen;
   final ValueChanged<String> onSelect;
-  const _CategoryMegaMenu({required this.onClose, required this.onSelect});
+  const _CategoryMegaMenu({
+    required this.onClose,
+    required this.onOpen,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final cms = context.watch<CMSProvider>();
+    final t = context.watch<LanguageProvider>().t;
 
     final List<Map<String, dynamic>> cats = cms.categories.isNotEmpty
         ? cms.categories
@@ -903,6 +992,7 @@ class _CategoryMegaMenu extends StatelessWidget {
           ];
 
     return MouseRegion(
+      onEnter: (_) => onOpen(),
       onExit: (_) => onClose(),
       child: Material(
         color: isDark ? AppColors.darkSurface : Colors.white,
@@ -918,7 +1008,7 @@ class _CategoryMegaMenu extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Browse Categories',
+                  Text(t['browse_categories'] ?? 'Browse Categories',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1008,6 +1098,7 @@ class WebFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final t = context.watch<LanguageProvider>().t;
 
     return Container(
       width: double.infinity,
@@ -1031,8 +1122,9 @@ class WebFooter extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Pak Sale is your local marketplace to buy and sell '
-                    'cars, properties, electronics, jobs and more.',
+                    t['footer_tagline'] ??
+                        'Pak Sale is your local marketplace to buy and sell '
+                            'cars, properties, electronics, jobs and more.',
                     style: TextStyle(
                         color: isDark
                             ? AppColors.textMuted
@@ -1046,40 +1138,40 @@ class WebFooter extends StatelessWidget {
               );
 
               final marketplace = _FooterBlock(
-                title: 'Marketplace',
+                title: t['marketplace'] ?? 'Marketplace',
                 children: [
                   _FooterLink(
-                      'Home', () => _goTab(context, WebTab.home)),
+                      t['home'] ?? 'Home', () => _goTab(context, WebTab.home)),
                   _FooterLink(
-                      'All Ads', () => context.push('/browse')),
-                  _FooterLink(
-                      'Categories', () => _goTab(context, WebTab.categories)),
-                  _FooterLink(
-                      'Post an Ad', () => _goTab(context, WebTab.postAd)),
+                      t['all_ads'] ?? 'All Ads', () => context.push('/browse')),
+                  _FooterLink(t['categories'] ?? 'Categories',
+                      () => _goTab(context, WebTab.categories)),
+                  _FooterLink(t['post_an_ad'] ?? 'Post an Ad',
+                      () => _goTab(context, WebTab.postAd)),
                 ],
               );
 
               final myAccount = _FooterBlock(
-                title: 'My Account',
+                title: t['my_account'] ?? 'My Account',
                 children: [
-                  _FooterLink(
-                      'My Ads', () => _goTab(context, WebTab.account)),
-                  _FooterLink(
-                      'Saved', () => _goTab(context, WebTab.favorites)),
-                  _FooterLink(
-                      'Notifications', () => context.push('/notifications')),
+                  _FooterLink(t['my_ads'] ?? 'My Ads',
+                      () => _goTab(context, WebTab.account)),
+                  _FooterLink(t['nav_saved'] ?? 'Saved',
+                      () => _goTab(context, WebTab.favorites)),
+                  _FooterLink(t['notifications'] ?? 'Notifications',
+                      () => context.push('/notifications')),
                 ],
               );
 
               final support = _FooterBlock(
-                title: 'Support',
+                title: t['support'] ?? 'Support',
                 children: [
-                  _FooterLink(
-                      'Help & Support', () => context.push('/help')),
-                  _FooterLink(
-                      'Safe Meeting', () => context.push('/safe-meeting')),
-                  _FooterLink(
-                      'Female Support', () => context.push('/female-support')),
+                  _FooterLink(t['help_support'] ?? 'Help & Support',
+                      () => context.push('/help')),
+                  _FooterLink(t['safe_meeting'] ?? 'Safe Meeting',
+                      () => context.push('/safe-meeting')),
+                  _FooterLink(t['female_support'] ?? 'Female Support',
+                      () => context.push('/female-support')),
                 ],
               );
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
@@ -200,12 +201,34 @@ class _PostAdScreenState extends State<PostAdScreen> {
         _snack(t['enter_company_error'] ?? 'Please enter company name', AppColors.orange);
         return;
       }
-      if (_titleCtrl.text.trim().isEmpty) {
+      final title = _titleCtrl.text.trim();
+      if (title.isEmpty) {
         _snack(t['enter_title_error'] ?? 'Please enter a title', AppColors.orange);
         return;
       }
-      if (!isJob && _priceCtrl.text.trim().isEmpty) {
-        _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
+      if (title.length < 3) {
+        _snack('Title must be at least 3 characters', AppColors.orange);
+        return;
+      }
+      if (!isJob) {
+        final priceText = _priceCtrl.text.trim();
+        if (priceText.isEmpty) {
+          _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
+          return;
+        }
+        final price = double.tryParse(priceText);
+        if (price == null || price < 0) {
+          _snack('Please enter a valid price', AppColors.orange);
+          return;
+        }
+      }
+      final phoneDigits = _phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (phoneDigits.length < 10) {
+        _snack('Please enter a valid phone number (at least 10 digits)', AppColors.orange);
+        return;
+      }
+      if (_location == 'Pakistan' && _cityCtrl.text.trim().isEmpty) {
+        _snack('Please enter your city', AppColors.orange);
         return;
       }
       if (_isAuction && _auctionEndTime == null) {
@@ -261,6 +284,24 @@ class _PostAdScreenState extends State<PostAdScreen> {
     if (_selectedCategory == null) {
       _snack('Please select a category', AppColors.orange);
       return;
+    }
+
+    // Final guard so the green submit button never silently fails.
+    final titleGuard = _titleCtrl.text.trim();
+    if (titleGuard.isEmpty) {
+      _snack(t['enter_title_error'] ?? 'Please enter a title', AppColors.orange);
+      return;
+    }
+    if (_phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '').length < 10) {
+      _snack('Please enter a valid phone number (at least 10 digits)', AppColors.orange);
+      return;
+    }
+    if (_selectedCategory != 'Jobs Center') {
+      final priceGuard = double.tryParse(_priceCtrl.text.trim());
+      if (priceGuard == null || priceGuard < 0) {
+        _snack(t['enter_price_error'] ?? 'Please enter a price (or 0 for free)', AppColors.orange);
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
@@ -715,23 +756,26 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 16),
           
           if (isJob) ...[
-            _field('Company Name *', 'e.g. Pakistan International Airlines', _companyCtrl),
+            _field('Company Name *', 'e.g. Pakistan International Airlines', _companyCtrl,
+                enforceSpacing: true, maxLength: 60),
             const SizedBox(height: 12),
             _dropdown('Job Type *', 
                 ['Full-time', 'Part-time', 'Contract', 'Temporary'], 
                 _jobType, 
                 (v) => setState(() => _jobType = v!)),
             const SizedBox(height: 12),
-            _field('Salary Range', 'e.g. 50,000 - 80,000 Rs.', _salaryCtrl),
+            _field('Salary Range', 'e.g. 50,000 - 80,000 Rs.', _salaryCtrl,
+                enforceSpacing: true, maxLength: 40),
             const SizedBox(height: 12),
           ],
 
-          _field('${t['title'] ?? "Title"} *', isJob ? 'e.g. Senior Accountant' : 'e.g. iPhone 14 Pro 256GB', _titleCtrl),
+          _field('${t['title'] ?? "Title"} *', isJob ? 'e.g. Senior Accountant' : 'e.g. iPhone 14 Pro 256GB', _titleCtrl,
+              enforceSpacing: true, maxLength: 80),
           const SizedBox(height: 12),
           
           if (!isJob) ...[
             _field('${t['price'] ?? "Price"} (Rs.)', 'e.g. 50000 (enter 0 if free)', _priceCtrl,
-                isNumber: true),
+                isNumber: true, maxLength: 12),
             const SizedBox(height: 12),
           ],
 
@@ -776,9 +820,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
             ),
             if (_acceptsCOD) ...[
               const SizedBox(height: 8),
-              _field('Delivery Location', 'e.g. Lahore, Gulberg', _codLocationCtrl),
+              _field('Delivery Location', 'e.g. Lahore, Gulberg', _codLocationCtrl,
+                  enforceSpacing: true, maxLength: 80),
               const SizedBox(height: 12),
-              _field('Contact Number', '+92 XXX XXXXXXX', _codContactCtrl, isNumber: true),
+              _field('Contact Number', '+92 XXX XXXXXXX', _codContactCtrl,
+                  isPhone: true, maxLength: 20),
               const SizedBox(height: 12),
             ],
           ],
@@ -802,7 +848,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 12),
           _field(
               t['description'] ?? 'Description', 'Describe your item in detail…', _descCtrl,
-              maxLines: 4),
+              maxLines: 4, maxLength: 2000),
           const SizedBox(height: 12),
           _dropdown(t['location'] ?? 'Location',
               ['Pakistan', 'GCC Countries'].map((x) => t[x.toLowerCase().replaceAll(' ', '_')] ?? x).toList(),
@@ -813,16 +859,18 @@ class _PostAdScreenState extends State<PostAdScreen> {
               }),
           const SizedBox(height: 12),
           if (_location == 'Pakistan') ...[
-            _field('City *', 'e.g. Lahore', _cityCtrl),
+            _field('City *', 'e.g. Lahore', _cityCtrl,
+                enforceSpacing: true, maxLength: 40),
             const SizedBox(height: 12),
-            _field('Village/Area', 'e.g. Gulberg III', _villageCtrl),
+            _field('Village/Area', 'e.g. Gulberg III', _villageCtrl,
+                enforceSpacing: true, maxLength: 60),
             const SizedBox(height: 12),
           ],
           _field('${t['phone_number'] ?? "Phone Number"} *', '+92 XXX XXXXXXX', _phoneCtrl,
-              isNumber: true),
+              isPhone: true, maxLength: 20),
           const SizedBox(height: 12),
           _field('WhatsApp Number', '+92 XXX XXXXXXX (optional)', _whatsAppCtrl,
-              isNumber: true),
+              isPhone: true, maxLength: 20),
           const SizedBox(height: 20),
         ],
       ),
@@ -835,10 +883,32 @@ class _PostAdScreenState extends State<PostAdScreen> {
       String hint,
       TextEditingController ctrl, {
         bool isNumber = false,
+        bool isPhone = false,
+        bool enforceSpacing = false,
+        int? maxLength,
         int maxLines = 1,
       }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Input rules:
+    //  • phone  : digits + + - ( ) and single spaces, capped length
+    //  • number : digits only (price etc.)
+    //  • text   : no leading / doubled spaces so names, titles and locations
+    //             cannot be padded with arbitrary whitespace
+    final formatters = <TextInputFormatter>[
+      if (isPhone) ...[
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-() ]')),
+        FilteringTextInputFormatter.deny(RegExp(r'\s{2,}')),
+      ] else if (isNumber) ...[
+        FilteringTextInputFormatter.digitsOnly,
+      ] else if (enforceSpacing && maxLines == 1) ...[
+        FilteringTextInputFormatter.deny(RegExp(r'^\s')),
+        FilteringTextInputFormatter.deny(RegExp(r'\s{2,}')),
+      ],
+      if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -848,9 +918,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
-          keyboardType:
-          isNumber ? TextInputType.number : TextInputType.text,
+          keyboardType: isPhone
+              ? TextInputType.phone
+              : isNumber
+                  ? TextInputType.number
+                  : TextInputType.text,
           maxLines: maxLines,
+          inputFormatters: formatters,
           style: TextStyle(color: theme.textTheme.bodyLarge?.color),
           decoration: InputDecoration(
             hintText: hint,
