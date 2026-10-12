@@ -45,3 +45,7 @@ app.*.map.json
 /android/app/release
 .vercel
 .env*
+
+# Never commit local notes that may contain credentials
+changes.txt
+lib/changes.txt
