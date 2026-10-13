@@ -480,13 +480,14 @@ class _PostAdScreenState extends State<PostAdScreen> {
             mainAxisSize: embedded ? MainAxisSize.min : MainAxisSize.max,
             children: [
               _buildStepIndicator(steps),
+              if (kIsWeb) _buildWebTopBar(t, steps),
               if (embedded)
                 _buildCurrentStep()
               else
                 Expanded(
                   child: _buildCurrentStep(),
                 ),
-              _buildNavButtons(t),
+              if (!kIsWeb) _buildNavButtons(t),
             ],
           );
 
@@ -642,6 +643,98 @@ class _PostAdScreenState extends State<PostAdScreen> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  // ── Top action bar (web only) ────────────────────────────────────────────
+  // On the website the PostAd page scrolls with the document, so the bottom
+  // nav buttons are only reachable after scrolling to the end. This bar puts
+  // Back/Next at the top, opposite the step content, so users can advance
+  // without scrolling. Bottom nav is shown on mobile only.
+  Widget _buildWebTopBar(Map<String, String> t, List<String> steps) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.primaryDark : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                .withValues(alpha: 0.5),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            steps[_step],
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+              color: isDark ? Colors.white : AppColors.primary,
+            ),
+          ),
+          const Spacer(),
+          if (_step > 0) ...[
+            OutlinedButton(
+              onPressed: _prevStep,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: isDark ? AppColors.divider : AppColors.dividerLightMode,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                t['back'] ?? 'Back',
+                style: TextStyle(color: isDark ? Colors.white : AppColors.primary),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          _step == 3
+              ? ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text(
+                          t['submit_ad'] ?? 'Submit Ad',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600),
+                        ),
+                )
+              : ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(
+                    _step == 2
+                        ? (t['preview_ad'] ?? 'Preview Ad')
+                        : '${t['next'] ?? "Next"} →',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+        ],
       ),
     );
   }
