@@ -10,7 +10,8 @@ flutter pub get
 echo "=== Build step: flutter build web ==="
 flutter build web \
   --release \
-  --base-href=/
+  --base-href=/ \
+  --no-web-resources-cdn
 
 echo "=== Build complete: build/web ==="
 ls -la build/web | head -n 20
