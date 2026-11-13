@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * Copyright 2025 Google LLC
  *
@@ -1632,7 +1632,7 @@ function isVersionServiceProvider(provider) {
     const component = provider.getComponent();
     return (component === null || component === void 0 ? void 0 : component.type) === "VERSION" /* ComponentType.VERSION */;
 }
-const name$q = "./firebase-app.js";
+const name$q = "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 const version$1 = "0.13.1";
 /**
  * @license
@@ -1650,7 +1650,7 @@ const version$1 = "0.13.1";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const logger = new Logger('./firebase-app.js');
+const logger = new Logger('https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js');
 const name$p = "@firebase/app-compat";
 const name$o = "@firebase/analytics-compat";
 const name$n = "@firebase/analytics";
