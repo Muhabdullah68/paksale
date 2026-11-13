@@ -145,11 +145,8 @@
     var SERVICES = ['app', 'auth', 'firestore', 'storage', 'database', 'analytics', 'messaging'];
 
     try {
-      // Cache-bust: the immutable-cache header on these modules means a stale
-      // copy (with hardcoded gstatic imports) would otherwise be served for a
-      // year. Bump the version whenever the vendored SDK files change.
       var modules = await Promise.all(SERVICES.map(function (name) {
-        return import('./firebasejs/' + FIREBASE_SDK_VERSION + '/firebase-' + name + '.js?v=2');
+        return import('./firebasejs/' + FIREBASE_SDK_VERSION + '/firebase-' + name + '.js');
       }));
       window.firebase_core = modules[0];
       window.firebase_auth = modules[1];
