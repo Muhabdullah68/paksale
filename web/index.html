@@ -96,6 +96,74 @@
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+
+    // Flutter renders the splash <picture> into the DOM before the engine
+    // paints its first frame. Remove it as soon as that frame is ready,
+    // otherwise a stale splash can stay on top of the app.
+    window.addEventListener("flutter-first-frame", function () {
+      removeSplashFromWeb();
+    });
+  </script>
+
+  <!--
+    Safari / WebKit cannot consume the dynamic `import()` callback that
+    FlutterFire injects (it fails with a Dart JS-interop type error), so
+    Firebase.initializeApp() throws before the app can paint.
+
+    Loading the Firebase JS SDK ourselves and exposing the module namespaces
+    as window.firebase_* makes firebase_core_web skip its own loader entirely.
+    The modules are served from our origin (web/firebasejs/11.9.1) so the boot
+    path no longer depends on www.gstatic.com being reachable.
+
+    startFlutter() is always called, even if the SDK fails to load, so a
+    failed preload can never block the app from booting.
+  -->
+  <script type="module">
+    (function () {
+      var SERVICES = [
+        "app",
+        "auth",
+        "firestore",
+        "storage",
+        "database",
+        "analytics",
+        "messaging",
+      ];
+      var started = false;
+
+      function startFlutter() {
+        if (started) return;
+        started = true;
+        var script = document.createElement("script");
+        script.src = "flutter_bootstrap.js";
+        script.async = true;
+        document.body.appendChild(script);
+      }
+
+      // Never let a slow or blocked SDK request hold the app hostage.
+      var fallback = setTimeout(startFlutter, 10000);
+
+      Promise.all(
+        SERVICES.map(function (name) {
+          return import("./firebasejs/11.9.1/firebase-" + name + ".js");
+        })
+      )
+        .then(function (modules) {
+          for (var i = 0; i < SERVICES.length; i++) {
+            // FlutterFire reads the app module as `firebase_core`; every
+            // other service lives under `firebase_<service>`.
+            var key = SERVICES[i] === "app" ? "firebase_core" : "firebase_" + SERVICES[i];
+            window[key] = modules[i];
+          }
+        })
+        .catch(function (error) {
+          console.error("Firebase SDK preload failed:", error);
+        })
+        .then(function () {
+          clearTimeout(fallback);
+          startFlutter();
+        });
+    })();
   </script>
 </head>
 <body>
@@ -106,14 +174,10 @@
   </picture>
   
   <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
+    flutter_bootstrap.js is injected by the module above, after the Firebase
+    SDK namespaces are available on window. Do not add a static tag here:
+    loading it twice would boot the Flutter engine twice.
   -->
-  <script src="flutter_bootstrap.js" async=""></script>
 
 
 </body></html>
