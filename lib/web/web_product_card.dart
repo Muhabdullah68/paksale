@@ -165,6 +165,76 @@ class _WebProductCardState extends State<WebProductCard> {
                     ),
                   ),
                 ),
+                // Action chips sit directly under the favourite icon in the
+                // image's top-right corner, matching the other card layouts.
+                Positioned(
+                  top: 44,
+                  right: 10,
+                  child: GestureDetector(
+                    // Absorb taps between chips so the card's onTap does not
+                    // open the detail page.
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {},
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _WebActionChip(
+                            icon: Icons.call_outlined,
+                            label: t['call'] ?? 'Call',
+                            compact: true,
+                            onTap: () => callProductSeller(context, p),
+                          ),
+                          const SizedBox(height: 2),
+                          _WebActionChip(
+                            icon: Icons.chat_bubble_outline,
+                            label: t['chat'] ?? 'Chat',
+                            compact: true,
+                            onTap: () => startProductChat(context, p),
+                          ),
+                          if (widget.showShareButton) ...[
+                            const SizedBox(height: 2),
+                            _WebActionChip(
+                              icon: Icons.share_outlined,
+                              label: t['share'] ?? 'Share',
+                              compact: true,
+                              onTap: () {
+                                if (widget.onShare != null) {
+                                  widget.onShare!();
+                                } else {
+                                  ShareService.shareProduct(
+                                    context,
+                                    widget.product,
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                          if (widget.showCompareButton) ...[
+                            const SizedBox(height: 2),
+                            _WebActionChip(
+                              icon: Icons.compare_arrows,
+                              label: t['compare'] ?? 'Compare',
+                              isActive: isInCompare,
+                              compact: true,
+                              onTap: () => toggleCompareWithFeedback(
+                                context,
+                                p,
+                                compareProvider,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -258,56 +328,6 @@ class _WebProductCardState extends State<WebProductCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // This opaque layer absorbs taps that land between chips so
-                // they never reach the card's onTap and open the detail page.
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {},
-                  child: Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _WebActionChip(
-                        icon: Icons.call_outlined,
-                        label: t['call'] ?? 'Call',
-                        onTap: () => callProductSeller(context, p),
-                      ),
-                      _WebActionChip(
-                        icon: Icons.chat_bubble_outline,
-                        label: t['chat'] ?? 'Chat',
-                        onTap: () => startProductChat(context, p),
-                      ),
-                      if (widget.showShareButton)
-                        _WebActionChip(
-                          icon: Icons.share_outlined,
-                          label: t['share'] ?? 'Share',
-                          onTap: () {
-                            if (widget.onShare != null) {
-                              widget.onShare!();
-                            } else {
-                              ShareService.shareProduct(
-                                context,
-                                widget.product,
-                              );
-                            }
-                          },
-                        ),
-                      if (widget.showCompareButton)
-                        _WebActionChip(
-                          icon: Icons.compare_arrows,
-                          label: t['compare'] ?? 'Compare',
-                          isActive: isInCompare,
-                          onTap: () => toggleCompareWithFeedback(
-                            context,
-                            p,
-                            compareProvider,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -392,29 +412,41 @@ class _WebActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isActive;
+  final bool compact;
 
   const _WebActionChip({
     required this.icon,
     required this.label,
     required this.onTap,
     this.isActive = false,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final padding = compact
+        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 3)
+        : const EdgeInsets.symmetric(horizontal: 10, vertical: 8);
+    final iconSize = compact ? 9.0 : 13.0;
+    final fontSize = compact ? 8.0 : 11.0;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
+        // Opaque so taps on the chip's padding count as taps on the chip,
+        // instead of falling through to the card's navigation onTap.
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           // Larger target keeps taps on the chip instead of the card beneath.
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: padding,
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold.withValues(alpha: 0.15)
-                : theme.colorScheme.surface,
+                : (compact
+                      ? Colors.black.withValues(alpha: 0.35)
+                      : theme.colorScheme.surface),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4),
@@ -423,13 +455,13 @@ class _WebActionChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 13, color: AppColors.gold),
-              const SizedBox(width: 4),
+              Icon(icon, size: iconSize, color: AppColors.gold),
+              SizedBox(width: compact ? 2 : 4),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.gold,
-                  fontSize: 11,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.w600,
                 ),
               ),

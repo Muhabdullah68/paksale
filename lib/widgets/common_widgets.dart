@@ -15,6 +15,9 @@ import '../repositories/user_repository.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../services/share_service.dart';
+import '../services/web_clipboard.dart'
+    if (dart.library.html) '../services/web_clipboard_web.dart'
+    as browser_clipboard;
 import '../screens/account_screen.dart';
 import '../screens/chat_screen.dart';
 
@@ -110,14 +113,25 @@ void _showCallDialog(
           ),
           TextButton(
             onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: phone));
-              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              // Show feedback synchronously, before any await, so a tap
+              // always produces a visible message.
               messenger.showSnackBar(
                 const SnackBar(
                   content: Text('Number copied to clipboard'),
                   backgroundColor: AppColors.gold,
                 ),
               );
+              if (kIsWeb) {
+                // Flutter's clipboard channel loses the user gesture in
+                // Safari; write through the browser API instead.
+                final copied = await browser_clipboard.copyToClipboard(phone);
+                if (!copied) {
+                  await Clipboard.setData(ClipboardData(text: phone));
+                }
+              } else {
+                await Clipboard.setData(ClipboardData(text: phone));
+              }
+              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
             },
             child: const Text('Copy number'),
           ),
@@ -794,26 +808,81 @@ class ProductCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                    ],
+                  ),
+                ),
+              ),
+              // Right rail: heart with the action chips directly below it.
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {},
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10, top: 10, bottom: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          if (favoritesProvider == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  t['sign_in_favorites'] ??
+                                      'Please sign in to save favorites',
+                                ),
+                                backgroundColor: isDark
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                              ),
+                            );
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          final ok = await favoritesProvider.toggleFavorite(
+                            product,
+                          );
+                          if (!ok) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  t['favorite_failed'] ??
+                                      "Couldn't update favorite",
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        },
+                        child: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav ? Colors.redAccent : AppColors.textMuted,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Wrap(
-                        alignment: WrapAlignment.end,
+                        direction: Axis.vertical,
                         spacing: 4,
-                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.end,
                         children: [
                           _ActionChip(
                             icon: Icons.call_outlined,
                             label: t['call'] ?? 'Call',
+                            compact: true,
                             onTap: () => callProductSeller(context, p),
                           ),
                           _ActionChip(
                             icon: Icons.chat_bubble_outline,
                             label: t['chat'] ?? 'Chat',
+                            compact: true,
                             onTap: () => startProductChat(context, p),
                           ),
                           if (showShareButton)
                             _ActionChip(
                               icon: Icons.share_outlined,
                               label: t['share'] ?? 'Share',
+                              compact: true,
                               onTap: () {
                                 if (onShare != null) {
                                   onShare!();
@@ -827,6 +896,7 @@ class ProductCard extends StatelessWidget {
                               icon: Icons.compare_arrows,
                               label: t['compare'] ?? 'Compare',
                               isActive: isInCompare,
+                              compact: true,
                               onTap: () => toggleCompareWithFeedback(
                                 context,
                                 p,
@@ -836,44 +906,6 @@ class ProductCard extends StatelessWidget {
                         ],
                       ),
                     ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 10, top: 10),
-                child: GestureDetector(
-                  onTap: () async {
-                    if (favoritesProvider == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            t['sign_in_favorites'] ??
-                                'Please sign in to save favorites',
-                          ),
-                          backgroundColor: isDark
-                              ? AppColors.primaryDark
-                              : AppColors.primary,
-                        ),
-                      );
-                      return;
-                    }
-                    final messenger = ScaffoldMessenger.of(context);
-                    final ok = await favoritesProvider.toggleFavorite(product);
-                    if (!ok) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            t['favorite_failed'] ?? "Couldn't update favorite",
-                          ),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                    }
-                  },
-                  child: Icon(
-                    isFav ? Icons.favorite : Icons.favorite_border,
-                    color: isFav ? Colors.redAccent : AppColors.textMuted,
-                    size: 20,
                   ),
                 ),
               ),
@@ -1389,6 +1421,9 @@ class _ActionChip extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
+        // Opaque so taps on the chip's padding count as taps on the chip,
+        // instead of falling through to the card's navigation onTap.
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),

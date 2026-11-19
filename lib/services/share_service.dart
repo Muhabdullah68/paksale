@@ -37,15 +37,16 @@ class ShareService {
     String? subject,
   }) async {
     if (kIsWeb) {
+      // Show feedback immediately — before any await — so the tap always
+      // produces a visible message even if the browser stalls on clipboard.
+      if (context.mounted) _copiedSnack(context);
+
       // Flutter's clipboard channel loses the user gesture on iOS Safari, so
       // write through the browser API while the tap is still on the stack.
       final copied = await browser_clipboard.copyToClipboard(text);
-      if (context.mounted) {
-        if (copied) {
-          _copiedSnack(context);
-        } else {
-          _showManualCopy(context, text);
-        }
+      if (!copied && context.mounted) {
+        // Browser blocked clipboard — give the user a selectable link.
+        _showManualCopy(context, text);
       }
       return;
     }

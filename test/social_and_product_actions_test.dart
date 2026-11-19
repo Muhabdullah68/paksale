@@ -167,12 +167,95 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('list product card chips sit under the heart at the right edge', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(360, 720));
+
+    final compareProvider = CompareProvider();
+    final product = buildProduct();
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(width: 360, child: ProductCard(product: product)),
+        ),
+        compareProvider: compareProvider,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(actionLabels(tester), ['Call', 'Chat', 'Share', 'Compare']);
+
+    final heart = find.byIcon(Icons.favorite_border);
+    expect(heart, findsOneWidget);
+    // Chips are directly below the heart ...
+    expect(
+      tester.getCenter(find.text('Call')).dy,
+      greaterThan(tester.getCenter(heart).dy),
+    );
+    // ... at the right edge, right of the title.
+    expect(
+      tester.getCenter(find.text('Call')).dx,
+      greaterThan(tester.getCenter(find.text(product.title)).dx),
+    );
+
+    await tester.tap(find.text('Compare'));
+    await tester.pumpAndSettle();
+    expect(compareProvider.isInCompare(product.id), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping chip padding runs the action without opening the card', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(360, 720));
+
+    final product = buildProduct();
+    var navigations = 0;
+    var shares = 0;
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(
+            width: 360,
+            child: ProductCard(
+              product: product,
+              onTap: () => navigations++,
+              onShare: () => shares++,
+            ),
+          ),
+        ),
+        compareProvider: CompareProvider(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Tap the chip's padding near its corner - the region that used to fall
+    // through to the card's onTap because of deferToChild hit testing.
+    final shareChip = find
+        .ancestor(
+          of: find.text('Share'),
+          matching: find.byType(GestureDetector),
+        )
+        .first;
+    final rect = tester.getRect(shareChip);
+    await tester.tapAt(rect.topLeft + const Offset(2, 2));
+    await tester.pumpAndSettle();
+
+    expect(shares, 1);
+    expect(navigations, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('web product card actions fit and keep their order', (
     tester,
   ) async {
     setViewport(tester, const Size(320, 720));
 
     final product = buildProduct();
+    final compareProvider = CompareProvider();
 
     await tester.pumpWidget(
       testApp(
@@ -183,12 +266,70 @@ void main() {
             child: WebProductCard(product: product),
           ),
         ),
-        compareProvider: CompareProvider(),
+        compareProvider: compareProvider,
       ),
     );
     await tester.pumpAndSettle();
 
     expect(actionLabels(tester), ['Call', 'Chat', 'Share', 'Compare']);
+
+    // Chips live in the image Stack: under the heart but above the title.
+    final heart = find.byIcon(Icons.favorite_border);
+    expect(heart, findsOneWidget);
+    expect(
+      tester.getCenter(find.text('Call')).dy,
+      greaterThan(tester.getCenter(heart).dy),
+    );
+    expect(
+      tester.getCenter(find.text('Call')).dy,
+      lessThan(tester.getCenter(find.text(product.title)).dy),
+    );
+
+    await tester.tap(find.text('Compare'));
+    await tester.pumpAndSettle();
+    expect(compareProvider.isInCompare(product.id), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping web chip padding runs the action without navigation', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(320, 720));
+
+    final product = buildProduct();
+    var navigations = 0;
+    var shares = 0;
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(
+            width: 180,
+            height: 320,
+            child: WebProductCard(
+              product: product,
+              onTap: () => navigations++,
+              onShare: () => shares++,
+            ),
+          ),
+        ),
+        compareProvider: CompareProvider(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final shareChip = find
+        .ancestor(
+          of: find.text('Share'),
+          matching: find.byType(GestureDetector),
+        )
+        .first;
+    final rect = tester.getRect(shareChip);
+    await tester.tapAt(rect.topLeft + const Offset(2, 2));
+    await tester.pumpAndSettle();
+
+    expect(shares, 1);
+    expect(navigations, 0);
     expect(tester.takeException(), isNull);
   });
 }
