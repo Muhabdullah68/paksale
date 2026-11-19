@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -48,16 +49,32 @@ void main() {
         .toList();
   }
 
-  ProductModel buildProduct() => ProductModel(
+  ProductModel buildProduct({
+    String sellerId = 'seller-1',
+    String sellerPhone = '+92 300 1234567',
+  }) => ProductModel(
     id: 'test-product',
     title: 'Compact card test listing',
     price: 100000,
     category: 'Vehicles',
     condition: 'Used',
     sellerType: 'Personal',
-    sellerId: 'seller-1',
+    sellerId: sellerId,
+    sellerPhone: sellerPhone,
     createdAt: DateTime.now(),
   );
+
+  void mockClipboard() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') return null;
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+  }
 
   test('normalizes local and international phone numbers', () {
     expect(normalizePhoneNumber('0300 1234567'), '+923001234567');
@@ -331,6 +348,97 @@ void main() {
 
     expect(shares, 1);
     expect(navigations, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Call opens the number sheet without waiting on Firestore', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(360, 720));
+    mockClipboard();
+    final product = buildProduct(sellerId: '');
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(width: 360, child: ProductCard(product: product)),
+        ),
+        compareProvider: CompareProvider(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // One frame after the tap is enough — no async privacy check involved.
+    await tester.tap(find.text('Call'));
+    await tester.pump();
+
+    expect(find.text('Call ${product.sellerName}'), findsOneWidget);
+    expect(find.text('+923001234567'), findsOneWidget);
+    expect(find.text('Copy number'), findsOneWidget);
+    expect(find.text('Dial'), findsOneWidget);
+
+    await tester.tap(find.text('Copy number'));
+    await tester.pumpAndSettle();
+    expect(find.text('Number copied to clipboard'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Call opens the number sheet on Web Home cards too', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(320, 720));
+    mockClipboard();
+    final product = buildProduct(sellerId: '');
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(
+            width: 180,
+            height: 320,
+            child: WebProductCard(product: product),
+          ),
+        ),
+        compareProvider: CompareProvider(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Call'));
+    await tester.pump();
+
+    expect(find.text('Call ${product.sellerName}'), findsOneWidget);
+    expect(find.text('+923001234567'), findsOneWidget);
+    expect(find.text('Copy number'), findsOneWidget);
+    expect(find.text('Dial'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact action chips use a readable font size', (tester) async {
+    setViewport(tester, const Size(320, 720));
+
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(
+            width: 143,
+            height: 260,
+            child: ProductCard(product: buildProduct(), isGridView: true),
+          ),
+        ),
+        compareProvider: CompareProvider(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const labels = {'Call', 'Chat', 'Share', 'Compare'};
+    final chipTexts = tester
+        .widgetList<Text>(find.byType(Text))
+        .where((text) => labels.contains(text.data));
+    expect(chipTexts.length, 4);
+    for (final text in chipTexts) {
+      expect(text.style?.fontSize, greaterThanOrEqualTo(9));
+    }
     expect(tester.takeException(), isNull);
   });
 }

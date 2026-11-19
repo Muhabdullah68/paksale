@@ -80,106 +80,116 @@ void _showCallDialog(
   required String phone,
   required Uri uri,
   String? message,
+  ProductModel? product,
+  ValueNotifier<bool>? allowsCalls,
 }) {
   final t = context.read<LanguageProvider>().t;
   final messenger = ScaffoldMessenger.of(context);
+  // When supplied, flipping this to false turns the open number sheet into
+  // the "calls disabled — chat instead" prompt without popping any routes.
+  final privacy = allowsCalls ?? ValueNotifier<bool>(true);
 
   showDialog<void>(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
-        title: Text('Call $sellerName'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (message != null) ...[Text(message), const SizedBox(height: 12)],
-            const Text('Seller phone number'),
-            const SizedBox(height: 4),
-            SelectableText(
-              phone,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.gold,
+      return ValueListenableBuilder<bool>(
+        valueListenable: privacy,
+        builder: (ctx, allowed, _) {
+          if (!allowed) {
+            return AlertDialog(
+              title: Text(t['call'] ?? 'Call'),
+              content: const Text(
+                'This seller has disabled calls. Would you like to chat instead?',
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(t['cancel'] ?? 'Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Show feedback synchronously, before any await, so a tap
-              // always produces a visible message.
-              messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Number copied to clipboard'),
-                  backgroundColor: AppColors.gold,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(t['cancel'] ?? 'Cancel'),
                 ),
-              );
-              if (kIsWeb) {
-                // Flutter's clipboard channel loses the user gesture in
-                // Safari; write through the browser API instead.
-                final copied = await browser_clipboard.copyToClipboard(phone);
-                if (!copied) {
-                  await Clipboard.setData(ClipboardData(text: phone));
-                }
-              } else {
-                await Clipboard.setData(ClipboardData(text: phone));
-              }
-              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Copy number'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final launched = await launchUrl(
-                uri,
-                mode: LaunchMode.externalApplication,
-              );
-              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              if (!launched) {
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Could not open the dialer')),
-                );
-              }
-            },
-            child: const Text('Dial'),
-          ),
-        ],
-      );
-    },
-  );
-}
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    if (product != null) startProductChat(ctx, product);
+                  },
+                  child: Text(t['chat'] ?? 'Chat'),
+                ),
+              ],
+            );
+          }
 
-void _showCallDisabledDialog(BuildContext context, ProductModel product) {
-  final t = context.read<LanguageProvider>().t;
-
-  showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: Text(t['call'] ?? 'Call'),
-        content: const Text(
-          'This seller has disabled calls. Would you like to chat instead?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(t['cancel'] ?? 'Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              startProductChat(context, product);
-            },
-            child: Text(t['chat'] ?? 'Chat'),
-          ),
-        ],
+          return AlertDialog(
+            title: Text('Call $sellerName'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (message != null) ...[
+                  Text(message),
+                  const SizedBox(height: 12),
+                ],
+                const Text('Seller phone number'),
+                const SizedBox(height: 4),
+                SelectableText(
+                  phone,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gold,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(t['cancel'] ?? 'Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  // Show feedback synchronously, before any await, so a tap
+                  // always produces a visible message.
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Number copied to clipboard'),
+                      backgroundColor: AppColors.gold,
+                    ),
+                  );
+                  if (kIsWeb) {
+                    // Flutter's clipboard channel loses the user gesture in
+                    // Safari; write through the browser API instead.
+                    final copied = await browser_clipboard.copyToClipboard(
+                      phone,
+                    );
+                    if (!copied) {
+                      await Clipboard.setData(ClipboardData(text: phone));
+                    }
+                  } else {
+                    await Clipboard.setData(ClipboardData(text: phone));
+                  }
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Copy number'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final launched = await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                  if (!launched) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not open the dialer'),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Dial'),
+              ),
+            ],
+          );
+        },
       );
     },
   );
@@ -197,48 +207,35 @@ Future<void> callProductSeller(
     _showActionMessage(context, 'The seller has not provided a phone number');
     return;
   }
-
-  final allowsCalls = await _sellerAllowsCalls(product);
   if (!context.mounted) return;
-  if (!allowsCalls) {
-    _showCallDisabledDialog(context, product);
-    return;
-  }
 
   final sellerName = product.sellerName.trim().isEmpty
       ? 'the seller'
       : product.sellerName;
   final uri = Uri.parse('tel:$phone');
+  final privacy = ValueNotifier<bool>(true);
 
-  // On desktop browsers tel: often does nothing, so always show the number
-  // with explicit Copy/Dial actions. App users go straight to the dialer and
-  // only see the dialog if the platform cannot launch it.
-  if (kIsWeb) {
-    _showCallDialog(context, sellerName: sellerName, phone: phone, uri: uri);
-    return;
-  }
+  // Show the number sheet synchronously — before any await — so every tap
+  // visibly responds. Firestore reads on web can stall, which previously
+  // made the Call button look completely dead.
+  _showCallDialog(
+    context,
+    sellerName: sellerName,
+    phone: phone,
+    uri: uri,
+    product: product,
+    allowsCalls: privacy,
+  );
 
+  // Check call privacy in the background with a hard timeout. If the seller
+  // explicitly disabled calls, the open sheet switches to the chat prompt.
   try {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && context.mounted) {
-      _showCallDialog(
-        context,
-        sellerName: sellerName,
-        phone: phone,
-        uri: uri,
-        message: 'Could not open the dialer. You can copy or dial manually.',
-      );
-    }
+    final allows = await _sellerAllowsCalls(
+      product,
+    ).timeout(const Duration(seconds: 3), onTimeout: () => true);
+    if (!allows) privacy.value = false;
   } catch (_) {
-    if (context.mounted) {
-      _showCallDialog(
-        context,
-        sellerName: sellerName,
-        phone: phone,
-        uri: uri,
-        message: 'Could not open the dialer. You can copy or dial manually.',
-      );
-    }
+    // Unknown privacy — keep calls available.
   }
 }
 
@@ -1081,22 +1078,22 @@ class ProductCard extends StatelessWidget {
                     // the image's top-right corner (Categories layout).
                     Positioned(
                       top: 34,
-                      right: 6,
+                      right: 2,
                       child: GestureDetector(
                         // Absorb taps between chips so the card's onTap does
                         // not open the detail page.
                         behavior: HitTestBehavior.opaque,
                         onTap: () {},
                         child: Container(
-                          padding: const EdgeInsets.all(3),
+                          padding: const EdgeInsets.symmetric(vertical: 3),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.45),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: ConstrainedBox(
-                            // Wide enough for two compact rows inside the
-                            // ~84px-tall image without clipping the last row.
-                            constraints: const BoxConstraints(maxWidth: 130),
+                            // Wide enough for Share+Compare on one row at the
+                            // larger font, while still fitting a 143px card.
+                            constraints: const BoxConstraints(maxWidth: 141),
                             child: Wrap(
                               alignment: WrapAlignment.end,
                               spacing: 2,
@@ -1413,10 +1410,10 @@ class _ActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final padding = compact
-        ? const EdgeInsets.symmetric(horizontal: 2, vertical: 1)
+        ? const EdgeInsets.symmetric(horizontal: 1, vertical: 2)
         : const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
-    final iconSize = compact ? 7.0 : 10.0;
-    final fontSize = compact ? 7.0 : 10.0;
+    final iconSize = compact ? 8.0 : 10.0;
+    final fontSize = compact ? 9.0 : 10.0;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1442,7 +1439,7 @@ class _ActionChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: iconSize, color: AppColors.gold),
-              SizedBox(width: compact ? 1 : 3),
+              SizedBox(width: compact ? 0 : 3),
               Flexible(
                 child: Text(
                   label,
