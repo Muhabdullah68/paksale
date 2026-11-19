@@ -48,14 +48,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navToProduct(ProductModel p) {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)),
+    );
   }
 
   // ── Handle every possible drawer key ──────────────────────────────────────
   void _handleDrawerNavigation(String key) {
     switch (key) {
-    // ── Tab switches ───────────────────────────────────────────────────────
+      // ── Tab switches ───────────────────────────────────────────────────────
       case 'home':
         setState(() => _currentNavIndex = _tabHome);
         break;
@@ -75,14 +77,18 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _currentNavIndex = _tabAccount);
         break;
 
-    // ── Screen pushes ──────────────────────────────────────────────────────
+      // ── Screen pushes ──────────────────────────────────────────────────────
       case 'notifications':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        );
         break;
       case 'search':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SearchFilterScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SearchFilterScreen()),
+        );
         break;
       case 'compare':
         final compareProvider = context.read<CompareProvider>();
@@ -96,14 +102,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(t['compare_empty'] ?? 'No items in compare list yet'),
-            backgroundColor: AppColors.primaryDark,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                t['compare_empty'] ?? 'No items in compare list yet',
+              ),
+              backgroundColor: AppColors.primaryDark,
+            ),
+          );
         }
         break;
 
-    // ── These are handled fully inside the drawer via bottom sheets ────────
+      // ── These are handled fully inside the drawer via bottom sheets ────────
       case 'saved_filters':
       case 'language':
       case 'my_products':
@@ -116,11 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       default:
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$key coming soon!'),
-          backgroundColor: AppColors.gold,
-          duration: const Duration(seconds: 1),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$key coming soon!'),
+            backgroundColor: AppColors.gold,
+            duration: const Duration(seconds: 1),
+          ),
+        );
     }
   }
 
@@ -158,29 +170,30 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: _currentNavIndex == _tabHome ? _buildAppBar() : null,
         floatingActionButton: _currentNavIndex != _tabHome && cmpCount > 0
             ? FloatingActionButton.extended(
-          backgroundColor: AppColors.gold,
-          elevation: 4,
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  CompareScreen(selectedProducts: compareProvider.compareList),
-            ),
-          ),
-          icon: const Icon(Icons.compare_arrows, color: Colors.white),
-          label: Text(
-            '${t['compare'] ?? 'Compare'} ($cmpCount)',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600),
-          ),
-        )
+                backgroundColor: AppColors.gold,
+                elevation: 4,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CompareScreen(
+                      selectedProducts: compareProvider.compareList,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.compare_arrows, color: Colors.white),
+                label: Text(
+                  '${t['compare'] ?? 'Compare'} ($cmpCount)',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
             : null,
         body: IndexedStack(
           index: _currentNavIndex,
           children: [
-            _HomeBody(
-              onProductTap: (p) => _navToProduct(p),
-            ),
+            _HomeBody(onProductTap: (p) => _navToProduct(p)),
             const CategoriesScreen(),
             const PostAdScreen(),
             const FavoritesScreen(),
@@ -212,9 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (_) => ListingScreen(categoryTitle: name),
               ),
             ),
-            onSeeAllAds: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ListingScreen()),
-            ),
+            onSeeAllAds: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ListingScreen())),
           ),
           const CategoriesScreen(webEmbedded: true),
           const PostAdScreen(webEmbedded: true),
@@ -232,11 +245,17 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Text(t['policy_update_title'] ?? 'Policy Update'),
-        content: Text(t['policy_update_msg'] ?? 'Our Terms of Service or Privacy Policy have been updated. Please review and accept to continue using the app.'),
+        content: Text(
+          t['policy_update_msg'] ??
+              'Our Terms of Service or Privacy Policy have been updated. Please review and accept to continue using the app.',
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AccountScreen()),
+              );
               Navigator.pop(ctx);
             },
             child: Text(t['view_policies'] ?? 'View Policies'),
@@ -247,7 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: Text(t['accept'] ?? 'Accept', style: const TextStyle(color: Colors.white)),
+            child: Text(
+              t['accept'] ?? 'Accept',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -263,7 +285,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05), blurRadius: 16)
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 16,
+          ),
         ],
       ),
       child: BottomNavigationBar(
@@ -277,29 +302,35 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedFontSize: 10,
         items: [
           BottomNavigationBarItem(
-              icon: const Icon(Icons.home_outlined),
-              activeIcon: const Icon(Icons.home),
-              label: t['nav_home'] ?? 'Home'),
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: t['nav_home'] ?? 'Home',
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.grid_view_outlined),
-              activeIcon: const Icon(Icons.grid_view),
-              label: t['nav_categories'] ?? 'Categories'),
+            icon: const Icon(Icons.grid_view_outlined),
+            activeIcon: const Icon(Icons.grid_view),
+            label: t['nav_categories'] ?? 'Categories',
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.add_circle_outline, size: 28),
-              activeIcon: const Icon(Icons.add_circle, size: 28),
-              label: t['nav_post_ad'] ?? 'Post Ad'),
+            icon: const Icon(Icons.add_circle_outline, size: 28),
+            activeIcon: const Icon(Icons.add_circle, size: 28),
+            label: t['nav_post_ad'] ?? 'Post Ad',
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.favorite_outline),
-              activeIcon: const Icon(Icons.favorite),
-              label: t['nav_saved'] ?? 'Saved'),
+            icon: const Icon(Icons.favorite_outline),
+            activeIcon: const Icon(Icons.favorite),
+            label: t['nav_saved'] ?? 'Saved',
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.chat_bubble_outline),
-              activeIcon: const Icon(Icons.chat_bubble),
-              label: t['nav_chat'] ?? 'Chat'),
+            icon: const Icon(Icons.chat_bubble_outline),
+            activeIcon: const Icon(Icons.chat_bubble),
+            label: t['nav_chat'] ?? 'Chat',
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline),
-              activeIcon: const Icon(Icons.person),
-              label: t['nav_account'] ?? 'Account'),
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: t['nav_account'] ?? 'Account',
+          ),
         ],
       ),
     );
@@ -309,9 +340,10 @@ class _HomeScreenState extends State<HomeScreen> {
   PreferredSizeWidget _buildAppBar() {
     final t = context.watch<LanguageProvider>().t;
     final unread = context.select<NotificationProvider, int>(
-        (p) => p.unreadCount);
+      (p) => p.unreadCount,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Adjust sizes for small screens
     final double logoSize = screenWidth < 360 ? 34 : 38;
     final double appLogoIconSize = screenWidth < 360 ? 22 : 24;
@@ -325,43 +357,54 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: AppColors.primary,
         automaticallyImplyLeading: false,
         titleSpacing: 0,
-        title: Row(children: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            padding: EdgeInsets.symmetric(horizontal: menuPadding),
-            tooltip: t['menu'] ?? 'Menu',
-          ),
-          Container(
-            width: logoSize, height: logoSize,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              padding: EdgeInsets.symmetric(horizontal: menuPadding),
+              tooltip: t['menu'] ?? 'Menu',
             ),
-            child: Center(
-              child: AppLogoIcon(size: appLogoIconSize),
+            Container(
+              width: logoSize,
+              height: logoSize,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Center(child: AppLogoIcon(size: appLogoIconSize)),
             ),
-          ),
-          SizedBox(width: spaceAfterLogo),
-          Expanded(
-            child: TextField(
-              maxLength: 80,
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: t['search_hint'] ?? 'Search in PakistanSale...',
-                hintStyle: TextStyle(color: Colors.white70, fontSize: hintFontSize),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.15),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
+            SizedBox(width: spaceAfterLogo),
+            Expanded(
+              child: TextField(
+                maxLength: 80,
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: t['search_hint'] ?? 'Search in PakistanSale...',
+                  hintStyle: TextStyle(
+                    color: Colors.white70,
+                    fontSize: hintFontSize,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.15),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
-          ),
-        ]),
+          ],
+        ),
         actions: [
           Stack(
             children: [
@@ -376,22 +419,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
-                        color: AppColors.gold, shape: BoxShape.circle),
-                    constraints:
-                        const BoxConstraints(minWidth: 14, minHeight: 14),
-                    child: Text('$unread',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                      color: AppColors.gold,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '$unread',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
             ],
           ),
         ],
       ),
-    );  }
+    );
+  }
 }
 
 // ── Home Body ─────────────────────────────────────────────────────────────────
@@ -435,13 +486,17 @@ class _HomeBodyState extends State<_HomeBody> {
               {'n': 'Furniture & Décor', 'i': '🪑'},
               {'n': 'Market', 'i': '🛒'},
             ]),
-            const AdBannerPlaceholder(text: 'City Doha Furniture - ستي دوحة للأثاث'),
+            const AdBannerPlaceholder(
+              text: 'City Doha Furniture - ستي دوحة للأثاث',
+            ),
             _catSection(context, 'Electronics & Tech', [
               {'n': 'Electronics', 'i': '⚡'},
               {'n': 'Computers & Parts', 'i': '💻'},
               {'n': 'Mobile & Tablets', 'i': '📱'},
             ]),
-            const AdBannerPlaceholder(text: 'Barcode Electronics - باركود للالكترونيات'),
+            const AdBannerPlaceholder(
+              text: 'Barcode Electronics - باركود للالكترونيات',
+            ),
             _catSection(context, 'Leisure & Luxury', [
               {'n': 'WaterCrafts', 'i': '⛵'},
               {'n': 'Jewellery', 'i': '💎'},
@@ -459,26 +514,42 @@ class _HomeBodyState extends State<_HomeBody> {
               title: t['recent'] ?? 'Recent Listings',
               actionText: t['see_all'] ?? 'See All',
               onAction: () => Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const ListingScreen())),
+                context,
+                MaterialPageRoute(builder: (_) => const ListingScreen()),
+              ),
             ),
             if (isLoading)
-              const Center(child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: CircularProgressIndicator(color: AppColors.gold),
-              ))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                ),
+              )
             else if (error != null)
               _buildErrorState(context, error)
             else if (products.isEmpty)
               // Fallback to sample data if Firebase is empty/not configured
-              ...SampleData.products.take(5).map((p) => ProductCard(
-                product: p,
-                onTap: () => widget.onProductTap(p),
-              ))
+              ...SampleData.products
+                  .take(5)
+                  .map(
+                    (p) => ProductCard(
+                      product: p,
+                      onTap: () => widget.onProductTap(p),
+                    ),
+                  )
             else
-              ...products.take(5).map((p) => ProductCard(
-                product: p,
-                onTap: () => widget.onProductTap(p),
-              )),
+              ...products
+                  .take(5)
+                  .map(
+                    (p) => ProductCard(
+                      product: p,
+                      onTap: () => widget.onProductTap(p),
+                    ),
+                  ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 16, 12, 8),
+              child: SocialMediaFooter(),
+            ),
             const SizedBox(height: 80),
           ],
         ),
@@ -489,7 +560,9 @@ class _HomeBodyState extends State<_HomeBody> {
   Widget _buildDynamicBanners(BuildContext context) {
     final banners = context.watch<CMSProvider>().banners;
     if (banners.isEmpty) {
-      return const AdBannerPlaceholder(text: 'J SEVEN REAL ESTATE - Freehold For Expats');
+      return const AdBannerPlaceholder(
+        text: 'J SEVEN REAL ESTATE - Freehold For Expats',
+      );
     }
 
     return SizedBox(
@@ -522,17 +595,27 @@ class _HomeBodyState extends State<_HomeBody> {
           children: [
             const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
             const SizedBox(height: 12),
-            Text(t['error_loading'] ?? 'Error loading products',
-                style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color, fontWeight: FontWeight.bold)),
+            Text(
+              t['error_loading'] ?? 'Error loading products',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.titleMedium?.color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(error,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => context.read<ProductProvider>().fetchProducts(),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-              child: Text(t['retry'] ?? 'Retry', style: const TextStyle(color: Colors.white)),
+              child: Text(
+                t['retry'] ?? 'Retry',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -564,35 +647,66 @@ class _HomeBodyState extends State<_HomeBody> {
           return GestureDetector(
             onTap: () {
               if (!isFirst) {
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => ListingScreen(categoryTitle: s['cat'] as String)));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ListingScreen(categoryTitle: s['cat'] as String),
+                  ),
+                );
               }
             },
             child: Container(
               width: 68,
               margin: const EdgeInsets.only(right: 12),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 56, height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: Theme.of(context).cardTheme.color,
-                    border: Border.all(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).cardTheme.color,
+                      border: Border.all(
                         color: isFirst ? AppColors.gold : AppColors.primary,
-                        width: 2.5),
+                        width: 2.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: isFirst
+                          ? const Text(
+                              'PS',
+                              style: TextStyle(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            )
+                          : Icon(
+                              Icons.image,
+                              color: isDark
+                                  ? AppColors.textMuted
+                                  : AppColors.textSecondaryLightMode,
+                              size: 22,
+                            ),
+                    ),
                   ),
-                  child: Center(
-                    child: isFirst
-                        ? const Text('PS', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 14))
-                        : Icon(Icons.image, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 22),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(s['l'] as String,
+                  const SizedBox(height: 4),
+                  Text(
+                    s['l'] as String,
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLightMode, fontSize: 10)),
-              ]),
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.textSecondary
+                          : AppColors.textSecondaryLightMode,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -603,11 +717,13 @@ class _HomeBodyState extends State<_HomeBody> {
   Widget _buildMainCategories(BuildContext context) {
     final cmsProvider = context.watch<CMSProvider>();
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     List<Map<String, String>> cats;
     if (cmsProvider.categories.isNotEmpty) {
       // Get categories from Firestore, ensure Offers is first
-      final firestoreCats = cmsProvider.categories.map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()}).toList();
+      final firestoreCats = cmsProvider.categories
+          .map((c) => {'n': c['name'].toString(), 'i': c['icon'].toString()})
+          .toList();
       // Check if Offers is already present
       final offersIndex = firestoreCats.indexWhere((c) => c['n'] == 'Offers');
       if (offersIndex != -1) {
@@ -623,18 +739,22 @@ class _HomeBodyState extends State<_HomeBody> {
       // Fallback list already has Offers first
       cats = [
         {'n': 'Offers', 'i': '🏷️'},
-        {'n': 'Vehicles', 'i': '🚗'}, {'n': 'Properties', 'i': '🏠'},
-        {'n': 'Electronics', 'i': '⚡'}, {'n': 'Furniture & Décor', 'i': '🪑'},
-        {'n': 'WaterCrafts', 'i': '⛵'}, {'n': 'Jewellery', 'i': '💎'},
-        {'n': 'Lifestyle', 'i': '🛍️'}, {'n': 'Market', 'i': '🛒'},
+        {'n': 'Vehicles', 'i': '🚗'},
+        {'n': 'Properties', 'i': '🏠'},
+        {'n': 'Electronics', 'i': '⚡'},
+        {'n': 'Furniture & Décor', 'i': '🪑'},
+        {'n': 'WaterCrafts', 'i': '⛵'},
+        {'n': 'Jewellery', 'i': '💎'},
+        {'n': 'Lifestyle', 'i': '🛍️'},
+        {'n': 'Market', 'i': '🛒'},
         {'n': 'Outdoor & Leisure', 'i': '⛺'},
       ];
     }
-    
+
     // Adjust grid parameters for different screen sizes
     final double categorySize = screenWidth < 360 ? 60 : 70;
     final double childAspectRatio = screenWidth < 360 ? 1.1 : 1.15;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: GridView.count(
@@ -644,16 +764,30 @@ class _HomeBodyState extends State<_HomeBody> {
         childAspectRatio: childAspectRatio,
         mainAxisSpacing: 4,
         crossAxisSpacing: 8,
-        children: cats.map((c) => CategoryCircle(
-          name: c['n']!, icon: c['i']!, size: categorySize,
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => ListingScreen(categoryTitle: c['n']))),
-        )).toList(),
+        children: cats
+            .map(
+              (c) => CategoryCircle(
+                name: c['n']!,
+                icon: c['i']!,
+                size: categorySize,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ListingScreen(categoryTitle: c['n']),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
 
-  Widget _catSection(BuildContext context, String title, List<Map<String, String>> cats) {
+  Widget _catSection(
+    BuildContext context,
+    String title,
+    List<Map<String, String>> cats,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -661,7 +795,9 @@ class _HomeBodyState extends State<_HomeBody> {
           title: title,
           actionText: 'See All',
           onAction: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const CategoriesScreen())),
+            context,
+            MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+          ),
         ),
         SizedBox(
           height: 105,
@@ -671,9 +807,15 @@ class _HomeBodyState extends State<_HomeBody> {
             itemCount: cats.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (_, i) => CategoryCircle(
-              name: cats[i]['n']!, icon: cats[i]['i']!, size: 65,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => ListingScreen(categoryTitle: cats[i]['n']))),
+              name: cats[i]['n']!,
+              icon: cats[i]['i']!,
+              size: 65,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ListingScreen(categoryTitle: cats[i]['n']),
+                ),
+              ),
             ),
           ),
         ),

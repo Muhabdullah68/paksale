@@ -10,6 +10,7 @@
 //   /account          account tab     (shell)
 //   /browse           listing page    (pushed, query: category/subCategory/q)
 //   /listing/:id      product detail  (pushed, deep-linkable)
+//   /chat/:id         conversation    (pushed, deep-linkable)
 //   /compare          compare tray    (pushed)
 //   /notifications    notifications   (pushed)
 //   /admin            admin panel     (pushed, admins only — guarded)
@@ -23,11 +24,13 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
 import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../screens/account_screen.dart';
 import '../screens/admin/admin_dashboard.dart';
 import '../screens/categories_screen.dart';
+import '../screens/chat_screen.dart';
 import '../screens/compare_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/female_support_screen.dart';
@@ -121,6 +124,90 @@ class _ProductDetailResolverState extends State<ProductDetailResolver> {
   }
 }
 
+/// Resolves a `/chat/:id` deep link to a [ConversationScreen]. The provider's
+/// live list is checked first; a direct lookup handles fresh page loads where
+/// the conversation stream has not emitted yet.
+class ConversationResolver extends StatefulWidget {
+  final String id;
+  const ConversationResolver({super.key, required this.id});
+
+  @override
+  State<ConversationResolver> createState() => _ConversationResolverState();
+}
+
+class _ConversationResolverState extends State<ConversationResolver> {
+  ConversationModel? _conversation;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final chatProvider = context.read<ChatProvider>();
+    final currentUserId = context.read<AuthProvider>().firebaseUser?.uid;
+
+    ConversationModel? found;
+    for (final conversation in chatProvider.conversations) {
+      if (conversation.id == widget.id) {
+        found = conversation;
+        break;
+      }
+    }
+    found ??= await chatProvider.getConversationById(widget.id);
+
+    // Never render a conversation the signed-in user is not part of.
+    if (currentUserId != null &&
+        found != null &&
+        !found.participants.contains(currentUserId)) {
+      found = null;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _conversation = found;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      );
+    }
+    final conversation = _conversation;
+    if (conversation == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline,
+                  size: 64, color: AppColors.textMuted),
+              const SizedBox(height: 12),
+              const Text('Conversation not found'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/account'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                ),
+                child: const Text('Back to Account',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return ConversationScreen(conversation: conversation);
+  }
+}
+
 /// The single web router. On mobile this is never installed.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -195,6 +282,15 @@ final GoRouter appRouter = GoRouter(
       path: '/listing/:id',
       builder: (context, state) =>
           ProductDetailResolver(id: state.pathParameters['id'] ?? ''),
+    ),
+    GoRoute(
+      path: '/chat/:id',
+      redirect: (context, state) {
+        final auth = context.read<AuthProvider>();
+        return auth.isAuthenticated ? null : '/account';
+      },
+      builder: (context, state) =>
+          ConversationResolver(id: state.pathParameters['id'] ?? ''),
     ),
     GoRoute(
       path: '/compare',

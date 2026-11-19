@@ -477,11 +477,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final body = _isSubmitting
         ? _buildSubmittingState(t, embedded: embedded)
         : Column(
-            mainAxisSize: embedded ? MainAxisSize.min : MainAxisSize.max,
+            mainAxisSize: (embedded || kIsWeb) ? MainAxisSize.min : MainAxisSize.max,
             children: [
               _buildStepIndicator(steps),
               if (kIsWeb) _buildWebTopBar(t, steps),
-              if (embedded)
+              if (embedded || kIsWeb)
                 _buildCurrentStep()
               else
                 Expanded(

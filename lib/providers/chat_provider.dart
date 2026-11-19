@@ -39,6 +39,10 @@ class ChatProvider extends ChangeNotifier {
     return _chatRepo.getMessages(conversationId);
   }
 
+  Future<ConversationModel?> getConversationById(String conversationId) {
+    return _chatRepo.getConversationById(conversationId);
+  }
+
   Future<void> sendMessage(
     String conversationId,
     ChatMessage message, {

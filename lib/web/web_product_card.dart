@@ -8,13 +8,15 @@ import '../providers/compare_provider.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../services/share_service.dart';
-import '../widgets/common_widgets.dart' show toggleCompareWithFeedback;
+import '../widgets/common_widgets.dart'
+    show callProductSeller, startProductChat, toggleCompareWithFeedback;
 
 class WebProductCard extends StatefulWidget {
   final ProductModel product;
   final VoidCallback? onTap;
   final VoidCallback? onShare;
   final bool showShareButton;
+  final bool showCompareButton;
 
   const WebProductCard({
     super.key,
@@ -22,6 +24,7 @@ class WebProductCard extends StatefulWidget {
     this.onTap,
     this.onShare,
     this.showShareButton = true,
+    this.showCompareButton = true,
   });
 
   @override
@@ -48,211 +51,259 @@ class _WebProductCardState extends State<WebProductCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _buildImage(),
+                if (p.isSold)
+                  Container(
+                    color: Colors.black54,
+                    child: Center(
+                      child: Text(
+                        t['sold'] ?? 'SOLD',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (p.isFeatured)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        t['featured_label'] ?? 'Featured',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (p.isBoosted)
+                  Positioned(
+                    top: p.isFeatured ? 30 : 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '🚀 Boosted',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () async {
+                        if (favoritesProvider == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                t['sign_in_favorites'] ??
+                                    'Please sign in to save favorites',
+                              ),
+                              backgroundColor: AppColors.orange,
+                            ),
+                          );
+                          return;
+                        }
+                        final messenger = ScaffoldMessenger.of(context);
+                        final ok = await favoritesProvider.toggleFavorite(p);
+                        if (!ok) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                t['favorite_failed'] ??
+                                    "Couldn't update favorite",
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                          color: Colors.black38,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          size: 16,
+                          color: isFav ? Colors.redAccent : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  p.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.textTheme.bodyLarge?.color,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  p.price == 0
+                      ? (t['contact'] ?? 'Contact')
+                      : currencyProvider.formatPrice(p.price),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
                   children: [
-                    _buildImage(),
-                    if (p.isSold)
-                      Container(
-                        color: Colors.black54,
-                        child: Center(
-                          child: Text(
-                            t['sold'] ?? 'SOLD',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 18,
-                                letterSpacing: 2),
-                          ),
+                    const Icon(
+                      Icons.access_time,
+                      size: 11,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      p.postedTime,
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 12,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        p.city.isNotEmpty
+                            ? '${p.location}, ${p.city}'
+                            : p.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
                         ),
                       ),
-                    if (p.isFeatured)
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            t['featured_label'] ?? 'Featured',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.remove_red_eye_outlined,
+                      size: 11,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${p.views}',
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
                       ),
-                    if (p.isBoosted)
-                      Positioned(
-                        top: p.isFeatured ? 30 : 10,
-                        left: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.orange,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            '🚀 Boosted',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                        onTap: () async {
-                          if (favoritesProvider == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(t['sign_in_favorites'] ??
-                                    'Please sign in to save favorites'),
-                                backgroundColor: AppColors.orange,
-                              ),
-                            );
-                            return;
-                          }
-                          final messenger = ScaffoldMessenger.of(context);
-                          final ok = await favoritesProvider.toggleFavorite(p);
-                          if (!ok) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(t['favorite_failed'] ??
-                                    "Couldn't update favorite"),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _WebActionChip(
+                      icon: Icons.call_outlined,
+                      label: t['call'] ?? 'Call',
+                      onTap: () => callProductSeller(context, p),
+                    ),
+                    _WebActionChip(
+                      icon: Icons.chat_bubble_outline,
+                      label: t['chat'] ?? 'Chat',
+                      onTap: () => startProductChat(context, p),
+                    ),
+                    if (widget.showShareButton)
+                      _WebActionChip(
+                        icon: Icons.share_outlined,
+                        label: t['share'] ?? 'Share',
+                        onTap: () {
+                          if (widget.onShare != null) {
+                            widget.onShare!();
+                          } else {
+                            ShareService.shareProduct(context, widget.product);
                           }
                         },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.all(7),
-                          decoration: const BoxDecoration(
-                            color: Colors.black38,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isFav ? Icons.favorite : Icons.favorite_border,
-                            size: 16,
-                            color: isFav ? Colors.redAccent : Colors.white,
-                          ),
-                        ),
+                      ),
+                    if (widget.showCompareButton)
+                      _WebActionChip(
+                        icon: Icons.compare_arrows,
+                        label: t['compare'] ?? 'Compare',
+                        isActive: isInCompare,
+                        onTap: () => toggleCompareWithFeedback(
+                          context,
+                          p,
+                          compareProvider,
                         ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      p.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: theme.textTheme.bodyLarge?.color,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      p.price == 0
-                          ? (t['contact'] ?? 'Contact')
-                          : currencyProvider.formatPrice(p.price),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time,
-                            size: 11, color: AppColors.textMuted),
-                        const SizedBox(width: 3),
-                        Text(p.postedTime,
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 12, color: AppColors.textMuted),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            p.city.isNotEmpty
-                                ? '${p.location}, ${p.city}'
-                                : p.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.remove_red_eye_outlined,
-                            size: 11, color: AppColors.textMuted),
-                        const SizedBox(width: 3),
-                        Text('${p.views}',
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11)),
-                        const Spacer(),
-                        if (widget.showShareButton) ...[
-                          _WebActionChip(
-                            icon: Icons.compare_arrows,
-                            label: t['compare'] ?? 'Compare',
-                            isActive: isInCompare,
-                            onTap: () => toggleCompareWithFeedback(
-                                context, p, compareProvider),
-                          ),
-                          const SizedBox(width: 6),
-                          _WebActionChip(
-                            icon: Icons.share_outlined,
-                            label: t['share'] ?? 'Share',
-                            onTap: () {
-                              if (widget.onShare != null) {
-                                widget.onShare!();
-                              } else {
-                                ShareService.shareProduct(
-                                    context, widget.product);
-                              }
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ],
+      ),
     );
   }
 
@@ -274,7 +325,9 @@ class _WebProductCardState extends State<WebProductCard> {
             width: 22,
             height: 22,
             child: CircularProgressIndicator(
-                strokeWidth: 2, color: AppColors.gold),
+              strokeWidth: 2,
+              color: AppColors.gold,
+            ),
           ),
         ),
       ),
@@ -354,8 +407,8 @@ class _WebActionChip extends StatelessWidget {
                 : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-                color:
-                    AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4)),
+              color: AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -365,9 +418,10 @@ class _WebActionChip extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600),
+                  color: AppColors.gold,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -416,10 +470,8 @@ class _HoverShellState extends State<_HoverShell> {
               border: Border.all(
                 color: _hovered
                     ? AppColors.gold.withValues(alpha: 0.6)
-                    : (isDark
-                            ? AppColors.divider
-                            : AppColors.dividerLightMode)
-                        .withValues(alpha: 0.25),
+                    : (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                          .withValues(alpha: 0.25),
               ),
               boxShadow: _hovered
                   ? [

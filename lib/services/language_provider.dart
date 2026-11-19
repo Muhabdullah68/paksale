@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 
 class LanguageProvider extends ChangeNotifier {
@@ -108,38 +106,45 @@ class LanguageProvider extends ChangeNotifier {
     'call': 'کال',
     'chat': 'چیٹ',
     'share': 'شیئر',
+    'follow_us': 'ہمیں فالو کریں',
     'unverified': 'غیر تصدیق شدہ',
     'current_lang': 'اردو',
 
     // About
     'about_content':
-    'پاکستان سیل پاکستان کی صف اول کی اشتہارات کی مارکیٹ ہے۔ مختلف اقسام میں مصنوعات اور خدمات خریدیں، بیچیں اور اشتہار دیں۔ ہمارا پلیٹ فارم ملک بھر کے خریداروں اور بیچنے والوں کو جوڑتا ہے۔\n\nورژن: 1.0.0\nتیار کردہ: JH IT Zone\nرابطہ: info@jhitzone.com',
+        'پاکستان سیل پاکستان کی صف اول کی اشتہارات کی مارکیٹ ہے۔ مختلف اقسام میں مصنوعات اور خدمات خریدیں، بیچیں اور اشتہار دیں۔ ہمارا پلیٹ فارم ملک بھر کے خریداروں اور بیچنے والوں کو جوڑتا ہے۔\n\nورژن: 1.0.0\nتیار کردہ: JH IT Zone\nرابطہ: info@jhitzone.com',
 
     // Privacy
     'privacy_content':
-    'ہم آپ کی پرائیسی کا احترام کرتے ہیں۔ آپ کا ذاتی ڈیٹا کبھی بھی تیسرے فریق کو فروخت نہیں کیا جاتا۔ تمام ڈیٹا انکرپٹڈ اور محفوظ طریقے سے محفوظ کیا جاتا ہے۔ آپ کسی بھی وقت سیٹنگز اسکرین سے ڈیٹا حذف کرنے کی درخواست کر سکتے ہیں۔\n\nہم جمع کرتے ہیں: نام، ای میل، فون نمبر، اور اشتہار کی تفصیلات۔ یہ ڈیٹا صرف مارکیٹ پلیس سروس چلانے کے لیے استعمال ہوتا ہے۔',
+        'ہم آپ کی پرائیسی کا احترام کرتے ہیں۔ آپ کا ذاتی ڈیٹا کبھی بھی تیسرے فریق کو فروخت نہیں کیا جاتا۔ تمام ڈیٹا انکرپٹڈ اور محفوظ طریقے سے محفوظ کیا جاتا ہے۔ آپ کسی بھی وقت سیٹنگز اسکرین سے ڈیٹا حذف کرنے کی درخواست کر سکتے ہیں۔\n\nہم جمع کرتے ہیں: نام، ای میل، فون نمبر، اور اشتہار کی تفصیلات۔ یہ ڈیٹا صرف مارکیٹ پلیس سروس چلانے کے لیے استعمال ہوتا ہے۔',
     'policy_update_title': 'پالیسی اپ ڈیٹ',
-    'policy_update_msg': 'ہماری سروس کی شرائط یا پرائیسی پالیسی کو اپ ڈیٹ کر دیا گیا ہے۔ براہ کرم ایپ کا استعمال جاری رکھنے کے لیے جائزہ لیں اور قبول کریں۔',
+    'policy_update_msg':
+        'ہماری سروس کی شرائط یا پرائیسی پالیسی کو اپ ڈیٹ کر دیا گیا ہے۔ براہ کرم ایپ کا استعمال جاری رکھنے کے لیے جائزہ لیں اور قبول کریں۔',
     'view_policies': 'پالیسیاں دیکھیں',
     'accept': 'قبول کریں',
 
     // Terms
     'terms_content':
-    'پاکستان سیل استعمال کر کے آپ اتفاق کرتے ہیں:\n\n• صرف حقیقی اشتہارات لگائیں\n• دوسرے صارفین کا احترام کریں\n• دھوکہ دہی کی سرگرمیوں میں ملوث نہ ہوں\n• پاکستان کے قانون کی تعمیل کریں\n\nہم کسی بھی ایسے اشتہار کو ہٹانے کا حق محفوظ رکھتے ہیں جو ان شرائط کی خلاف ورزی کرتا ہو۔ بار بار خلاف ورزی کے نتیجے میں اکاؤنٹ معطل کر دیا جائے گا۔',
+        'پاکستان سیل استعمال کر کے آپ اتفاق کرتے ہیں:\n\n• صرف حقیقی اشتہارات لگائیں\n• دوسرے صارفین کا احترام کریں\n• دھوکہ دہی کی سرگرمیوں میں ملوث نہ ہوں\n• پاکستان کے قانون کی تعمیل کریں\n\nہم کسی بھی ایسے اشتہار کو ہٹانے کا حق محفوظ رکھتے ہیں جو ان شرائط کی خلاف ورزی کرتا ہو۔ بار بار خلاف ورزی کے نتیجے میں اکاؤنٹ معطل کر دیا جائے گا۔',
 
     // Help
     'help_q1': 'میں اشتہار کیسے لگا سکتا ہوں؟',
-    'help_a1': 'نیچے "اشتہار لگائیں" پر ٹیپ کریں، ایک کیٹیگری منتخب کریں، تفصیلات اور تصاویر بھریں، پھر جمع کرائیں۔',
+    'help_a1':
+        'نیچے "اشتہار لگائیں" پر ٹیپ کریں، ایک کیٹیگری منتخب کریں، تفصیلات اور تصاویر بھریں، پھر جمع کرائیں۔',
     'help_q2': 'میں بیچنے والے سے کیسے رابطہ کروں؟',
-    'help_a2': 'کوئی بھی اشتہار کھولیں اور نیچے کال، واٹس ایپ یا چیٹ بٹن استعمال کریں۔',
+    'help_a2':
+        'کوئی بھی اشتہار کھولیں اور نیچے کال، واٹس ایپ یا چیٹ بٹن استعمال کریں۔',
     'help_q3': 'میں اشتہار کیسے محفوظ کروں؟',
-    'help_a3': 'کسی بھی اشتہار پر ❤️ دل کے آئیکون پر ٹیپ کریں تاکہ اسے اپنے پسندیدہ میں محفوظ کیا جا سکے۔',
+    'help_a3':
+        'کسی بھی اشتہار پر ❤️ دل کے آئیکون پر ٹیپ کریں تاکہ اسے اپنے پسندیدہ میں محفوظ کیا جا سکے۔',
     'help_q4': 'میں اشیاء کا موازنہ کیسے کروں؟',
-    'help_a4': 'اشتہارات پر "+ موازنہ" پر ٹیپ کریں، پھر ظاہر ہونے والے موازنہ FAB پر ٹیپ کریں۔',
+    'help_a4':
+        'اشتہارات پر "+ موازنہ" پر ٹیپ کریں، پھر ظاہر ہونے والے موازنہ FAB پر ٹیپ کریں۔',
 
     // CV upload
     'cv_title': 'اپنی سی وی اپ لوڈ کریں',
-    'cv_body': 'پاکستان سیل کے اندر براہ راست ملازمتوں کے لیے درخواست دینے کے لیے اپنی سی وی اپ لوڈ کریں۔ آجر آپ کا پروفائل تلاش کر سکتے ہیں اور آپ سے رابطہ کر سکتے ہیں۔\n\nقبول شدہ فارمیٹس: PDF, DOCX\nزیادہ سے زیادہ سائز: 5 MB',
+    'cv_body':
+        'پاکستان سیل کے اندر براہ راست ملازمتوں کے لیے درخواست دینے کے لیے اپنی سی وی اپ لوڈ کریں۔ آجر آپ کا پروفائل تلاش کر سکتے ہیں اور آپ سے رابطہ کر سکتے ہیں۔\n\nقبول شدہ فارمیٹس: PDF, DOCX\nزیادہ سے زیادہ سائز: 5 MB',
 
     // Search & Filter
     'search_filter': 'تلاش اور فلٹر',
@@ -210,13 +215,16 @@ class LanguageProvider extends ChangeNotifier {
     'retry': 'دوبارہ کوشش کریں',
     'clear_favorites': 'سب صاف کریں',
     'sign_in_required': 'لاگ ان ضروری ہے',
-    'sign_in_favorites': 'براہ کرم اپنے پسندیدہ اشتہارات دیکھنے کے لیے لاگ ان کریں۔',
+    'sign_in_favorites':
+        'براہ کرم اپنے پسندیدہ اشتہارات دیکھنے کے لیے لاگ ان کریں۔',
     'no_favorites': 'ابھی تک کوئی پسندیدہ نہیں',
-    'no_favorites_hint': 'تیز رسائی کے لیے یہاں محفوظ کرنے کے لیے کسی بھی اشتہار پر ❤️ پر ٹیپ کریں',
+    'no_favorites_hint':
+        'تیز رسائی کے لیے یہاں محفوظ کرنے کے لیے کسی بھی اشتہار پر ❤️ پر ٹیپ کریں',
     'browse_listings': 'اشتہارات براؤز کریں',
     'categories_title': 'اقسام',
     'clear_favorites_confirm': 'تمام پسندیدہ صاف کریں؟',
-    'clear_favorites_confirm_msg': 'کیا آپ واقعی اپنے پسندیدہ سے تمام اشیاء کو ہٹانا چاہتے ہیں؟',
+    'clear_favorites_confirm_msg':
+        'کیا آپ واقعی اپنے پسندیدہ سے تمام اشیاء کو ہٹانا چاہتے ہیں؟',
     'sold': 'فروخت شدہ',
     'contact': 'رابطہ',
     'featured_label': 'نمایاں',
@@ -227,7 +235,8 @@ class LanguageProvider extends ChangeNotifier {
     'all_marked_read': 'سب کو پڑھا ہوا نشان زد کر دیا گیا',
     'mark_all_read': 'سب کو پڑھا ہوا نشان زد کریں',
     'login_required': 'لاگ ان ضروری ہے',
-    'login_to_notifications': 'بولیوں، پیغامات، قیمتوں میں کمی اور مزید کے لیے اپنی ذاتی اطلاعات دیکھنے کے لیے سائن ان کریں۔',
+    'login_to_notifications':
+        'بولیوں، پیغامات، قیمتوں میں کمی اور مزید کے لیے اپنی ذاتی اطلاعات دیکھنے کے لیے سائن ان کریں۔',
     'go_to_login': 'لاگ ان پر جائیں',
     'today': 'آج',
     'yesterday': 'کل',
@@ -250,7 +259,8 @@ class LanguageProvider extends ChangeNotifier {
     'time_day_ago': 'دن پہلے',
     'time_days_ago': 'دن پہلے',
     'ad_submitted': 'اشتہار جمع کر دیا گیا 📝',
-    'ad_pending_review': 'آپ کا اشتہار جمع کر دیا گیا ہے اور ایڈمن کے جائزے کا منتظر ہے۔',
+    'ad_pending_review':
+        'آپ کا اشتہار جمع کر دیا گیا ہے اور ایڈمن کے جائزے کا منتظر ہے۔',
     'step_category': 'کیٹیگری',
     'step_details': 'تفصیلات',
     'step_photos': 'تصاویر',
@@ -290,7 +300,7 @@ class LanguageProvider extends ChangeNotifier {
     'all_ads': 'تمام اشتہارات',
     'post_an_ad': 'اشتہار لگائیں',
     'footer_tagline':
-    'پاک سیل آپ کی مقامی مارکیٹ ہے جہاں گاڑیاں، جائیدادیں، الیکٹرونکس، نوکریاں اور مزید خریدیں اور بیچیں۔',
+        'پاک سیل آپ کی مقامی مارکیٹ ہے جہاں گاڑیاں، جائیدادیں، الیکٹرونکس، نوکریاں اور مزید خریدیں اور بیچیں۔',
   };
 
   // ── English strings ────────────────────────────────────────────────────────
@@ -381,38 +391,45 @@ class LanguageProvider extends ChangeNotifier {
     'call': 'Call',
     'chat': 'Chat',
     'share': 'Share',
+    'follow_us': 'Follow us',
     'unverified': 'Unverified',
     'current_lang': 'English',
 
     // About
     'about_content':
-    'Pak Sale is Pakistan\'s leading classified marketplace. Buy, sell and advertise products & services across multiple categories. Our platform connects buyers and sellers across the entire country.\n\nVersion: 1.0.0\nDeveloped by: JH IT Zone\nContact: info@jhitzone.com',
+        'Pak Sale is Pakistan\'s leading classified marketplace. Buy, sell and advertise products & services across multiple categories. Our platform connects buyers and sellers across the entire country.\n\nVersion: 1.0.0\nDeveloped by: JH IT Zone\nContact: info@jhitzone.com',
 
     // Privacy
     'privacy_content':
-    'We respect your privacy. Your personal data is never sold to third parties. All data is encrypted and stored securely. You can request data deletion at any time from the settings screen.\n\nWe collect: name, email, phone number, and listing details. This data is used only to operate the marketplace service.',
+        'We respect your privacy. Your personal data is never sold to third parties. All data is encrypted and stored securely. You can request data deletion at any time from the settings screen.\n\nWe collect: name, email, phone number, and listing details. This data is used only to operate the marketplace service.',
     'policy_update_title': 'Policy Update',
-    'policy_update_msg': 'Our Terms of Service or Privacy Policy have been updated. Please review and accept to continue using the app.',
+    'policy_update_msg':
+        'Our Terms of Service or Privacy Policy have been updated. Please review and accept to continue using the app.',
     'view_policies': 'View Policies',
     'accept': 'Accept',
 
     // Terms
     'terms_content':
-    'By using Pak Sale you agree to:\n\n• Post only genuine listings\n• Respect other users\n• Not engage in fraudulent activity\n• Comply with Pakistan law\n\nWe reserve the right to remove any listing that violates these terms. Repeated violations will result in account suspension.',
+        'By using Pak Sale you agree to:\n\n• Post only genuine listings\n• Respect other users\n• Not engage in fraudulent activity\n• Comply with Pakistan law\n\nWe reserve the right to remove any listing that violates these terms. Repeated violations will result in account suspension.',
 
     // Help
     'help_q1': 'How do I post an ad?',
-    'help_a1': 'Tap "Post Ad" at the bottom, select a category, fill in details and photos, then submit.',
+    'help_a1':
+        'Tap "Post Ad" at the bottom, select a category, fill in details and photos, then submit.',
     'help_q2': 'How do I contact a seller?',
-    'help_a2': 'Open any listing and use the Call, WhatsApp, or Chat buttons at the bottom.',
+    'help_a2':
+        'Open any listing and use the Call, WhatsApp, or Chat buttons at the bottom.',
     'help_q3': 'How do I save a listing?',
-    'help_a3': 'Tap the ❤️ heart icon on any listing to save it to your Favorites.',
+    'help_a3':
+        'Tap the ❤️ heart icon on any listing to save it to your Favorites.',
     'help_q4': 'How do I compare items?',
-    'help_a4': 'Tap "+ Compare" on listings, then tap the Compare FAB that appears.',
+    'help_a4':
+        'Tap "+ Compare" on listings, then tap the Compare FAB that appears.',
 
     // CV upload
     'cv_title': 'Upload Your CV',
-    'cv_body': 'Upload your CV to apply for jobs directly within Pak Sale. Employers can find your profile and contact you.\n\nFormats accepted: PDF, DOCX\nMax size: 5 MB',
+    'cv_body':
+        'Upload your CV to apply for jobs directly within Pak Sale. Employers can find your profile and contact you.\n\nFormats accepted: PDF, DOCX\nMax size: 5 MB',
     // Search & Filter
     'search_filter': 'Search & Filter',
     'reset_all': 'Reset All',
@@ -484,11 +501,13 @@ class LanguageProvider extends ChangeNotifier {
     'sign_in_required': 'Sign In Required',
     'sign_in_favorites': 'Please sign in to see your favorite listings.',
     'no_favorites': 'No Favorites Yet',
-    'no_favorites_hint': 'Tap the ❤️ on any listing to save it here for quick access',
+    'no_favorites_hint':
+        'Tap the ❤️ on any listing to save it here for quick access',
     'browse_listings': 'Browse Listings',
     'categories_title': 'Categories',
     'clear_favorites_confirm': 'Clear All Favorites?',
-    'clear_favorites_confirm_msg': 'Are you sure you want to remove all items from your favorites?',
+    'clear_favorites_confirm_msg':
+        'Are you sure you want to remove all items from your favorites?',
     'sold': 'SOLD',
     'contact': 'Contact',
     'featured_label': 'Featured',
@@ -499,7 +518,8 @@ class LanguageProvider extends ChangeNotifier {
     'all_marked_read': 'All marked as read',
     'mark_all_read': 'Mark all as read',
     'login_required': 'Login Required',
-    'login_to_notifications': 'Sign in to see your personalised notifications for bids, messages, price drops and more.',
+    'login_to_notifications':
+        'Sign in to see your personalised notifications for bids, messages, price drops and more.',
     'go_to_login': 'Go to Login',
     'today': 'Today',
     'yesterday': 'Yesterday',
@@ -522,7 +542,8 @@ class LanguageProvider extends ChangeNotifier {
     'time_day_ago': 'day ago',
     'time_days_ago': 'days ago',
     'ad_submitted': 'Ad Submitted 📝',
-    'ad_pending_review': 'Your ad has been submitted and is pending admin review.',
+    'ad_pending_review':
+        'Your ad has been submitted and is pending admin review.',
     'step_category': 'Category',
     'step_details': 'Details',
     'step_photos': 'Photos',
@@ -562,7 +583,7 @@ class LanguageProvider extends ChangeNotifier {
     'all_ads': 'All Ads',
     'post_an_ad': 'Post an Ad',
     'footer_tagline':
-    'Pak Sale is your local marketplace to buy and sell cars, properties, electronics, jobs and more.',
+        'Pak Sale is your local marketplace to buy and sell cars, properties, electronics, jobs and more.',
   };
 
   // ── Arabic strings ─────────────────────────────────────────────────────────
@@ -650,38 +671,44 @@ class LanguageProvider extends ChangeNotifier {
     'call': 'اتصال',
     'chat': 'دردشة',
     'share': 'مشاركة',
+    'follow_us': 'تابعونا',
     'unverified': 'غير مُحقَّق',
     'current_lang': 'العربية',
 
     // About
     'about_content':
-    'قطر سيل هو السوق الإلكتروني الرائد في قطر. اشترِ وبِع وأعلن عن المنتجات والخدمات في مختلف الفئات. يربط منصتنا المشترين والبائعين في جميع أنحاء البلاد.\n\nالإصدار: 1.0.0\nالمطوّر: JH IT Zone\nالتواصل: info@jhitzone.com',
+        'قطر سيل هو السوق الإلكتروني الرائد في قطر. اشترِ وبِع وأعلن عن المنتجات والخدمات في مختلف الفئات. يربط منصتنا المشترين والبائعين في جميع أنحاء البلاد.\n\nالإصدار: 1.0.0\nالمطوّر: JH IT Zone\nالتواصل: info@jhitzone.com',
 
     // Privacy
     'privacy_content':
-    'نحن نحترم خصوصيتك. لا نبيع بياناتك الشخصية لأطراف ثالثة. جميع البيانات مشفرة ومحفوظة بأمان. يمكنك طلب حذف بياناتك في أي وقت من شاشة الإعدادات.\n\nنجمع: الاسم والبريد الإلكتروني ورقم الهاتف وتفاصيل الإعلانات. تُستخدم هذه البيانات فقط لتشغيل خدمة السوق.',
+        'نحن نحترم خصوصيتك. لا نبيع بياناتك الشخصية لأطراف ثالثة. جميع البيانات مشفرة ومحفوظة بأمان. يمكنك طلب حذف بياناتك في أي وقت من شاشة الإعدادات.\n\nنجمع: الاسم والبريد الإلكتروني ورقم الهاتف وتفاصيل الإعلانات. تُستخدم هذه البيانات فقط لتشغيل خدمة السوق.',
     'policy_update_title': 'تحديث السياسة',
-    'policy_update_msg': 'تم تحديث شروط الخدمة أو سياسة الخصوصية الخاصة بنا. يرجى المراجعة والموافقة للمتابعة في استخدام التطبيق.',
+    'policy_update_msg':
+        'تم تحديث شروط الخدمة أو سياسة الخصوصية الخاصة بنا. يرجى المراجعة والموافقة للمتابعة في استخدام التطبيق.',
     'view_policies': 'عرض السياسات',
     'accept': 'قبول',
 
     // Terms
     'terms_content':
-    'باستخدامك لقطر سيل، فإنك توافق على:\n\n• نشر إعلانات حقيقية فقط\n• احترام المستخدمين الآخرين\n• عدم الانخراط في أنشطة احتيالية\n• الامتثال لقوانين قطر\n\nنحتفظ بالحق في إزالة أي إعلان ينتهك هذه الشروط. قد يؤدي الانتهاك المتكرر إلى تعليق الحساب.',
+        'باستخدامك لقطر سيل، فإنك توافق على:\n\n• نشر إعلانات حقيقية فقط\n• احترام المستخدمين الآخرين\n• عدم الانخراط في أنشطة احتيالية\n• الامتثال لقوانين قطر\n\nنحتفظ بالحق في إزالة أي إعلان ينتهك هذه الشروط. قد يؤدي الانتهاك المتكرر إلى تعليق الحساب.',
 
     // Help
     'help_q1': 'كيف أنشر إعلانًا؟',
-    'help_a1': 'اضغط على "إضافة إعلان" في الأسفل، اختر الفئة، أدخل التفاصيل والصور، ثم أرسل.',
+    'help_a1':
+        'اضغط على "إضافة إعلان" في الأسفل، اختر الفئة، أدخل التفاصيل والصور، ثم أرسل.',
     'help_q2': 'كيف أتواصل مع البائع؟',
-    'help_a2': 'افتح أي إعلان واستخدم أزرار الاتصال أو واتساب أو الدردشة في الأسفل.',
+    'help_a2':
+        'افتح أي إعلان واستخدم أزرار الاتصال أو واتساب أو الدردشة في الأسفل.',
     'help_q3': 'كيف أحفظ إعلانًا؟',
     'help_a3': 'اضغط على أيقونة ❤️ في أي إعلان لحفظه في المفضلة.',
     'help_q4': 'كيف أقارن بين المنتجات؟',
-    'help_a4': 'اضغط على "+ مقارنة" في الإعلانات، ثم اضغط زر المقارنة الذي يظهر.',
+    'help_a4':
+        'اضغط على "+ مقارنة" في الإعلانات، ثم اضغط زر المقارنة الذي يظهر.',
 
     // CV upload
     'cv_title': 'رفع السيرة الذاتية',
-    'cv_body': 'ارفع سيرتك الذاتية للتقدم للوظائف مباشرةً من قطر سيل. يمكن لأصحاب العمل العثور على ملفك الشخصي والتواصل معك.\n\nالصيغ المقبولة: PDF، DOCX\nالحجم الأقصى: 5 ميجابايت',
+    'cv_body':
+        'ارفع سيرتك الذاتية للتقدم للوظائف مباشرةً من قطر سيل. يمكن لأصحاب العمل العثور على ملفك الشخصي والتواصل معك.\n\nالصيغ المقبولة: PDF، DOCX\nالحجم الأقصى: 5 ميجابايت',
 
     // Search & Filter
     'search_filter': 'البحث والتصفية',
@@ -753,7 +780,8 @@ class LanguageProvider extends ChangeNotifier {
     'browse_listings': 'تصفح الإعلانات',
     'categories_title': 'الفئات',
     'clear_favorites_confirm': 'مسح جميع المفضلات؟',
-    'clear_favorites_confirm_msg': 'هل أنت متأكد أنك تريد إزالة جميع العناصر من مفضلاتك؟',
+    'clear_favorites_confirm_msg':
+        'هل أنت متأكد أنك تريد إزالة جميع العناصر من مفضلاتك؟',
     'sold': 'مباع',
     'contact': 'تواصل',
     'featured_label': 'مميز',
@@ -764,7 +792,8 @@ class LanguageProvider extends ChangeNotifier {
     'all_marked_read': 'تم تحديد الكل كمقروء',
     'mark_all_read': 'تحديد الكل كمقروء',
     'login_required': 'تسجيل الدخول مطلوب',
-    'login_to_notifications': 'سجّل دخولك لرؤية إشعاراتك المخصصة للمناقصات والرسائل وانخفاض الأسعار والمزيد.',
+    'login_to_notifications':
+        'سجّل دخولك لرؤية إشعاراتك المخصصة للمناقصات والرسائل وانخفاض الأسعار والمزيد.',
     'go_to_login': 'الذهاب لتسجيل الدخول',
     'today': 'اليوم',
     'yesterday': 'أمس',
@@ -801,7 +830,8 @@ class LanguageProvider extends ChangeNotifier {
     'enter_price_error': 'يرجى إدخال السعر (أو 0 للمجاني)',
     'select_auction_end_error': 'يرجى اختيار تاريخ انتهاء المزاد',
     'signin_to_post_error': 'يرجى تسجيل الدخول لنشر إعلان',
-    'session_error': 'لم يتم العثور على جلسة المستخدم. يرجى تسجيل الدخول مرة أخرى.',
+    'session_error':
+        'لم يتم العثور على جلسة المستخدم. يرجى تسجيل الدخول مرة أخرى.',
     'back': 'رجوع',
     'submit_ad': 'إرسال الإعلان',
     'preview_ad': 'معاينة الإعلان',
@@ -827,6 +857,6 @@ class LanguageProvider extends ChangeNotifier {
     'all_ads': 'جميع الإعلانات',
     'post_an_ad': 'نشر إعلان',
     'footer_tagline':
-    'باك سيل هو سوقك المحلي لبيع وشراء السيارات والعقارات والإلكترونيات والوظائف والمزيد.',
+        'باك سيل هو سوقك المحلي لبيع وشراء السيارات والعقارات والإلكترونيات والوظائف والمزيد.',
   };
 }

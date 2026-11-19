@@ -33,6 +33,19 @@ class ChatRepository {
     });
   }
 
+  /// Direct lookup used by web deep links to `/chat/:id`. Normally the
+  /// provider stream already has the conversation, but a fresh page load
+  /// needs to fetch it by id.
+  Future<ConversationModel?> getConversationById(String conversationId) async {
+    final snapshot = await _conversationsRef.child(conversationId).get();
+    final value = snapshot.value;
+    if (!snapshot.exists || value == null || value is! Map) return null;
+    return ConversationModel.fromMap(
+      conversationId,
+      Map<String, dynamic>.from(value),
+    );
+  }
+
   // Get messages for a specific conversation
   Stream<List<ChatMessage>> getMessages(String conversationId) {
     return _messagesRef.child(conversationId).onValue.map((event) {

@@ -75,7 +75,8 @@ class _ListingScreenState extends State<ListingScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       _fetchProducts(refresh: false);
     }
   }
@@ -98,16 +99,20 @@ class _ListingScreenState extends State<ListingScreen> {
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       filtered = filtered
-          .where((p) =>
-      p.title.toLowerCase().contains(q) ||
-          p.description.toLowerCase().contains(q) ||
-          p.category.toLowerCase().contains(q) ||
-          p.location.toLowerCase().contains(q))
+          .where(
+            (p) =>
+                p.title.toLowerCase().contains(q) ||
+                p.description.toLowerCase().contains(q) ||
+                p.category.toLowerCase().contains(q) ||
+                p.location.toLowerCase().contains(q),
+          )
           .toList();
     }
 
     if (_selectedCondition != null && _selectedCondition!.isNotEmpty) {
-      filtered = filtered.where((p) => p.condition == _selectedCondition).toList();
+      filtered = filtered
+          .where((p) => p.condition == _selectedCondition)
+          .toList();
     }
     if (_minPrice != null) {
       filtered = filtered.where((p) => p.price >= _minPrice!).toList();
@@ -116,16 +121,23 @@ class _ListingScreenState extends State<ListingScreen> {
       filtered = filtered.where((p) => p.price <= _maxPrice!).toList();
     }
     if (_selectedLocation != null && _selectedLocation!.isNotEmpty) {
-      filtered = filtered.where((p) => 
-        p.location.contains(_selectedLocation!) || 
-        p.city.contains(_selectedLocation!) || 
-        p.village.contains(_selectedLocation!)
-      ).toList();
+      filtered = filtered
+          .where(
+            (p) =>
+                p.location.contains(_selectedLocation!) ||
+                p.city.contains(_selectedLocation!) ||
+                p.village.contains(_selectedLocation!),
+          )
+          .toList();
     }
-    
+
     // Filter by subcategory if provided
-    if (widget.subCategoryTitle != null && widget.subCategoryTitle!.isNotEmpty && !widget.subCategoryTitle!.startsWith('All ')) {
-      filtered = filtered.where((p) => p.subCategory == widget.subCategoryTitle).toList();
+    if (widget.subCategoryTitle != null &&
+        widget.subCategoryTitle!.isNotEmpty &&
+        !widget.subCategoryTitle!.startsWith('All ')) {
+      filtered = filtered
+          .where((p) => p.subCategory == widget.subCategoryTitle)
+          .toList();
     }
 
     return filtered;
@@ -172,14 +184,16 @@ class _ListingScreenState extends State<ListingScreen> {
         Expanded(
           child: RepaintBoundary(
             child: productProvider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  )
                 : productProvider.error != null
-                    ? _buildErrorState(productProvider.error!)
-                    : filteredProducts.isEmpty
-                        ? _buildEmptyState()
-                        : _isGridView
-                            ? _buildGrid(filteredProducts, productProvider.isLoadingMore)
-                            : _buildList(filteredProducts, productProvider.isLoadingMore),
+                ? _buildErrorState(productProvider.error!)
+                : filteredProducts.isEmpty
+                ? _buildEmptyState()
+                : _isGridView
+                ? _buildGrid(filteredProducts, productProvider.isLoadingMore)
+                : _buildList(filteredProducts, productProvider.isLoadingMore),
           ),
         ),
       ],
@@ -187,7 +201,13 @@ class _ListingScreenState extends State<ListingScreen> {
 
     if (kIsWeb) {
       final webContent = _buildWebContent(
-          context, theme, isDark, productProvider, t, filteredProducts);
+        context,
+        theme,
+        isDark,
+        productProvider,
+        t,
+        filteredProducts,
+      );
       return widget.webEmbedded
           ? webContent
           : WebPage(breadcrumbs: _breadcrumbs(t), content: webContent);
@@ -206,7 +226,10 @@ class _ListingScreenState extends State<ListingScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            ),
           ),
         ],
       ),
@@ -216,8 +239,13 @@ class _ListingScreenState extends State<ListingScreen> {
 
   /// The three header rows shared by mobile and web: search bar, category chip
   /// + view toggles, and the filter / results row.
-  Widget _buildListHeader(BuildContext context, ThemeData theme, bool isDark,
-      Map<String, String> t, int resultCount) {
+  Widget _buildListHeader(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+    Map<String, String> t,
+    int resultCount,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -227,7 +255,8 @@ class _ListingScreenState extends State<ListingScreen> {
           color: isDark ? AppColors.primaryDark : AppColors.primary,
           child: CustomSearchBar(
             onPrimaryBackground: true,
-            hint: '${t['search_hint'] ?? "Search in PakistanSale..."} ${widget.categoryTitle ?? ""}',
+            hint:
+                '${t['search_hint'] ?? "Search in PakistanSale..."} ${widget.categoryTitle ?? ""}',
             onChanged: (value) {
               setState(() => _searchQuery = value);
             },
@@ -237,23 +266,35 @@ class _ListingScreenState extends State<ListingScreen> {
         // ── Category chip + view-mode toggles ──────────────────────────────
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: isDark ? AppColors.primaryDark : AppColors.primary.withValues(alpha: 0.9),
+          color: isDark
+              ? AppColors.primaryDark
+              : AppColors.primary.withValues(alpha: 0.9),
           child: Row(
             children: [
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.card : Colors.white24,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isDark ? AppColors.divider : Colors.white30),
+                    border: Border.all(
+                      color: isDark ? AppColors.divider : Colors.white30,
+                    ),
                   ),
                   child: Text(
                     widget.subCategoryTitle != null
                         ? widget.subCategoryTitle!
                         : widget.categoryTitle != null
-                            ? (t[widget.categoryTitle?.toLowerCase().replaceAll(' ', '_')] ?? widget.categoryTitle ?? '')
-                            : (t['all_categories'] ?? 'All Categories'),
+                        ? (t[widget.categoryTitle?.toLowerCase().replaceAll(
+                                ' ',
+                                '_',
+                              )] ??
+                              widget.categoryTitle ??
+                              '')
+                        : (t['all_categories'] ?? 'All Categories'),
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
@@ -283,23 +324,37 @@ class _ListingScreenState extends State<ListingScreen> {
               GestureDetector(
                 onTap: _navigateToFilter,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.cardTheme.color,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: (isDark ? AppColors.divider : Colors.grey).withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: (isDark ? AppColors.divider : Colors.grey)
+                          .withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.filter_list,
-                          size: 14,
-                          color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87)),
+                      Icon(
+                        Icons.filter_list,
+                        size: 14,
+                        color: _selectedCondition != null
+                            ? AppColors.gold
+                            : (isDark ? Colors.white : Colors.black87),
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                        _selectedCondition != null ? (t['filtered'] ?? 'Filtered') : (t['filter'] ?? 'Filter'),
+                        _selectedCondition != null
+                            ? (t['filtered'] ?? 'Filtered')
+                            : (t['filter'] ?? 'Filter'),
                         style: TextStyle(
-                          color: _selectedCondition != null ? AppColors.gold : (isDark ? Colors.white : Colors.black87),
+                          color: _selectedCondition != null
+                              ? AppColors.gold
+                              : (isDark ? Colors.white : Colors.black87),
                           fontSize: 13,
                         ),
                       ),
@@ -310,10 +365,21 @@ class _ListingScreenState extends State<ListingScreen> {
               const Spacer(),
               Text(
                 '$resultCount ${t['results'] ?? "results"}',
-                style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+                style: TextStyle(
+                  color: isDark
+                      ? AppColors.textMuted
+                      : AppColors.textSecondaryLightMode,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.sort, color: isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode, size: 18),
+              Icon(
+                Icons.sort,
+                color: isDark
+                    ? AppColors.textMuted
+                    : AppColors.textSecondaryLightMode,
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -337,30 +403,50 @@ class _ListingScreenState extends State<ListingScreen> {
 
   /// Web version of the page: the same header rows followed by a responsive
   /// grid that flows inside WebPage's document scroll (no inner scrolling).
-  Widget _buildWebContent(BuildContext context, ThemeData theme, bool isDark,
-      ProductProvider productProvider, Map<String, String> t,
-      List<ProductModel> filteredProducts) {
+  Widget _buildWebContent(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+    ProductProvider productProvider,
+    Map<String, String> t,
+    List<ProductModel> filteredProducts,
+  ) {
     return LayoutBuilder(
       builder: (context, c) {
         final cols = _webColumns(c.maxWidth);
         final grid = productProvider.isLoading
             ? const Padding(
                 padding: EdgeInsets.all(48),
-                child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                ),
               )
             : productProvider.error != null
-                ? _buildErrorState(productProvider.error!)
-                : filteredProducts.isEmpty
-                    ? _buildEmptyState(web: true)
-                    : _isGridView
-                        ? _buildGrid(filteredProducts, productProvider.isLoadingMore,
-                            columns: cols, shrinkWrap: true)
-                        : _buildList(filteredProducts, productProvider.isLoadingMore,
-                            shrinkWrap: true);
+            ? _buildErrorState(productProvider.error!)
+            : filteredProducts.isEmpty
+            ? _buildEmptyState(web: true)
+            : _isGridView
+            ? _buildGrid(
+                filteredProducts,
+                productProvider.isLoadingMore,
+                columns: cols,
+                shrinkWrap: true,
+              )
+            : _buildList(
+                filteredProducts,
+                productProvider.isLoadingMore,
+                shrinkWrap: true,
+              );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildListHeader(context, theme, isDark, t, filteredProducts.length),
+            _buildListHeader(
+              context,
+              theme,
+              isDark,
+              t,
+              filteredProducts.length,
+            ),
             grid,
             const SizedBox(height: 12),
           ],
@@ -401,10 +487,16 @@ class _ListingScreenState extends State<ListingScreen> {
             ElevatedButton.icon(
               onPressed: () => _fetchProducts(),
               icon: const Icon(Icons.refresh, color: Colors.white),
-              label: const Text('Try Again', style: TextStyle(color: Colors.white)),
+              label: const Text(
+                'Try Again',
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -422,33 +514,51 @@ class _ListingScreenState extends State<ListingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off,
-                size: 72, color: AppColors.textMuted.withValues(alpha: 0.35)),
+            Icon(
+              Icons.search_off,
+              size: 72,
+              color: AppColors.textMuted.withValues(alpha: 0.35),
+            ),
             const SizedBox(height: 20),
             Text(
               'No listings found',
               style: TextStyle(
-                  color: Theme.of(context).textTheme.titleLarge?.color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600),
+                color: Theme.of(context).textTheme.titleLarge?.color,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try adjusting your filters or search query',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textMuted : AppColors.textSecondaryLightMode, fontSize: 13),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.textMuted
+                    : AppColors.textSecondaryLightMode,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _clearFilters,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 13,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25)),
+                  borderRadius: BorderRadius.circular(25),
+                ),
               ),
-              child: const Text('Clear Filters',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Clear Filters',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -467,8 +577,18 @@ class _ListingScreenState extends State<ListingScreen> {
   }
 
   // ── Grid ────────────────────────────────────────────────────────────────────
-  Widget _buildGrid(List<ProductModel> products, bool isLoadingMore,
-      {int? columns, bool shrinkWrap = false}) {
+  Widget _buildGrid(
+    List<ProductModel> products,
+    bool isLoadingMore, {
+    int? columns,
+    bool shrinkWrap = false,
+  }) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardAspectRatio = screenWidth < 360
+        ? 0.55
+        : screenWidth < 500
+        ? 0.62
+        : 0.72;
     return GridView.builder(
       controller: shrinkWrap ? null : _scrollController,
       shrinkWrap: shrinkWrap,
@@ -478,7 +598,7 @@ class _ListingScreenState extends State<ListingScreen> {
         crossAxisCount: columns ?? 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.72,
+        childAspectRatio: cardAspectRatio,
       ),
       itemCount: products.length + (isLoadingMore ? 2 : 1),
       itemBuilder: (ctx, i) {
@@ -515,8 +635,11 @@ class _ListingScreenState extends State<ListingScreen> {
   }
 
   // ── List ────────────────────────────────────────────────────────────────────
-  Widget _buildList(List<ProductModel> products, bool isLoadingMore,
-      {bool shrinkWrap = false}) {
+  Widget _buildList(
+    List<ProductModel> products,
+    bool isLoadingMore, {
+    bool shrinkWrap = false,
+  }) {
     return ListView.builder(
       controller: shrinkWrap ? null : _scrollController,
       shrinkWrap: shrinkWrap,
@@ -547,8 +670,12 @@ class _ListingScreenState extends State<ListingScreen> {
     if (kIsWeb) {
       context.push('/listing/${product.id}');
     } else {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailScreen(product: product),
+        ),
+      );
     }
   }
 }
@@ -558,7 +685,11 @@ class _ViewToggle extends StatelessWidget {
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
-  const _ViewToggle({required this.icon, required this.active, required this.onTap});
+  const _ViewToggle({
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -568,10 +699,22 @@ class _ViewToggle extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: active ? AppColors.gold : (isDark ? AppColors.card : Colors.black.withValues(alpha: 0.05)),
+          color: active
+              ? AppColors.gold
+              : (isDark
+                    ? AppColors.card
+                    : Colors.black.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, size: 18, color: active ? Colors.white : (isDark ? AppColors.textMuted : AppColors.textSecondaryLightMode)),
+        child: Icon(
+          icon,
+          size: 18,
+          color: active
+              ? Colors.white
+              : (isDark
+                    ? AppColors.textMuted
+                    : AppColors.textSecondaryLightMode),
+        ),
       ),
     );
   }

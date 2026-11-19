@@ -14,7 +14,7 @@ class ShareService {
   static String productUrl(String productId) {
     if (kIsWeb) {
       final base = Uri.base;
-      return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/listing/$productId';
+      return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/listing/$productId';
     }
     return 'https://paksale.app/listing/$productId';
   }
@@ -22,7 +22,7 @@ class ShareService {
   static String profileUrl(String userId) {
     if (kIsWeb) {
       final base = Uri.base;
-      return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/#/account';
+      return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}/account';
     }
     return 'https://paksale.app/profile/$userId';
   }
@@ -36,6 +36,14 @@ class ShareService {
     String? title,
     String? subject,
   }) async {
+    // Desktop browsers do not reliably expose a share sheet. Copying directly
+    // guarantees desktop users get a working link and visible confirmation.
+    if (kIsWeb) {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (context.mounted) _copiedSnack(context);
+      return;
+    }
+
     try {
       await SharePlus.instance.share(
         ShareParams(text: text, title: title ?? subject),
