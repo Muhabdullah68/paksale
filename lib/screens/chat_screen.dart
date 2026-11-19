@@ -501,6 +501,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final ImagePicker _picker = ImagePicker();
 
   void _pickImage() async {
+    // Read providers before awaiting so no BuildContext is used after the gap.
+    final auth = context.read<AuthProvider>();
+    final chatProvider = context.read<ChatProvider>();
+
     // Show bottom sheet to choose source
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -529,9 +533,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final XFile? image = await _picker.pickImage(source: source);
     if (image == null) return;
 
-    final auth = context.read<AuthProvider>();
-    final chatProvider = context.read<ChatProvider>();
-
     final myId = auth.firebaseUser!.uid;
     final myName = auth.userModel?.name ?? 'User';
     final recipientId = widget.conversation.participants
@@ -557,6 +558,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
+
+    // Read providers before the optional privacy-dialog await.
+    final auth = context.read<AuthProvider>();
+    final chatProvider = context.read<ChatProvider>();
 
     final text = _messageController.text.trim();
     final sensitivePatterns = [
@@ -599,9 +604,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
       if (proceed != true) return;
     }
-
-    final auth = context.read<AuthProvider>();
-    final chatProvider = context.read<ChatProvider>();
 
     final myId = auth.firebaseUser!.uid;
     final myName = auth.userModel?.name ?? 'User';

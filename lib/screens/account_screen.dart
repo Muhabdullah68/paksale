@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +17,7 @@ import '../widgets/common_widgets.dart';
 import '../services/language_provider.dart';
 import '../services/theme_provider.dart';
 import '../services/currency_provider.dart';
+import '../services/tts_service.dart';
 import '../web/web_shell.dart';
 import 'listing_screen.dart';
 import 'categories_screen.dart';
@@ -1823,8 +1826,9 @@ class _SettingsTabState extends State<_SettingsTab> {
 //  LANGUAGE PICKER SHEET  (shared by guest + settings)
 // ══════════════════════════════════════════════════════════════════════════════
 class _LanguagePickerSheet extends StatefulWidget {
-  final VoidCallback onChanged;
-  const _LanguagePickerSheet({required this.onChanged});
+  final VoidCallback? onChanged;
+
+  const _LanguagePickerSheet({this.onChanged});
 
   @override
   State<_LanguagePickerSheet> createState() => _LanguagePickerSheetState();
@@ -1832,11 +1836,36 @@ class _LanguagePickerSheet extends StatefulWidget {
 
 class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
   late String _selected;
+  late final TtsService _ttsService;
 
   @override
   void initState() {
     super.initState();
-    _selected = context.read<LanguageProvider>().languageCode;
+    final languageProvider = context.read<LanguageProvider>();
+    _selected = languageProvider.languageCode;
+    _ttsService = context.read<TtsService>();
+  }
+
+  void _selectLanguage(String code, String displayName) {
+    final languageProvider = context.read<LanguageProvider>();
+    final phrase =
+        languageProvider.t['language_changed'] ?? 'Language changed to';
+
+    setState(() => _selected = code);
+    languageProvider.setLanguage(code);
+
+    // Web speech must be started synchronously from this tap. No awaits here.
+    _ttsService.setLoadingLanguage(true);
+    unawaited(
+      _ttsService
+          .speakWithLanguage('$phrase $displayName', languageCode: code)
+          .whenComplete(() {
+        _ttsService.setLoadingLanguage(false);
+      }),
+    );
+
+    Navigator.pop(context);
+    widget.onChanged?.call();
   }
 
   @override
@@ -1864,49 +1893,31 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
-          // English option
-          _LangOption(
+          _LangOptionWithTTS(
             flagEmoji: '🇬🇧',
             name: 'English',
             nativeName: 'English',
             code: 'en',
             isSelected: _selected == 'en',
-            onTap: () {
-              setState(() => _selected = 'en');
-              context.read<LanguageProvider>().setLanguage('en');
-              Navigator.pop(context);
-              widget.onChanged();
-            },
+            onTap: () => _selectLanguage('en', 'English'),
           ),
           const SizedBox(height: 10),
-          // Arabic option
-          _LangOption(
+          _LangOptionWithTTS(
             flagEmoji: '🇸🇦',
             name: 'Arabic',
             nativeName: 'العربية',
             code: 'ar',
             isSelected: _selected == 'ar',
-            onTap: () {
-              setState(() => _selected = 'ar');
-              context.read<LanguageProvider>().setLanguage('ar');
-              Navigator.pop(context);
-              widget.onChanged();
-            },
+            onTap: () => _selectLanguage('ar', 'العربية'),
           ),
           const SizedBox(height: 10),
-          // Urdu option
-          _LangOption(
+          _LangOptionWithTTS(
             flagEmoji: '🇵🇰',
             name: 'Urdu',
             nativeName: 'اردو',
             code: 'ur',
             isSelected: _selected == 'ur',
-            onTap: () {
-              setState(() => _selected = 'ur');
-              context.read<LanguageProvider>().setLanguage('ur');
-              Navigator.pop(context);
-              widget.onChanged();
-            },
+            onTap: () => _selectLanguage('ur', 'اردو'),
           ),
           const SizedBox(height: 10),
           Text(
@@ -1925,7 +1936,10 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
   }
 }
 
-class _LangOption extends StatelessWidget {
+// Optionally selected language will be spoken with proper pronunciation
+// using the TTS service with language loading state
+
+class _LangOptionWithTTS extends StatelessWidget {
   final String flagEmoji;
   final String name;
   final String nativeName;
@@ -1933,7 +1947,7 @@ class _LangOption extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _LangOption({
+  const _LangOptionWithTTS({
     required this.flagEmoji,
     required this.name,
     required this.nativeName,

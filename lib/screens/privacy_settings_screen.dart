@@ -182,9 +182,11 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     return RadioListTile<String>(
       title: Text(label, style: const TextStyle(fontSize: 14)),
       value: value,
+      // ignore: deprecated_member_use
       groupValue: current,
       activeColor: AppColors.gold,
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      // ignore: deprecated_member_use
       onChanged: (v) {
         if (v == null) return;
         setState(() => _setField(field, v));

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
@@ -20,11 +21,16 @@ import 'providers/admin_provider.dart';
 import 'providers/order_provider.dart';
 import 'services/theme_provider.dart';
 import 'services/currency_provider.dart';
+import 'services/tts_service.dart';
 import 'web/app_router.dart';
 import 'web/web_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ShareService creates path-based links (/listing/:id, /chat/:id), so the
+  // router must use the browser path instead of the default hash strategy.
+  if (kIsWeb) usePathUrlStrategy();
   
   // Initialize Firebase (wrapped in try-catch to allow app to run even if options are placeholders)
   try {
@@ -44,6 +50,10 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CompareProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider<TtsService>(
+          create: (context) =>
+              TtsService(context.read<LanguageProvider>()),
+        ),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => ReportProvider()),
