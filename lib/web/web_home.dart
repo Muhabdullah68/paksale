@@ -61,7 +61,11 @@ class _WebHomeBodyState extends State<WebHomeBody> {
     final featured = context.select((ProductProvider p) => p.featuredProducts);
     final isLoading = context.select((ProductProvider p) => p.isLoading);
     final centerContent = _buildCenterContent(
-        context, products, featured, isLoading);
+      context,
+      products,
+      featured,
+      isLoading,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -77,40 +81,43 @@ class _WebHomeBodyState extends State<WebHomeBody> {
         // Desktop: 2 or 3 column layout (page scroll owns the scrolling)
         final children = <Widget>[];
         if (showLeft) {
-          children.add(SizedBox(
-            width: _leftSidebarWidth,
-            child: _LeftSidebar(
-              priceRange: _priceRange,
-              onPriceChanged: (v) => setState(() => _priceRange = v),
-              selectedConditions: _selectedConditions,
-              onConditionToggle: (cond) => setState(() {
-                _selectedConditions.contains(cond)
-                    ? _selectedConditions.remove(cond)
-                    : _selectedConditions.add(cond);
-              }),
-              expandedCategories: _expandedCategories,
-              onCategoryToggle: (name) => setState(() {
-                _expandedCategories.contains(name)
-                    ? _expandedCategories.remove(name)
-                    : _expandedCategories.add(name);
-              }),
+          children.add(
+            SizedBox(
+              width: _leftSidebarWidth,
+              child: _LeftSidebar(
+                priceRange: _priceRange,
+                onPriceChanged: (v) => setState(() => _priceRange = v),
+                selectedConditions: _selectedConditions,
+                onConditionToggle: (cond) => setState(() {
+                  _selectedConditions.contains(cond)
+                      ? _selectedConditions.remove(cond)
+                      : _selectedConditions.add(cond);
+                }),
+                expandedCategories: _expandedCategories,
+                onCategoryToggle: (name) => setState(() {
+                  _expandedCategories.contains(name)
+                      ? _expandedCategories.remove(name)
+                      : _expandedCategories.add(name);
+                }),
+              ),
             ),
-          ));
+          );
         }
-        children.add(Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: showLeft ? 20 : 0,
-              right: showRight ? 20 : 0,
+        children.add(
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: showLeft ? 20 : 0,
+                right: showRight ? 20 : 0,
+              ),
+              child: centerContent,
             ),
-            child: centerContent,
           ),
-        ));
+        );
         if (showRight) {
-          children.add(const SizedBox(
-            width: _rightSidebarWidth,
-            child: _RightSidebar(),
-          ));
+          children.add(
+            const SizedBox(width: _rightSidebarWidth, child: _RightSidebar()),
+          );
         }
 
         return Row(
@@ -121,10 +128,12 @@ class _WebHomeBodyState extends State<WebHomeBody> {
     );
   }
 
-  Widget _buildCenterContent(BuildContext context,
-      List<ProductModel> products,
-      List<ProductModel> featured,
-      bool isLoading) {
+  Widget _buildCenterContent(
+    BuildContext context,
+    List<ProductModel> products,
+    List<ProductModel> featured,
+    bool isLoading,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,18 +185,22 @@ class _WebHomeBodyState extends State<WebHomeBody> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
       ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.storefront_outlined,
-                size: 56, color: AppColors.textMuted),
+            const Icon(
+              Icons.storefront_outlined,
+              size: 56,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 16),
-            Text(message,
-                style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
+            Text(
+              message,
+              style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+            ),
           ],
         ),
       ),
@@ -261,15 +274,20 @@ class _HeroCarouselState extends State<_HeroCarousel> {
     final cms = context.watch<CMSProvider>();
     final banners = cms.banners;
     final slides = banners.isNotEmpty
-        ? banners.map((b) => {
-              'title': b['title']?.toString() ?? '',
-              'subtitle': b['subtitle']?.toString() ?? '',
-              'image': b['imageUrl']?.toString() ?? '',
-            }).toList()
+        ? banners
+              .map(
+                (b) => {
+                  'title': b['title']?.toString() ?? '',
+                  'subtitle': b['subtitle']?.toString() ?? '',
+                  'image': b['imageUrl']?.toString() ?? '',
+                },
+              )
+              .toList()
         : [
             {
               'title': 'Buy & Sell Anything',
-              'subtitle': 'Cars, properties, electronics, jobs & more across Pakistan.',
+              'subtitle':
+                  'Cars, properties, electronics, jobs & more across Pakistan.',
               'image': '',
             },
             {
@@ -305,8 +323,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                         imageUrl: image,
                         fit: BoxFit.cover,
                         memCacheWidth: 1200,
-                        errorWidget: (context, url, error) =>
-                            _bannerFallback(),
+                        errorWidget: (context, url, error) => _bannerFallback(),
                         placeholder: (context, url) => _bannerFallback(),
                       )
                     else
@@ -326,7 +343,9 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                       ),
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 48, vertical: 36),
+                        horizontal: 48,
+                        vertical: 36,
+                      ),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: ConstrainedBox(
@@ -337,17 +356,22 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.gold,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Text('PAK SALE',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 2)),
+                                child: const Text(
+                                  'PAK SALE',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 14),
                               Text(
@@ -423,10 +447,14 @@ class _CategoryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final cms = context.watch<CMSProvider>();
     final cats = cms.categories.isNotEmpty
-        ? cms.categories.map((c) => {
-              'name': c['name']?.toString() ?? '',
-              'icon': c['icon']?.toString() ?? '',
-            }).toList()
+        ? cms.categories
+              .map(
+                (c) => {
+                  'name': c['name']?.toString() ?? '',
+                  'icon': c['icon']?.toString() ?? '',
+                },
+              )
+              .toList()
         : [
             {'name': 'Vehicles', 'icon': '🚗'},
             {'name': 'Properties', 'icon': '🏠'},
@@ -460,7 +488,8 @@ class _CategoryGrid extends StatelessWidget {
               name: name,
               icon: icon,
               onTap: () => context.push(
-                  '/browse?category=${Uri.encodeQueryComponent(name)}'),
+                '/browse?category=${Uri.encodeQueryComponent(name)}',
+              ),
             );
           }).toList(),
         );
@@ -498,8 +527,7 @@ class _CategoryCardState extends State<_CategoryCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          transform: Matrix4.translationValues(
-              0, _hovered ? -3 : 0, 0),
+          transform: Matrix4.translationValues(0, _hovered ? -3 : 0, 0),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: theme.cardTheme.color,
@@ -508,16 +536,17 @@ class _CategoryCardState extends State<_CategoryCard> {
               color: _hovered
                   ? AppColors.gold
                   : (theme.brightness == Brightness.dark
-                          ? AppColors.divider
-                          : AppColors.dividerLightMode)
-                      .withValues(alpha: 0.3),
+                            ? AppColors.divider
+                            : AppColors.dividerLightMode)
+                        .withValues(alpha: 0.3),
             ),
             boxShadow: _hovered
                 ? [
                     BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.2),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4)),
+                      color: AppColors.gold.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
                   ]
                 : null,
           ),
@@ -537,9 +566,11 @@ class _CategoryCardState extends State<_CategoryCard> {
                   ),
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  size: 18,
-                  color: _hovered ? AppColors.gold : AppColors.textMuted),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: _hovered ? AppColors.gold : AppColors.textMuted,
+              ),
             ],
           ),
         ),
@@ -589,9 +620,10 @@ class _SectionHeader extends StatelessWidget {
               child: Text(
                 actionLabel!,
                 style: const TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
+                  color: AppColors.gold,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -630,12 +662,11 @@ class _ProductGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          childAspectRatio: 0.9,
+          childAspectRatio: 0.78,
           children: products
-              .map((p) => WebProductCard(
-                    product: p,
-                    onTap: () => onProductTap(p),
-                  ))
+              .map(
+                (p) => WebProductCard(product: p, onTap: () => onProductTap(p)),
+              )
               .toList(),
         );
       },
@@ -697,10 +728,9 @@ class _LeftSidebar extends StatelessWidget {
                   max: 5000000,
                   divisions: 100,
                   activeColor: AppColors.gold,
-                  inactiveColor: (isDark
-                          ? AppColors.divider
-                          : AppColors.dividerLightMode)
-                      .withValues(alpha: 0.5),
+                  inactiveColor:
+                      (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                          .withValues(alpha: 0.5),
                   labels: RangeLabels(
                     _fmtPrice(priceRange.start),
                     _fmtPrice(priceRange.end),
@@ -715,21 +745,26 @@ class _LeftSidebar extends StatelessWidget {
                         child: Text(
                           'Rs ${_fmtPrice(priceRange.start)}',
                           style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyLarge?.color),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ),
-                      const Icon(Icons.arrow_forward,
-                          size: 12, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.arrow_forward,
+                        size: 12,
+                        color: AppColors.textMuted,
+                      ),
                       Expanded(
                         child: Text(
                           'Rs ${_fmtPrice(priceRange.end)}',
                           textAlign: TextAlign.right,
                           style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyLarge?.color),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ),
                     ],
@@ -750,54 +785,57 @@ class _LeftSidebar extends StatelessWidget {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: [
-                    'New',
-                    'Used',
-                    'Like New',
-                    'Sale',
-                    'Rent',
-                    'Exchange'
-                  ].map((c) {
-                    final sel = selectedConditions.contains(c);
-                    return MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => onConditionToggle(c),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: sel
-                                ? AppColors.gold.withValues(alpha: 0.2)
-                                : theme.cardTheme.color,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: sel
-                                  ? AppColors.gold
-                                  : (isDark
-                                          ? AppColors.divider
-                                          : AppColors.dividerLightMode)
-                                      .withValues(alpha: 0.3),
-                              width: sel ? 1.2 : 1,
+                  children:
+                      [
+                        'New',
+                        'Used',
+                        'Like New',
+                        'Sale',
+                        'Rent',
+                        'Exchange',
+                      ].map((c) {
+                        final sel = selectedConditions.contains(c);
+                        return MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => onConditionToggle(c),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? AppColors.gold.withValues(alpha: 0.2)
+                                    : theme.cardTheme.color,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: sel
+                                      ? AppColors.gold
+                                      : (isDark
+                                                ? AppColors.divider
+                                                : AppColors.dividerLightMode)
+                                            .withValues(alpha: 0.3),
+                                  width: sel ? 1.2 : 1,
+                                ),
+                              ),
+                              child: Text(
+                                c,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: sel
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: sel
+                                      ? AppColors.gold
+                                      : theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
                             ),
                           ),
-                          child: Text(
-                            c,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: sel
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: sel
-                                  ? AppColors.gold
-                                  : theme.textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }).toList(),
                 ),
               ],
             ),
@@ -896,8 +934,9 @@ class _CardBox extends StatelessWidget {
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
-                .withValues(alpha: 0.25)),
+          color: (isDark ? AppColors.divider : AppColors.dividerLightMode)
+              .withValues(alpha: 0.25),
+        ),
         boxShadow: isDark
             ? null
             : [
@@ -953,25 +992,29 @@ class _QuickLinkTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              Icon(icon,
-                  size: 15,
-                  color: highlight ? AppColors.gold : AppColors.textMuted),
+              Icon(
+                icon,
+                size: 15,
+                color: highlight ? AppColors.gold : AppColors.textMuted,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight:
-                        highlight ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
                     color: highlight
                         ? AppColors.gold
                         : Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right,
-                  size: 14, color: AppColors.textMuted),
+              const Icon(
+                Icons.chevron_right,
+                size: 14,
+                color: AppColors.textMuted,
+              ),
             ],
           ),
         ),
@@ -1002,24 +1045,36 @@ class _MiniCategoryTree extends StatelessWidget {
   Widget build(BuildContext context) {
     final categories = [
       ('Offers', '🏷️', <(String, String)>[]),
-      ('Vehicles', '🚗', <(String, String)>[
-        ('Cars', ''),
-        ('Bikes & Motorcycles', ''),
-        ('Trucks & Buses', ''),
-        ('WaterCrafts', ''),
-      ]),
-      ('Properties', '🏠', <(String, String)>[
-        ('Houses for Sale', ''),
-        ('Plots & Land', ''),
-        ('Rentals', ''),
-        ('Commercial', ''),
-      ]),
-      ('Electronics', '⚡', <(String, String)>[
-        ('Mobile Phones', ''),
-        ('Computers & Laptops', ''),
-        ('TV & Video', ''),
-        ('Home Appliances', ''),
-      ]),
+      (
+        'Vehicles',
+        '🚗',
+        <(String, String)>[
+          ('Cars', ''),
+          ('Bikes & Motorcycles', ''),
+          ('Trucks & Buses', ''),
+          ('WaterCrafts', ''),
+        ],
+      ),
+      (
+        'Properties',
+        '🏠',
+        <(String, String)>[
+          ('Houses for Sale', ''),
+          ('Plots & Land', ''),
+          ('Rentals', ''),
+          ('Commercial', ''),
+        ],
+      ),
+      (
+        'Electronics',
+        '⚡',
+        <(String, String)>[
+          ('Mobile Phones', ''),
+          ('Computers & Laptops', ''),
+          ('TV & Video', ''),
+          ('Home Appliances', ''),
+        ],
+      ),
       ('Furniture & Décor', '🪑', <(String, String)>[]),
       ('Jewellery', '💎', <(String, String)>[]),
       ('Jobs Center', '💼', <(String, String)>[]),
@@ -1063,7 +1118,8 @@ class _TreeTileState extends State<_TreeTile> {
             onTap: hasSub
                 ? () => setState(() => _expanded = !_expanded)
                 : () => context.push(
-                    '/browse?category=${Uri.encodeQueryComponent(widget.name)}'),
+                    '/browse?category=${Uri.encodeQueryComponent(widget.name)}',
+                  ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 7),
               child: Row(
@@ -1104,14 +1160,18 @@ class _TreeTileState extends State<_TreeTile> {
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
                     onTap: () => context.push(
-                        '/browse?category=${Uri.encodeQueryComponent(widget.name)}'
-                        '&subCategory=${Uri.encodeQueryComponent(sub.$1)}'),
+                      '/browse?category=${Uri.encodeQueryComponent(widget.name)}'
+                      '&subCategory=${Uri.encodeQueryComponent(sub.$1)}',
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: [
-                          const Icon(Icons.circle,
-                              size: 5, color: AppColors.gold),
+                          const Icon(
+                            Icons.circle,
+                            size: 5,
+                            color: AppColors.gold,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1157,7 +1217,9 @@ class _RightSidebar extends StatelessWidget {
 
           // Trending Searches
           _SidebarSectionTitle(
-              title: 'Trending Searches', icon: Icons.local_fire_department),
+            title: 'Trending Searches',
+            icon: Icons.local_fire_department,
+          ),
           SizedBox(height: 14),
           _TrendingSearchesCard(),
           SizedBox(height: 22),
@@ -1178,8 +1240,9 @@ class _SuperAdsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final featured = context.select((ProductProvider p) => p.featuredProducts);
-    final list =
-        featured.isEmpty ? SampleData.products.take(3).toList() : featured.take(3).toList();
+    final list = featured.isEmpty
+        ? SampleData.products.take(3).toList()
+        : featured.take(3).toList();
     return _CardBox(
       child: Column(
         children: [
@@ -1226,7 +1289,8 @@ class _SuperAdTile extends StatelessWidget {
                       )
                     : Container(
                         color: AppColors.gold.withValues(alpha: 0.1),
-                        child: const Icon(Icons.star, color: AppColors.gold)),
+                        child: const Icon(Icons.star, color: AppColors.gold),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1257,7 +1321,9 @@ class _SuperAdTile extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(3),
@@ -1265,9 +1331,10 @@ class _SuperAdTile extends StatelessWidget {
                           child: const Text(
                             '⭐ FEATURED',
                             style: TextStyle(
-                                color: AppColors.gold,
-                                fontSize: 8,
-                                fontWeight: FontWeight.w800),
+                              color: AppColors.gold,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -1316,10 +1383,7 @@ class _TrendingSearchesCard extends StatelessWidget {
         runSpacing: 6,
         children: [
           for (var i = 0; i < trendings.length; i++)
-            _TrendTag(
-              rank: i + 1,
-              text: trendings[i],
-            ),
+            _TrendTag(rank: i + 1, text: trendings[i]),
         ],
       ),
     );
@@ -1339,8 +1403,8 @@ class _TrendTag extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => context.push(
-            '/browse?q=${Uri.encodeQueryComponent(text)}'),
+        onTap: () =>
+            context.push('/browse?q=${Uri.encodeQueryComponent(text)}'),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
@@ -1352,7 +1416,7 @@ class _TrendTag extends StatelessWidget {
               color: hot
                   ? AppColors.gold.withValues(alpha: 0.5)
                   : (isDark ? AppColors.divider : AppColors.dividerLightMode)
-                      .withValues(alpha: 0.25),
+                        .withValues(alpha: 0.25),
             ),
           ),
           child: Row(
@@ -1419,10 +1483,11 @@ class _PSUpdatesCard extends StatelessWidget {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: (updates[i].$3
-                              ? AppColors.gold
-                              : AppColors.bluePersonal)
-                          .withValues(alpha: 0.18),
+                      color:
+                          (updates[i].$3
+                                  ? AppColors.gold
+                                  : AppColors.bluePersonal)
+                              .withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(

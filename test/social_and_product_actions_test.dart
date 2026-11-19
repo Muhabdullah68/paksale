@@ -273,7 +273,8 @@ void main() {
 
     expect(actionLabels(tester), ['Call', 'Chat', 'Share', 'Compare']);
 
-    // Chips live in the image Stack: under the heart but above the title.
+    // Chips sit in a vertical rail at the bottom-right of the details area:
+    // below the heart and to the right of the title.
     final heart = find.byIcon(Icons.favorite_border);
     expect(heart, findsOneWidget);
     expect(
@@ -281,8 +282,8 @@ void main() {
       greaterThan(tester.getCenter(heart).dy),
     );
     expect(
-      tester.getCenter(find.text('Call')).dy,
-      lessThan(tester.getCenter(find.text(product.title)).dy),
+      tester.getCenter(find.text('Call')).dx,
+      greaterThan(tester.getCenter(find.text(product.title)).dx),
     );
 
     await tester.tap(find.text('Compare'));

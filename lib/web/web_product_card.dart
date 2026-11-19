@@ -165,76 +165,6 @@ class _WebProductCardState extends State<WebProductCard> {
                     ),
                   ),
                 ),
-                // Action chips sit directly under the favourite icon in the
-                // image's top-right corner, matching the other card layouts.
-                Positioned(
-                  top: 44,
-                  right: 10,
-                  child: GestureDetector(
-                    // Absorb taps between chips so the card's onTap does not
-                    // open the detail page.
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _WebActionChip(
-                            icon: Icons.call_outlined,
-                            label: t['call'] ?? 'Call',
-                            compact: true,
-                            onTap: () => callProductSeller(context, p),
-                          ),
-                          const SizedBox(height: 2),
-                          _WebActionChip(
-                            icon: Icons.chat_bubble_outline,
-                            label: t['chat'] ?? 'Chat',
-                            compact: true,
-                            onTap: () => startProductChat(context, p),
-                          ),
-                          if (widget.showShareButton) ...[
-                            const SizedBox(height: 2),
-                            _WebActionChip(
-                              icon: Icons.share_outlined,
-                              label: t['share'] ?? 'Share',
-                              compact: true,
-                              onTap: () {
-                                if (widget.onShare != null) {
-                                  widget.onShare!();
-                                } else {
-                                  ShareService.shareProduct(
-                                    context,
-                                    widget.product,
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                          if (widget.showCompareButton) ...[
-                            const SizedBox(height: 2),
-                            _WebActionChip(
-                              icon: Icons.compare_arrows,
-                              label: t['compare'] ?? 'Compare',
-                              isActive: isInCompare,
-                              compact: true,
-                              onTap: () => toggleCompareWithFeedback(
-                                context,
-                                p,
-                                compareProvider,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -268,63 +198,126 @@ class _WebProductCardState extends State<WebProductCard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 10),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 11,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      p.postedTime,
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 12,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 3),
                     Expanded(
-                      child: Text(
-                        p.city.isNotEmpty
-                            ? '${p.location}, ${p.city}'
-                            : p.location,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                size: 11,
+                                color: AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  p.postedTime,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                size: 12,
+                                color: AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  p.city.isNotEmpty
+                                      ? '${p.location}, ${p.city}'
+                                      : p.location,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.remove_red_eye_outlined,
+                                size: 11,
+                                color: AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${p.views}',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _WebActionChip(
+                          icon: Icons.call_outlined,
+                          label: t['call'] ?? 'Call',
+                          onTap: () => callProductSeller(context, p),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.remove_red_eye_outlined,
-                      size: 11,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${p.views}',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
+                        const SizedBox(height: 5),
+                        _WebActionChip(
+                          icon: Icons.chat_bubble_outline,
+                          label: t['chat'] ?? 'Chat',
+                          onTap: () => startProductChat(context, p),
+                        ),
+                        if (widget.showShareButton) ...[
+                          const SizedBox(height: 5),
+                          _WebActionChip(
+                            icon: Icons.share_outlined,
+                            label: t['share'] ?? 'Share',
+                            onTap: () {
+                              if (widget.onShare != null) {
+                                widget.onShare!();
+                              } else {
+                                ShareService.shareProduct(
+                                  context,
+                                  widget.product,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                        if (widget.showCompareButton) ...[
+                          const SizedBox(height: 5),
+                          _WebActionChip(
+                            icon: Icons.compare_arrows,
+                            label: t['compare'] ?? 'Compare',
+                            isActive: isInCompare,
+                            onTap: () => toggleCompareWithFeedback(
+                              context,
+                              p,
+                              compareProvider,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -412,24 +405,17 @@ class _WebActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isActive;
-  final bool compact;
 
   const _WebActionChip({
     required this.icon,
     required this.label,
     required this.onTap,
     this.isActive = false,
-    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final padding = compact
-        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 3)
-        : const EdgeInsets.symmetric(horizontal: 10, vertical: 8);
-    final iconSize = compact ? 9.0 : 13.0;
-    final fontSize = compact ? 8.0 : 11.0;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -439,14 +425,11 @@ class _WebActionChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          // Larger target keeps taps on the chip instead of the card beneath.
-          padding: padding,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold.withValues(alpha: 0.15)
-                : (compact
-                      ? Colors.black.withValues(alpha: 0.35)
-                      : theme.colorScheme.surface),
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: AppColors.gold.withValues(alpha: isActive ? 0.8 : 0.4),
@@ -455,13 +438,13 @@ class _WebActionChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: iconSize, color: AppColors.gold),
-              SizedBox(width: compact ? 2 : 4),
+              Icon(icon, size: 13, color: AppColors.gold),
+              const SizedBox(width: 4),
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.gold,
-                  fontSize: fontSize,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
