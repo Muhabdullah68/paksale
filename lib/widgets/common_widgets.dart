@@ -47,9 +47,9 @@ String normalizePhoneNumber(String raw) {
 
 void _showActionMessage(BuildContext context, String message) {
   if (!context.mounted) return;
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.orange));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), backgroundColor: AppColors.orange),
+  );
 }
 
 /// Call-privacy policy: only an explicit `false` blocks calls. A missing or
@@ -90,10 +90,7 @@ void _showCallDialog(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (message != null) ...[
-              Text(message),
-              const SizedBox(height: 12),
-            ],
+            if (message != null) ...[Text(message), const SizedBox(height: 12)],
             const Text('Seller phone number'),
             const SizedBox(height: 4),
             SelectableText(
@@ -194,8 +191,9 @@ Future<void> callProductSeller(
     return;
   }
 
-  final sellerName =
-      product.sellerName.trim().isEmpty ? 'the seller' : product.sellerName;
+  final sellerName = product.sellerName.trim().isEmpty
+      ? 'the seller'
+      : product.sellerName;
   final uri = Uri.parse('tel:$phone');
 
   // On desktop browsers tel: often does nothing, so always show the number
@@ -1047,6 +1045,77 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Action chips sit directly under the favourite icon in
+                    // the image's top-right corner (Categories layout).
+                    Positioned(
+                      top: 34,
+                      right: 6,
+                      child: GestureDetector(
+                        // Absorb taps between chips so the card's onTap does
+                        // not open the detail page.
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {},
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ConstrainedBox(
+                            // Wide enough for two compact rows inside the
+                            // ~84px-tall image without clipping the last row.
+                            constraints: const BoxConstraints(maxWidth: 130),
+                            child: Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: 2,
+                              runSpacing: 2,
+                              children: [
+                                _ActionChip(
+                                  icon: Icons.call_outlined,
+                                  label: t['call'] ?? 'Call',
+                                  compact: true,
+                                  onTap: () => callProductSeller(context, p),
+                                ),
+                                _ActionChip(
+                                  icon: Icons.chat_bubble_outline,
+                                  label: t['chat'] ?? 'Chat',
+                                  compact: true,
+                                  onTap: () => startProductChat(context, p),
+                                ),
+                                if (showShareButton)
+                                  _ActionChip(
+                                    icon: Icons.share_outlined,
+                                    label: t['share'] ?? 'Share',
+                                    compact: true,
+                                    onTap: () {
+                                      if (onShare != null) {
+                                        onShare!();
+                                      } else {
+                                        ShareService.shareProduct(
+                                          context,
+                                          product,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                if (showCompareButton)
+                                  _ActionChip(
+                                    icon: Icons.compare_arrows,
+                                    label: t['compare'] ?? 'Compare',
+                                    isActive: isInCompare,
+                                    compact: true,
+                                    onTap: () => toggleCompareWithFeedback(
+                                      context,
+                                      p,
+                                      compareProvider,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1152,51 +1221,6 @@ class ProductCard extends StatelessWidget {
                             fontSize: 9,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 4,
-                      runSpacing: 3,
-                      children: [
-                        _ActionChip(
-                          icon: Icons.call_outlined,
-                          label: t['call'] ?? 'Call',
-                          dense: true,
-                          onTap: () => callProductSeller(context, p),
-                        ),
-                        _ActionChip(
-                          icon: Icons.chat_bubble_outline,
-                          label: t['chat'] ?? 'Chat',
-                          dense: true,
-                          onTap: () => startProductChat(context, p),
-                        ),
-                        if (showShareButton)
-                          _ActionChip(
-                            icon: Icons.share_outlined,
-                            label: t['share'] ?? 'Share',
-                            dense: true,
-                            onTap: () {
-                              if (onShare != null) {
-                                onShare!();
-                              } else {
-                                ShareService.shareProduct(context, product);
-                              }
-                            },
-                          ),
-                        if (showCompareButton)
-                          _ActionChip(
-                            icon: Icons.compare_arrows,
-                            label: t['compare'] ?? 'Compare',
-                            isActive: isInCompare,
-                            dense: true,
-                            onTap: () => toggleCompareWithFeedback(
-                              context,
-                              p,
-                              compareProvider,
-                            ),
-                          ),
                       ],
                     ),
                   ],
@@ -1342,24 +1366,25 @@ class _ActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isActive;
-  final bool dense;
+  // Smallest variant, used for the chips overlaid on grid-card images.
+  final bool compact;
 
   const _ActionChip({
     required this.icon,
     required this.label,
     required this.onTap,
     this.isActive = false,
-    this.dense = false,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final padding = dense
-        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
+    final padding = compact
+        ? const EdgeInsets.symmetric(horizontal: 2, vertical: 1)
         : const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
-    final iconSize = dense ? 8.5 : 10.0;
-    final fontSize = dense ? 8.0 : 10.0;
+    final iconSize = compact ? 7.0 : 10.0;
+    final fontSize = compact ? 7.0 : 10.0;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1382,7 +1407,7 @@ class _ActionChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: iconSize, color: AppColors.gold),
-              const SizedBox(width: 3),
+              SizedBox(width: compact ? 1 : 3),
               Flexible(
                 child: Text(
                   label,
@@ -1898,9 +1923,10 @@ class SocialMediaFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF9),
+        // Requested plum background: rgb(74,10,30) = #4A0A1E.
+        color: AppColors.primaryDark,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE9DDE0)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.55)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -1916,7 +1942,7 @@ class SocialMediaFooter extends StatelessWidget {
           Text(
             t['follow_us'] ?? 'Follow us',
             style: const TextStyle(
-              color: AppColors.primaryDark,
+              color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -1942,9 +1968,9 @@ class SocialMediaFooter extends StatelessWidget {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            // Match the app-wide plum used by the header,
-                            // splash and footer instead of a stark white disc.
-                            color: AppColors.primary,
+                            // Same plum as the card (#4A0A1E); the gold ring
+                            // keeps each circle distinct against the card.
+                            color: AppColors.primaryDark,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: AppColors.gold.withValues(alpha: 0.65),

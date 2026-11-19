@@ -49,15 +49,15 @@ void main() {
   }
 
   ProductModel buildProduct() => ProductModel(
-        id: 'test-product',
-        title: 'Compact card test listing',
-        price: 100000,
-        category: 'Vehicles',
-        condition: 'Used',
-        sellerType: 'Personal',
-        sellerId: 'seller-1',
-        createdAt: DateTime.now(),
-      );
+    id: 'test-product',
+    title: 'Compact card test listing',
+    price: 100000,
+    category: 'Vehicles',
+    condition: 'Used',
+    sellerType: 'Personal',
+    sellerId: 'seller-1',
+    createdAt: DateTime.now(),
+  );
 
   test('normalizes local and international phone numbers', () {
     expect(normalizePhoneNumber('0300 1234567'), '+923001234567');
@@ -72,11 +72,12 @@ void main() {
     expect(allowCallsFromFlag(false), isFalse);
   });
 
-  test('shared listing links use a stable path URL', () {
+  test('shared listing links use the stable live website on web and app', () {
     expect(
       ShareService.productUrl('listing-123'),
-      'https://paksale.app/listing/listing-123',
+      'https://paksale.net/listing/listing-123',
     );
+    expect(ShareService.siteBase, 'https://paksale.net');
   });
 
   testWidgets('social panel wraps all six links on a narrow viewport', (
@@ -99,15 +100,30 @@ void main() {
     expect(find.byTooltip('X'), findsOneWidget);
     expect(find.byTooltip('Facebook'), findsOneWidget);
 
-    // Icons sit on the app-wide plum, with white glyphs for contrast.
+    // Circles use rgb(74,10,30) = #4A0A1E, with white glyphs for contrast.
     final circles = tester
         .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
         .where((c) => c.decoration is BoxDecoration)
         .toList();
     expect(circles.length, 6);
     for (final circle in circles) {
-      expect((circle.decoration as BoxDecoration).color, AppColors.primary);
+      expect((circle.decoration as BoxDecoration).color, AppColors.primaryDark);
     }
+    // The surrounding card uses the same plum instead of white.
+    final card =
+        find
+                .byWidgetPredicate(
+                  (w) =>
+                      w is Container &&
+                      w.decoration is BoxDecoration &&
+                      (w.decoration as BoxDecoration).color ==
+                          AppColors.primaryDark,
+                )
+                .evaluate()
+                .first
+                .widget
+            as Container;
+    expect(card.decoration, isA<BoxDecoration>());
     final icons = tester.widgetList<FaIcon>(find.byType(FaIcon));
     expect(icons.length, 6);
     for (final icon in icons) {
@@ -139,13 +155,21 @@ void main() {
     expect(actionLabels(tester), ['Call', 'Chat', 'Share', 'Compare']);
     expect(tester.takeException(), isNull);
 
+    // Chips live in the image Stack, above the title and under the heart.
+    expect(
+      tester.getCenter(find.text('Call')).dy,
+      lessThan(tester.getCenter(find.text(product.title)).dy),
+    );
+
     await tester.tap(find.text('Compare'));
     await tester.pumpAndSettle();
     expect(compareProvider.isInCompare(product.id), isTrue);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('web product card actions fit and keep their order', (tester) async {
+  testWidgets('web product card actions fit and keep their order', (
+    tester,
+  ) async {
     setViewport(tester, const Size(320, 720));
 
     final product = buildProduct();

@@ -258,46 +258,55 @@ class _WebProductCardState extends State<WebProductCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _WebActionChip(
-                      icon: Icons.call_outlined,
-                      label: t['call'] ?? 'Call',
-                      onTap: () => callProductSeller(context, p),
-                    ),
-                    _WebActionChip(
-                      icon: Icons.chat_bubble_outline,
-                      label: t['chat'] ?? 'Chat',
-                      onTap: () => startProductChat(context, p),
-                    ),
-                    if (widget.showShareButton)
+                const SizedBox(height: 8),
+                // This opaque layer absorbs taps that land between chips so
+                // they never reach the card's onTap and open the detail page.
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
                       _WebActionChip(
-                        icon: Icons.share_outlined,
-                        label: t['share'] ?? 'Share',
-                        onTap: () {
-                          if (widget.onShare != null) {
-                            widget.onShare!();
-                          } else {
-                            ShareService.shareProduct(context, widget.product);
-                          }
-                        },
+                        icon: Icons.call_outlined,
+                        label: t['call'] ?? 'Call',
+                        onTap: () => callProductSeller(context, p),
                       ),
-                    if (widget.showCompareButton)
                       _WebActionChip(
-                        icon: Icons.compare_arrows,
-                        label: t['compare'] ?? 'Compare',
-                        isActive: isInCompare,
-                        onTap: () => toggleCompareWithFeedback(
-                          context,
-                          p,
-                          compareProvider,
+                        icon: Icons.chat_bubble_outline,
+                        label: t['chat'] ?? 'Chat',
+                        onTap: () => startProductChat(context, p),
+                      ),
+                      if (widget.showShareButton)
+                        _WebActionChip(
+                          icon: Icons.share_outlined,
+                          label: t['share'] ?? 'Share',
+                          onTap: () {
+                            if (widget.onShare != null) {
+                              widget.onShare!();
+                            } else {
+                              ShareService.shareProduct(
+                                context,
+                                widget.product,
+                              );
+                            }
+                          },
                         ),
-                      ),
-                  ],
+                      if (widget.showCompareButton)
+                        _WebActionChip(
+                          icon: Icons.compare_arrows,
+                          label: t['compare'] ?? 'Compare',
+                          isActive: isInCompare,
+                          onTap: () => toggleCompareWithFeedback(
+                            context,
+                            p,
+                            compareProvider,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -400,7 +409,8 @@ class _WebActionChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          // Larger target keeps taps on the chip instead of the card beneath.
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold.withValues(alpha: 0.15)
@@ -413,13 +423,13 @@ class _WebActionChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 11, color: AppColors.gold),
-              const SizedBox(width: 3),
+              Icon(icon, size: 13, color: AppColors.gold),
+              const SizedBox(width: 4),
               Text(
                 label,
                 style: const TextStyle(
                   color: AppColors.gold,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -431,8 +441,9 @@ class _WebActionChip extends StatelessWidget {
   }
 }
 
-/// Owns the hover state + card chrome (scale, border, shadow) so mouse
-/// enter/exit never rebuilds the card contents passed as [child].
+/// Owns the hover state + card chrome (border, shadow) so mouse enter/exit
+/// never rebuilds the card contents passed as [child]. No scale on hover: a
+/// moving card shifts out from under the cursor and swallows action-chip taps.
 class _HoverShell extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -457,41 +468,36 @@ class _HoverShellState extends State<_HoverShell> {
           : MouseCursor.defer,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _hovered ? 1.02 : 1.0,
+        child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: theme.cardTheme.color,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: _hovered
-                    ? AppColors.gold.withValues(alpha: 0.6)
-                    : (isDark ? AppColors.divider : AppColors.dividerLightMode)
-                          .withValues(alpha: 0.25),
-              ),
-              boxShadow: _hovered
-                  ? [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.25),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered
+                  ? AppColors.gold.withValues(alpha: 0.6)
+                  : (isDark ? AppColors.divider : AppColors.dividerLightMode)
+                        .withValues(alpha: 0.25),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: widget.child,
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.25),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
+          clipBehavior: Clip.antiAlias,
+          child: widget.child,
         ),
       ),
     );
