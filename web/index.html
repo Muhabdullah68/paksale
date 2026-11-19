@@ -135,7 +135,10 @@
         if (started) return;
         started = true;
         var script = document.createElement("script");
-        script.src = "flutter_bootstrap.js";
+        // Absolute path: this script is injected from an inline module, and on
+        // deep links like /listing/<id> a relative src would resolve under
+        // /listing/ and return the SPA fallback HTML instead of the bootstrap.
+        script.src = "/flutter_bootstrap.js";
         script.async = true;
         document.body.appendChild(script);
       }
@@ -145,7 +148,10 @@
 
       Promise.all(
         SERVICES.map(function (name) {
-          return import("./firebasejs/11.9.1/firebase-" + name + ".js");
+          // Dynamic import() resolves relative to the document URL (not the
+          // <base href>), so on a deep link like /listing/<id> a relative
+          // specifier would point at /listing/firebasejs/... and return HTML.
+          return import("/firebasejs/11.9.1/firebase-" + name + ".js");
         })
       )
         .then(function (modules) {
