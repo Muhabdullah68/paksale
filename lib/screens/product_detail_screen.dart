@@ -38,6 +38,8 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedImageIndex = 0;
   PrivacySettings? _sellerPrivacy;
+  // Raw flag: missing means the seller never disabled calls.
+  bool _sellerAllowsCalls = true;
 
   @override
   void initState() {
@@ -50,12 +52,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _loadSellerPrivacy() async {
     try {
-      final seller = await UserRepository().getUserById(
-        widget.product.sellerId,
-      );
+      final repo = UserRepository();
+      final seller = await repo.getUserById(widget.product.sellerId);
+      final explicit = await repo.getAllowCallsFlag(widget.product.sellerId);
       if (mounted) {
         setState(() {
           _sellerPrivacy = seller?.privacy;
+          _sellerAllowsCalls = allowCallsFromFlag(explicit);
         });
       }
     } catch (_) {}
@@ -705,7 +708,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           onCall: _launchCaller,
           onWhatsApp: _launchWhatsApp,
           onChat: () => startProductChat(context, p),
-          privacy: _sellerPrivacy,
+          // Keep the seller's other privacy choices, but use the raw call flag
+          // so a missing value doesn't hide the Call button (the model
+          // defaults it to false).
+          privacy: _sellerPrivacy?.copyWith(allowCalls: _sellerAllowsCalls),
         ),
         const SizedBox(height: 8),
 

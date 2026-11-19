@@ -32,7 +32,8 @@ class SellerProfileScreen extends StatefulWidget {
 }
 
 class _SellerProfileScreenState extends State<SellerProfileScreen> {
-  PrivacySettings? _privacy;
+  // Missing/unknown setting means the seller never disabled calls.
+  bool _allowCalls = true;
 
   @override
   void initState() {
@@ -42,8 +43,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Future<void> _loadPrivacy() async {
     try {
-      final seller = await UserRepository().getUserById(widget.sellerId);
-      if (mounted) setState(() { _privacy = seller?.privacy; });
+      final explicit = await UserRepository().getAllowCallsFlag(widget.sellerId);
+      if (mounted) {
+        setState(() => _allowCalls = allowCallsFromFlag(explicit));
+      }
     } catch (_) {
     }
   }
@@ -60,7 +63,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     final displayListings =
     listings.isNotEmpty ? listings : SampleData.products.take(4).toList();
     final isBusiness = widget.sellerType.toLowerCase() == 'business';
-    final allowCall = _privacy == null || _privacy!.allowCalls;
+    final allowCall = _allowCalls;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -268,7 +271,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   void _showCallDialog(BuildContext context) {
-    if (_privacy != null && !_privacy!.allowCalls) {
+    if (!_allowCalls) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(

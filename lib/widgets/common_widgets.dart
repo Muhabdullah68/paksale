@@ -15,6 +15,7 @@ import '../repositories/user_repository.dart';
 import '../services/language_provider.dart';
 import '../services/currency_provider.dart';
 import '../services/share_service.dart';
+import '../screens/account_screen.dart';
 import '../screens/chat_screen.dart';
 
 /// Converts common local/international phone formats into a dialable URI
@@ -51,13 +52,20 @@ void _showActionMessage(BuildContext context, String message) {
   ).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.orange));
 }
 
+/// Call-privacy policy: only an explicit `false` blocks calls. A missing or
+/// unknown value means the seller never chose, so legacy listings stay usable.
+bool allowCallsFromFlag(bool? explicitFlag) => explicitFlag ?? true;
+
 /// Missing privacy documents and unknown values are treated as "allow" so
 /// legacy sellers are not accidentally blocked. Only an explicit false blocks.
 Future<bool> _sellerAllowsCalls(ProductModel product) async {
   if (product.sellerId.isEmpty) return true;
   try {
-    final seller = await UserRepository().getUserById(product.sellerId);
-    return seller?.privacy.allowCalls ?? true;
+    // Read the *raw* flag. PrivacySettings defaults `allowCalls` to false, so
+    // going through UserModel would turn a missing field into "blocked" and
+    // every legacy listing would claim the seller disabled calls.
+    final explicit = await UserRepository().getAllowCallsFlag(product.sellerId);
+    return allowCallsFromFlag(explicit);
   } catch (_) {
     return true;
   }
@@ -222,19 +230,50 @@ Future<void> callProductSeller(
   }
 }
 
+/// Asks the user to sign in, opens the shared auth sheet, and re-runs
+/// [startProductChat] on success so the conversation opens without an extra tap.
+Future<void> _promptSignInForChat(
+  BuildContext context,
+  ProductModel product,
+) async {
+  final t = context.read<LanguageProvider>().t;
+  final goSignIn = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(t['chat'] ?? 'Chat'),
+      content: Text(
+        t['login_prompt'] ?? 'Please sign in to message the seller',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(t['cancel'] ?? 'Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(t['login'] ?? 'Sign in'),
+        ),
+      ],
+    ),
+  );
+  if (goSignIn != true || !context.mounted) return;
+
+  final signedIn = await showAuthSheet(context);
+  if (signedIn && context.mounted) {
+    // Now authenticated — create/reuse the conversation and open it.
+    await startProductChat(context, product);
+  }
+}
+
 Future<void> startProductChat(
   BuildContext context,
   ProductModel product,
 ) async {
   final auth = context.read<AuthProvider>();
   final chatProvider = context.read<ChatProvider>();
-  final t = context.read<LanguageProvider>().t;
 
   if (!auth.isAuthenticated || auth.firebaseUser == null) {
-    _showActionMessage(
-      context,
-      t['login_prompt'] ?? 'Please sign in to message the seller',
-    );
+    await _promptSignInForChat(context, product);
     return;
   }
 
@@ -1903,10 +1942,12 @@ class SocialMediaFooter extends StatelessWidget {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            // Match the app-wide plum used by the header,
+                            // splash and footer instead of a stark white disc.
+                            color: AppColors.primary,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFFBFA9B0),
+                              color: AppColors.gold.withValues(alpha: 0.65),
                               width: 1.6,
                             ),
                           ),
@@ -1914,7 +1955,8 @@ class SocialMediaFooter extends StatelessWidget {
                             child: FaIcon(
                               icon,
                               size: 22,
-                              color: AppColors.primaryDark,
+                              // White on plum stays clearly visible.
+                              color: Colors.white,
                             ),
                           ),
                         ),

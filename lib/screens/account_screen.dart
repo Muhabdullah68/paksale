@@ -65,23 +65,9 @@ class _AccountScreenState extends State<AccountScreen>
   bool get _isArLang => context.read<LanguageProvider>().isArabic;
 
   // ── Auth ─────────────────────────────────────────────────────────────────
-  void _showLoginSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _AuthSheet(isRegister: false),
-    );
-  }
+  void _showLoginSheet() => showAuthSheet(context);
 
-  void _showRegisterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _AuthSheet(isRegister: true),
-    );
-  }
+  void _showRegisterSheet() => showAuthSheet(context, isRegister: true);
 
   void _logout() {
     final auth = context.read<AuthProvider>();
@@ -2138,16 +2124,34 @@ class _HelpSheet extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 //  AUTH SHEET (Login / Register)
 // ══════════════════════════════════════════════════════════════════════════════
-class _AuthSheet extends StatefulWidget {
-  final bool isRegister;
 
-  const _AuthSheet({this.isRegister = false});
-
-  @override
-  State<_AuthSheet> createState() => _AuthSheetState();
+/// Shows the shared login/register sheet from anywhere in the app.
+///
+/// Returns `true` only when sign-in/register succeeded, so callers (for
+/// example the Chat button) can resume the action that asked for sign-in.
+Future<bool> showAuthSheet(
+  BuildContext context, {
+  bool isRegister = false,
+}) async {
+  final result = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => AuthSheet(isRegister: isRegister),
+  );
+  return result ?? false;
 }
 
-class _AuthSheetState extends State<_AuthSheet> {
+class AuthSheet extends StatefulWidget {
+  final bool isRegister;
+
+  const AuthSheet({super.key, this.isRegister = false});
+
+  @override
+  State<AuthSheet> createState() => _AuthSheetState();
+}
+
+class _AuthSheetState extends State<AuthSheet> {
   late bool _isRegister;
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
@@ -2197,8 +2201,11 @@ class _AuthSheetState extends State<_AuthSheet> {
       }
       
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        // Pop with true so callers waiting on showAuthSheet() know sign-in
+        // succeeded and can resume the action that requested it.
+        Navigator.pop(context, true);
+        messenger.showSnackBar(SnackBar(
           content: Text(_isRegister
               ? (lang.isArabic ? 'تم إنشاء الحساب بنجاح!' : 'Account created! Welcome!')
               : (lang.isArabic ? 'أهلاً بك مجددًا!' : 'Welcome back!')),

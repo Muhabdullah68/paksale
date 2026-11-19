@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:marketplace_app/models/product_model.dart';
@@ -7,6 +8,8 @@ import 'package:marketplace_app/providers/compare_provider.dart';
 import 'package:marketplace_app/providers/favorites_provider.dart';
 import 'package:marketplace_app/services/currency_provider.dart';
 import 'package:marketplace_app/services/language_provider.dart';
+import 'package:marketplace_app/services/share_service.dart';
+import 'package:marketplace_app/theme/app_theme.dart';
 import 'package:marketplace_app/web/web_product_card.dart';
 import 'package:marketplace_app/widgets/common_widgets.dart';
 
@@ -63,6 +66,19 @@ void main() {
     expect(normalizePhoneNumber(''), '');
   });
 
+  test('call privacy allows missing flags and blocks only explicit false', () {
+    expect(allowCallsFromFlag(null), isTrue);
+    expect(allowCallsFromFlag(true), isTrue);
+    expect(allowCallsFromFlag(false), isFalse);
+  });
+
+  test('shared listing links use a stable path URL', () {
+    expect(
+      ShareService.productUrl('listing-123'),
+      'https://paksale.app/listing/listing-123',
+    );
+  });
+
   testWidgets('social panel wraps all six links on a narrow viewport', (
     tester,
   ) async {
@@ -82,6 +98,21 @@ void main() {
     expect(find.byTooltip('YouTube'), findsOneWidget);
     expect(find.byTooltip('X'), findsOneWidget);
     expect(find.byTooltip('Facebook'), findsOneWidget);
+
+    // Icons sit on the app-wide plum, with white glyphs for contrast.
+    final circles = tester
+        .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+        .where((c) => c.decoration is BoxDecoration)
+        .toList();
+    expect(circles.length, 6);
+    for (final circle in circles) {
+      expect((circle.decoration as BoxDecoration).color, AppColors.primary);
+    }
+    final icons = tester.widgetList<FaIcon>(find.byType(FaIcon));
+    expect(icons.length, 6);
+    for (final icon in icons) {
+      expect(icon.color, Colors.white);
+    }
     expect(tester.takeException(), isNull);
   });
 

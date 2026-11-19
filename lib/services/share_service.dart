@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import 'web_clipboard.dart'
+    if (dart.library.html) 'web_clipboard_web.dart' as browser_clipboard;
 
 class ShareService {
   ShareService._();
@@ -36,11 +38,19 @@ class ShareService {
     String? title,
     String? subject,
   }) async {
-    // Desktop browsers do not reliably expose a share sheet. Copying directly
-    // guarantees desktop users get a working link and visible confirmation.
+    // Browsers do not reliably expose a share sheet, and Flutter's clipboard
+    // channel loses the user gesture on iOS Safari. Write through the browser
+    // API synchronously instead; if that fails, show a selectable fallback so
+    // the link is still usable.
     if (kIsWeb) {
-      await Clipboard.setData(ClipboardData(text: text));
-      if (context.mounted) _copiedSnack(context);
+      final copied = await browser_clipboard.copyToClipboard(text);
+      if (context.mounted) {
+        if (copied) {
+          _copiedSnack(context);
+        } else {
+          _showManualCopy(context, text);
+        }
+      }
       return;
     }
 
@@ -71,5 +81,23 @@ class ShareService {
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ));
+  }
+
+  /// Last-resort fallback: the link is placed in a selectable dialog so the
+  /// user can copy it manually even when the browser blocks clipboard access.
+  static void _showManualCopy(BuildContext context, String text) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Copy this link'),
+        content: SelectableText(text),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }
